@@ -1,3 +1,5 @@
+/* need to fix mobile layout and download resume button for mobile */
+
 @media screen and (max-width: 1400px) {
     #profile {
         height: 83vh;
@@ -58,6 +60,7 @@
     .about-contianers, .contact-info-upper-container, .btn-container {
         flex-wrap: wrap;
     }
+
     .contact-info-container {
         margin: 0;
     }

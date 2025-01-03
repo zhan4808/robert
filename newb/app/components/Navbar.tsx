@@ -46,7 +46,7 @@ export default function Navbar() {
     <AnimatePresence>
       {visible && (
         <motion.header
-          className="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-md"
+          className="fixed top-0 left-0 right-0 z-50 bg-transparent"
           initial={{ y: '-100%' }}
           animate={{ y: 0 }}
           exit={{ y: '-100%' }}
@@ -75,8 +75,8 @@ export default function Navbar() {
                         href={item.href}
                         className={
                           isActive
-                            ? 'font-semibold text-blue-600 dark:text-blue-400'
-                            : 'font-medium text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400'
+                            ? 'text-red-600 dark:text-red-600'
+                            : 'text-navy-800 dark:text-navy-200 hover:text-red-800 dark:hover:text-red-800'
                         }
                       >
                         {item.name}

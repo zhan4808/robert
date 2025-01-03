@@ -194,7 +194,7 @@ export default function AboutPage() {
                 <span>{link.name}</span>
               </div>
               <img
-                src={document.documentElement.classList.contains('dark') ? '/diagarrow-dark.svg' : '/diagarrow-light.svg'}
+                src={'/diagarrow-light.svg'}
                 alt="Arrow Icon"
                 className="w-4 h-4"
               />

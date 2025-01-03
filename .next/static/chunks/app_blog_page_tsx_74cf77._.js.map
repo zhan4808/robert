@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file:///Users/robertzhang/Documents/GitHub/portfolio-website/app/blog/page.tsx"],"sourcesContent":["'use client';\n\nimport { motion } from 'framer-motion';\n\nexport default function BlogPage() {\n  return (\n    <motion.div\n      className=\"mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center p-8\"\n      initial={{ opacity: 0 }}\n      animate={{ opacity: 1 }}\n      transition={{ duration: 0.5 }}\n    >\n      <h1 className=\"mb-4 text-3xl font-semibold\">Blog</h1>\n      <p className=\"mb-2 text-center text-lg text-gray-600\">\n        Welcome to my blog. I write about tech, design, and more.\n      </p>\n      <p className=\"text-center text-sm text-gray-400\">\n        *No posts yet. Stay tuned!*\n      </p>\n    </motion.div>\n  );\n}"],"names":[],"mappings":";;;;AAEA;AAFA;;;AAIe,SAAS;IACtB,qBACE,6LAAC,6LAAA,CAAA,SAAM,CAAC,GAAG;QACT,WAAU;QACV,SAAS;YAAE,SAAS;QAAE;QACtB,SAAS;YAAE,SAAS;QAAE;QACtB,YAAY;YAAE,UAAU;QAAI;;0BAE5B,6LAAC;gBAAG,WAAU;0BAA8B;;;;;;0BAC5C,6LAAC;gBAAE,WAAU;0BAAyC;;;;;;0BAGtD,6LAAC;gBAAE,WAAU;0BAAoC;;;;;;;;;;;;AAKvD;KAjBwB"}},
-    {"offset": {"line": 65, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"A"}}]
-}

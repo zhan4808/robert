@@ -55,14 +55,21 @@ export default function Navbar() {
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
             {/* Logo */}
             <div className="flex items-center">
-              <Link href="/">
-                <img
-                  src="/my-logo.svg"
-                  alt="My Logo"
-                  className="h-8 w-auto"
-                />
-              </Link>
-            </div>
+            <Link href="/">
+              {/* Light Mode Logo */}
+              <img
+                src="/rob-logo-light.svg"
+                alt="Rob Logo Light"
+                className="h-16 w-auto block dark:hidden"
+              />
+              {/* Dark Mode Logo */}
+              <img
+                src="/rob-logo-dark.svg"
+                alt="Rob Logo Dark"
+                className="h-16 w-auto hidden dark:block"
+              />
+            </Link>
+          </div>
 
             {/* Centered Nav Items */}
             <nav className="hidden md:block">

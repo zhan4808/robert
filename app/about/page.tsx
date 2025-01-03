@@ -12,9 +12,9 @@ export default function AboutPage() {
     >
       <h1 className="mb-4 text-3xl font-semibold">About Me</h1>
       <p className="mb-2 text-center text-lg text-gray-600">
-        I am a software developer, designer, and technology enthusiast. I love
-        creating beautiful experiences using Next.js, Tailwind, and Framer
-        Motion!
+        I am a builder, designer, and technology enthusiast. I love
+        creating projects that push the capabilities of technology
+        with others, so let's chat!
       </p>
     </motion.div>
   );

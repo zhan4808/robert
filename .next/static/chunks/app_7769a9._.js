@@ -92,7 +92,7 @@ function Navbar() {
                 duration: 0.3
             },
             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "mx-auto flex h-16 max-w-6xl items-center justify-between px-4",
+                className: "mx-auto flex h-16 max-w-[55%] items-center justify-between px-4",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex items-center",
@@ -102,26 +102,26 @@ function Navbar() {
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
                                     src: "/rob-logo-light.svg",
                                     alt: "Rob Logo Light",
-                                    className: "h-16 w-auto block dark:hidden"
+                                    className: "h-14 w-auto block dark:hidden"
                                 }, void 0, false, {
                                     fileName: "[project]/app/components/Navbar.tsx",
                                     lineNumber: 60,
-                                    columnNumber: 15
+                                    columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
                                     src: "/rob-logo-dark.svg",
                                     alt: "Rob Logo Dark",
-                                    className: "h-16 w-auto hidden dark:block"
+                                    className: "h-14 w-auto hidden dark:block"
                                 }, void 0, false, {
                                     fileName: "[project]/app/components/Navbar.tsx",
                                     lineNumber: 66,
-                                    columnNumber: 15
+                                    columnNumber: 17
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/app/components/Navbar.tsx",
                             lineNumber: 58,
-                            columnNumber: 13
+                            columnNumber: 15
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/components/Navbar.tsx",
@@ -162,8 +162,16 @@ function Navbar() {
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                         onClick: handleThemeToggle,
-                        className: "rounded-md border border-gray-200 bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700",
-                        children: darkMode ? 'Light Mode' : 'Dark Mode'
+                        className: "focus:outline-none",
+                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+                            src: darkMode ? '/moon-dark.svg' : '/moon-light.svg',
+                            alt: "Theme Toggle",
+                            className: "h-6 w-6"
+                        }, void 0, false, {
+                            fileName: "[project]/app/components/Navbar.tsx",
+                            lineNumber: 99,
+                            columnNumber: 15
+                        }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/components/Navbar.tsx",
                         lineNumber: 98,

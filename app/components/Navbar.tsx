@@ -52,24 +52,24 @@ export default function Navbar() {
           exit={{ y: '-100%' }}
           transition={{ duration: 0.3 }}
         >
-          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+          <div className="mx-auto flex h-16 max-w-[55%] items-center justify-between px-4">
             {/* Logo */}
             <div className="flex items-center">
-            <Link href="/">
-              {/* Light Mode Logo */}
-              <img
-                src="/rob-logo-light.svg"
-                alt="Rob Logo Light"
-                className="h-16 w-auto block dark:hidden"
-              />
-              {/* Dark Mode Logo */}
-              <img
-                src="/rob-logo-dark.svg"
-                alt="Rob Logo Dark"
-                className="h-16 w-auto hidden dark:block"
-              />
-            </Link>
-          </div>
+              <Link href="/">
+                {/* Light Mode Logo */}
+                <img
+                  src="/rob-logo-light.svg"
+                  alt="Rob Logo Light"
+                  className="h-14 w-auto block dark:hidden"
+                />
+                {/* Dark Mode Logo */}
+                <img
+                  src="/rob-logo-dark.svg"
+                  alt="Rob Logo Dark"
+                  className="h-14 w-auto hidden dark:block"
+                />
+              </Link>
+            </div>
 
             {/* Centered Nav Items */}
             <nav className="hidden md:block">
@@ -94,12 +94,13 @@ export default function Navbar() {
               </ul>
             </nav>
 
-            {/* Theme Toggle */}
-            <button
-              onClick={handleThemeToggle}
-              className="rounded-md border border-gray-200 bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-            >
-              {darkMode ? 'Light Mode' : 'Dark Mode'}
+            {/* Theme Toggle (Moon Icon) */}
+            <button onClick={handleThemeToggle} className="focus:outline-none">
+              <img
+                src={darkMode ? '/moon-dark.svg' : '/moon-light.svg'}
+                alt="Theme Toggle"
+                className="h-6 w-6"
+              />
             </button>
           </div>
         </motion.header>

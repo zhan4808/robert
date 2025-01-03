@@ -127,11 +127,11 @@ export default function HomePage() {
       <div className="bg-white dark:bg-black py-12">
         <div className="max-w-[52%] mx-auto px-4">
           <h2 className="text-4xl font-bold text-black dark:text-white mb-4">
-            Work
+            Experience
           </h2>
           <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">
             I specialize in RTL, ASIC design, transformers, compilers,
-            semiconductors, and product design. But I am always learning new things. Here
+            and product design. But I am always learning new things. Here
             are some of the places I have worked.
           </p>
           <div className="space-y-6">

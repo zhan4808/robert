@@ -1,13 +1,17 @@
 import './globals.css';
 import { ReactNode } from 'react';
-import Navbar from './components/Navbar'; // <-- path to your file
+import Navbar from './components/Navbar';
+import { ThemeProvider } from './ThemeContext';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-white text-black dark:bg-black dark:text-white transition-colors duration-300">
-        <Navbar />
-        <main>{children}</main>
+        {/* Wrap the app with ThemeProvider */}
+        <ThemeProvider>
+          <Navbar />
+          <main>{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );

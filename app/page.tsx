@@ -3,10 +3,12 @@
 import GradientBackground from './components/GradientBackground';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTheme } from './ThemeContext';
 
 export default function HomePage() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const { darkMode } = useTheme();
 
   const projects = [
     {
@@ -111,7 +113,7 @@ export default function HomePage() {
               >
                 {button.name}
                 <img
-                  src={`/diagarrow-${document.documentElement.classList.contains('dark') ? 'dark' : 'light'}.svg`}
+                  src={`/diagarrow-${darkMode ? 'light' : 'dark'}.svg`}
                   alt={`${button.name} Arrow Icon`}
                   className="ml-2 w-4 h-4"
                 />

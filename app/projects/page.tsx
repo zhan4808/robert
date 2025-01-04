@@ -49,9 +49,12 @@ export default function ProjectsPage() {
   return (
     <div className="bg-white dark:bg-black py-12 min-h-screen">
       <div className="max-w-[50%] mx-auto px-4">
-        <h2 className="text-4xl font-bold text-center text-black dark:text-white mb-8">
+        <h1 className="mt-12 text-2xl font-bold text-black dark:text-white">
           Projects
-        </h2>
+        </h1>
+        <p className="mt-0 text-small text-gray-600 dark:text-gray-400">
+          what i've been building
+        </p>
         <div className="space-y-12">
           {projects.map((project, index) => {
             const reverse = index % 2 !== 0;

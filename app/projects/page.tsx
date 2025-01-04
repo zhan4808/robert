@@ -52,7 +52,7 @@ export default function ProjectsPage() {
         <h1 className="mt-12 text-2xl font-bold text-black dark:text-white">
           Projects
         </h1>
-        <p className="mt-0 text-small text-gray-600 dark:text-gray-400">
+        <p className="mt-0 mb-8 text-small text-gray-600 dark:text-gray-400">
           what i've been building
         </p>
         <div className="space-y-12">

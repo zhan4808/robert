@@ -102,7 +102,7 @@ export default function ProjectsPage() {
                     <p className="text-white text-lg font-semibold flex items-center">
                       Check it Out{' '}
                       <img
-                        src="/arrow.svg"
+                        src="/diagarrow.svg"
                         alt="Arrow Icon"
                         className="ml-2 w-4 h-4"
                       />

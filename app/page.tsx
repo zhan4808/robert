@@ -19,8 +19,8 @@ export default function HomePage() {
       link: 'https://github.com/zhan4808/gemmopt',
     },
     {
-      title: 'Darwin',
-      description: 'A multimodal AI learning assistant that enhances online lecture learning and retention with personalized review and highlights.',
+      title: 'ArtSage',
+      description: 'Interactive AI museum exploration tool with image recognition and RAG workflows to identify art, retrieve museum data, and answer user prompts for enriched museum experience. Expanding with agentic features and AR.',
       image: '/QwQ1.gif',
       mediaType: 'gif',
       link: '/projects/generative-design',

@@ -1,5 +1,6 @@
 import './globals.css';
 import { ReactNode } from 'react';
+import { Analytics } from "@vercel/analytics/react"
 import Navbar from './components/Navbar';
 import { ThemeProvider } from './ThemeContext';
 

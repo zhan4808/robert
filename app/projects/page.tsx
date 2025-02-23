@@ -7,42 +7,50 @@ import { useState } from 'react';
 export default function ProjectsPage() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  // Updated project list
   const projects = [
     {
-      title: 'Optimized Triton GEMM Kernel for Transformer Inference on Non-NVIDIA GPUs',
-      description: 'GEMM kernel for efficient self-attention and feedforward mechanisms in LLMs. Targeting improvements in throughput, latency, and memory efficiency compared to cIBLAS.',
+      title: 'Triton GEMM Kernel for Small Batch Transformer Inference on Low Resource Hardware',
+      description: 'Open-source GEMM kernel for small batch transformer inference workloads with improved latency and throughput for low resource accelerated inference. Identifying efficient quantization algorithms in Triton.',
       image: '/Qyyy.gif',
       mediaType: 'gif',
       link: 'https://github.com/zhan4808/gemmopt',
+    },
+    {
+      title: 'VeriGen: Agents for Accelerated Chip Design',
+      description: 'Integrated RTL design verification tool for testbench generation, script and trace analysis with multi-agent collaboration for accelerated RTL development.',
+      image: '/QwQ1.gif',
+      mediaType: 'gif',
+      link: '/projects/verigen',
     },
     {
       title: 'ArtSage',
       description: 'Interactive AI museum exploration tool with image recognition and RAG workflows to identify art, retrieve museum data, and answer user prompts for enriched museum experience. Expanding with agentic features and AR.',
       image: '/QwQ1.gif',
       mediaType: 'gif',
-      link: '/projects/generative-design',
-      
+      link: '/projects/artsage',
     },
     {
-      title: 'ROV Autonomous CV System',
-      description: 'Dual-camera stereovision system for accurate depth estimation and 3D mapping, YOLOv5 integration for object detection and tracking.',
+      title: 'OmNom | TreeHacks 2025 Most Creative Hack Grand Prize',
+      description: 'An autonomous end-to-end 6-foot tall autonomous food delivery robot that navigates novel outdoor and indoor campus environments, interacts with ordering iPads, fetches and delives late-night food, allowing students to focus on their work while satisfying their cravings.',
       image: '/murmure6.mp4',
       mediaType: 'video',
-      link: '/projects/productivity-dashboard',
+      link: 'https://devpost.com/software/omnom-hg16v3',
     },
     {
-      title: 'HUGS: Haptic Under-Garment Support ',
-      description: 'A Flexinol-contracting vest with custom PCB and smart app to deliver immediate DTP for anxiety/autism patients.',
+      title: 'slynk: Turning Ads into Experiences',
+      description: 'Reimagining ads with interactive AR avatars. meet and talk with your favorite celebrities with sylnk, our AR app offering a new personalized immersive experience for discovering advertisements.',
       image: '/murmure3.gif',
       mediaType: 'gif',
-      link: '/projects/tech-vlog',
+      link: 'https://devpost.com/software/slynk',
     },
     {
       title: 'Using an Ensemble of GANs and CNNs to More Accurately Generate and Diagnose Skin Condition Datasets in Diverse Skin Types',
       description: 'Generated and validated synthetic images to address ethical AI bias due to lack of diverse skin condition images.',
       image: '/Murmure7.svg',
       mediaType: 'image',
-      link: '/projects/open-source',
+      // Updated link to our new route with PDF viewer
+      link: '/projects/skin-ensemble',
     },
   ];
 
@@ -52,7 +60,7 @@ export default function ProjectsPage() {
         <h1 className="mt-12 text-2xl font-bold text-black dark:text-white">
           Projects
         </h1>
-        <p className="mt-0 mb-8 text-small text-gray-600 dark:text-gray-400">
+        <p className="mt-0 mb-8 text-sm text-gray-600 dark:text-gray-400">
           what i've been building
         </p>
         <div className="space-y-12">

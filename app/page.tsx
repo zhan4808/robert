@@ -3,42 +3,51 @@
 import GradientBackground from './components/GradientBackground';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTheme } from './ThemeContext';
 
 export default function HomePage() {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  // Separate hover states for experiences and projects
+  const [hoveredExperienceIndex, setHoveredExperienceIndex] = useState<number | null>(null);
+  const [hoveredProjectIndex, setHoveredProjectIndex] = useState<number | null>(null);
+
   const { darkMode } = useTheme();
 
   const projects = [
     {
-      title: 'Optimized Triton GEMM Kernel for Transformer Inference on Non-NVIDIA GPUs',
-      description: 'GEMM kernel for efficient self-attention and feedforward mechanisms in LLMs. Targeting improvements in throughput, latency, and memory efficiency compared to cIBLAS.',
+      title: 'Triton GEMM Kernel for Small Batch Transformer Inference on Low Resource Hardware',
+      description: 'Open-source GEMM kernel for small batch transformer inference workloads with improved latency and throughput for low resource accelerated inference. Identifying efficient quantization algorithms in Triton.',
       image: '/Qyyy.gif',
       mediaType: 'gif',
       link: 'https://github.com/zhan4808/gemmopt',
+    },
+    {
+      title: 'VeriGen: Agents for Accelerated Chip Design',
+      description: 'Integrated RTL design verification tool for testbench generation, script and trace analysis with multi-agent collaboration for accelerated RTL development.',
+      image: '/QwQ1.gif',
+      mediaType: 'gif',
+      link: '/projects/verigen',
     },
     {
       title: 'ArtSage',
       description: 'Interactive AI museum exploration tool with image recognition and RAG workflows to identify art, retrieve museum data, and answer user prompts for enriched museum experience. Expanding with agentic features and AR.',
       image: '/QwQ1.gif',
       mediaType: 'gif',
-      link: '/projects/generative-design',
-      
+      link: '/projects/artsage',
     },
     {
-      title: 'ROV Autonomous CV System',
-      description: 'Dual-camera stereovision system for accurate depth estimation and 3D mapping, YOLOv5 integration for object detection and tracking.',
+      title: 'OmNom | TreeHacks 2025 Most Creative Hack Grand Prize',
+      description: 'An autonomous end-to-end 6-foot tall autonomous food delivery robot that navigates novel outdoor and indoor campus environments, interacts with ordering iPads, fetches and delives late-night food, allowing students to focus on their work while satisfying their cravings.',
       image: '/murmure6.mp4',
       mediaType: 'video',
-      link: '/projects/productivity-dashboard',
+      link: 'https://devpost.com/software/omnom-hg16v3',
     },
     {
-      title: 'HUGS: Haptic Under-Garment Support ',
-      description: 'A Flexinol-contracting vest with custom PCB and smart app to deliver immediate DTP for anxiety/autism patients.',
+      title: 'slynk: Turning Ads into Experiences',
+      description: 'Reimagining ads with interactive AR avatars. meet and talk with your favorite celebrities with sylnk, our AR app offering a new personalized immersive experience for discovering advertisements.',
       image: '/murmure3.gif',
       mediaType: 'gif',
-      link: '/projects/tech-vlog',
+      link: 'https://devpost.com/software/slynk',
     },
     {
       title: 'Using an Ensemble of GANs and CNNs to More Accurately Generate and Diagnose Skin Condition Datasets in Diverse Skin Types',
@@ -50,6 +59,12 @@ export default function HomePage() {
   ];
 
   const experiences = [
+    {
+      title: 'Advanced Memory Intern',
+      company: 'SanDisk',
+      logo: '/sandisk.svg',
+      period: 'Jan 2025 - May 2025',
+    },
     {
       title: 'ASIC Design Flow Researcher',
       company: 'SoCET Lab',
@@ -139,12 +154,13 @@ export default function HomePage() {
               <motion.div
                 key={experience.title}
                 className={`flex items-center justify-between p-4 rounded-md transition-opacity ${
-                  hoveredIndex === null || hoveredIndex === index
+                  hoveredExperienceIndex === null ||
+                  hoveredExperienceIndex === index
                     ? 'opacity-100'
                     : 'opacity-50'
                 }`}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
+                onMouseEnter={() => setHoveredExperienceIndex(index)}
+                onMouseLeave={() => setHoveredExperienceIndex(null)}
               >
                 <div className="flex items-center">
                   {/* Logo */}
@@ -194,14 +210,15 @@ export default function HomePage() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, ease: 'easeOut' }}
-                  onMouseEnter={() => setHoveredIndex(index)}
-                  onMouseLeave={() => setHoveredIndex(null)}
+                  onMouseEnter={() => setHoveredProjectIndex(index)}
+                  onMouseLeave={() => setHoveredProjectIndex(null)}
                 >
                   {/* Project Media */}
                   <Link
                     href={project.link}
                     className={`relative group w-full md:w-[40%] mx-auto cursor-pointer ${
-                      hoveredIndex !== null && hoveredIndex !== index
+                      hoveredProjectIndex !== null &&
+                      hoveredProjectIndex !== index
                         ? 'opacity-50'
                         : 'opacity-100'
                     } transition-opacity`}
@@ -226,7 +243,12 @@ export default function HomePage() {
                     {/* Hover Text */}
                     <div className="absolute inset-0 flex justify-center items-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                       <p className="text-white text-lg font-light flex items-center">
-                        Check it Out <img src="/diagarrow.svg" alt="Arrow" className="ml-2 w-6 h-6" />
+                        Check it Out
+                        <img
+                          src="/diagarrow.svg"
+                          alt="Arrow"
+                          className="ml-2 w-6 h-6"
+                        />
                       </p>
                     </div>
                   </Link>

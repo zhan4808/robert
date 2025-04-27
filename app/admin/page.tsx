@@ -81,7 +81,7 @@ export default function AdminPage() {
         previewAudio.src = '';
       }
     };
-  }, []);
+  }, [previewAudio]);
   
   useEffect(() => {
     // Check if authenticated in localStorage

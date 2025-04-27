@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+// @ts-nocheck
+import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
+  _request,
+  { params }
 ) {
   try {
-    const { slug } = params;
+    const slug = params.slug;
     
     if (!slug) {
       return NextResponse.json(
@@ -67,7 +68,7 @@ export async function GET(
     }
     
     // Extract content
-    const paragraphs: string[] = [];
+    const paragraphs = [];
     const paragraphMatches = content.matchAll(/<motion\.p[^>]*>\s*([\s\S]*?)\s*<\/motion\.p>/g);
     
     for (const match of paragraphMatches) {

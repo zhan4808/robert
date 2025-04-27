@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SVG to PNG Converter</title>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
+    <h1>SVG to PNG Converter</h1>
+    <p>Right-click on the image below and select "Save Image As..." to save the PNG version</p>
+    
+    <img id="svgImage" src="/gradient-icon.svg" width="512" height="512" style="margin: 20px;">
+    
+    <canvas id="canvas" width="1200" height="1200" style="display: none;"></canvas>
+    <img id="pngImage" width="512" height="512" style="border: 1px solid #ddd; margin: 20px;">
+    
+    <script>
+      window.onload = function() {
+        const svgImage = document.getElementById('svgImage');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const pngImage = document.getElementById('pngImage');
+        
+        // Once the SVG is loaded, draw it on the canvas and convert to PNG
+        svgImage.onload = function() {
+          // Draw at a higher resolution for better quality
+          ctx.drawImage(svgImage, 0, 0, 1200, 1200);
+          
+          // Convert to PNG
+          const dataURL = canvas.toDataURL('image/png');
+          pngImage.src = dataURL;
+        };
+      };
+    </script>
+  </div>
+</body>
+</html> 

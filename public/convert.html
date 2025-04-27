@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Convert SVG to PNG</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    button {
+      margin: 20px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #f9a8d4, #c4b5fd);
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SVG to PNG Converter for OG Image</h1>
+    <p>This tool helps convert our SVG open graph image to PNG format</p>
+    
+    <div>
+      <h2>Original SVG:</h2>
+      <img src="/og-fallback.svg" width="600" height="315" id="svgImage">
+    </div>
+    
+    <button id="convertBtn">Convert to PNG</button>
+    
+    <div>
+      <h2>PNG Result:</h2>
+      <canvas id="canvas" width="1200" height="630" style="display: none;"></canvas>
+      <img id="pngResult" width="600" height="315">
+    </div>
+    
+    <div id="downloadContainer" style="display: none;">
+      <h2>Download:</h2>
+      <a id="downloadLink" download="og-image.png" href="#">Download PNG</a>
+    </div>
+    
+    <script>
+      document.getElementById('convertBtn').addEventListener('click', function() {
+        const svgImage = document.getElementById('svgImage');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const pngResult = document.getElementById('pngResult');
+        const downloadLink = document.getElementById('downloadLink');
+        const downloadContainer = document.getElementById('downloadContainer');
+        
+        // Create a new Image object for better handling
+        const img = new Image();
+        img.onload = function() {
+          // Clear canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw SVG to canvas at full resolution
+          ctx.drawImage(img, 0, 0, 1200, 630);
+          
+          // Convert to PNG
+          const dataUrl = canvas.toDataURL('image/png');
+          
+          // Display result
+          pngResult.src = dataUrl;
+          
+          // Update download link
+          downloadLink.href = dataUrl;
+          downloadContainer.style.display = 'block';
+        };
+        
+        // Set source to trigger load
+        img.src = svgImage.src;
+      });
+    </script>
+  </div>
+</body>
+</html> 

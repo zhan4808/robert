@@ -1,0 +1,36 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <rect width="1200" height="630" fill="url(#gradient)" />
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f9a8d4" />
+      <stop offset="50%" stop-color="#c4b5fd" />
+      <stop offset="100%" stop-color="#93c5fd" />
+    </linearGradient>
+    
+    <!-- Noise filter for texture -->
+    <filter id="noise" x="0" y="0" width="1200" height="630" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+      <feBlend mode="overlay" in="SourceGraphic" />
+    </filter>
+  </defs>
+  
+  <!-- Noise overlay -->
+  <rect width="1200" height="630" fill="url(#gradient)" filter="url(#noise)" opacity="0.4" />
+  
+  <!-- Logo icon -->
+  <circle cx="600" cy="255" r="125" fill="white" opacity="0.9" />
+  
+  <!-- Text elements -->
+  <text x="600" y="255" dominant-baseline="middle" text-anchor="middle" 
+        fill="#f9a8d4" font-family="Arial, sans-serif" font-weight="bold" font-size="140">
+    r
+  </text>
+  
+  <text x="600" y="445" dominant-baseline="middle" text-anchor="middle" 
+        fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="90">
+    robert
+  </text>
+</svg> 

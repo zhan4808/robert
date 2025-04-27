@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRef, useEffect, useState } from 'react';
+import ImageIcon from '../../components/ImageIcon';
 
 export default function CollegePost() {
   const [scrollY, setScrollY] = useState(0);
@@ -161,14 +162,20 @@ export default function CollegePost() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to blog
+            back to blog
           </Link>
         </motion.div>
         
         {/* Header with square gradient icon */}
         <div className="flex items-start mb-8">
-          <div className="mr-5 flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden shadow-sm">
-            <GrainyGradient colorClass="bg-gradient-to-r from-blue-200 via-indigo-300 to-purple-200" />
+          <div className="mr-5 flex-shrink-0">
+            <ImageIcon 
+              src="/oai3.jpg"
+              size="lg"
+              borderGradient="from-pink-200 via-rose-300 to-orange-200"
+              withHoverEffect={true}
+              alt="College post icon"
+            />
           </div>
           
           <div>
@@ -178,7 +185,7 @@ export default function CollegePost() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              College
+              college
             </motion.h1>
             
             <motion.h2
@@ -187,7 +194,7 @@ export default function CollegePost() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              The Joy of New Beginnings and Unexpected Friendships
+              unexpected friends and experiences
             </motion.h2>
             
             <motion.div
@@ -196,7 +203,7 @@ export default function CollegePost() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              April 14, 2025
             </motion.div>
           </div>
         </div>
@@ -258,14 +265,14 @@ export default function CollegePost() {
               <div className="flex-grow">
                 <div className="mb-1">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Now Playing
+                    now playing
                   </span>
                 </div>
                 <div className="font-medium text-gray-900 dark:text-white text-sm">
-                  Charcoal Baby
+                  charcoal baby
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Blood Orange
+                  blood orange
                 </div>
               </div>
               
@@ -325,7 +332,7 @@ export default function CollegePost() {
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
-          <GrainyGradient colorClass="bg-gradient-to-r from-blue-200 via-indigo-300 to-purple-200" />
+          <GrainyGradient colorClass="bg-gradient-to-r from-pink-400 via-rose-300 to-orange-300" />
         </motion.div>
         
         <motion.p 
@@ -335,7 +342,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          College—I never expected it to feel like this. The first night in my dorm, I stared at the ceiling wondering if I'd made a mistake. Everything felt strange and unfamiliar: the too-firm mattress, the sound of strangers shuffling down the hallway, the knowledge that home was now hours away instead of just upstairs. But two months in, and I'm realizing that this kind of discomfort might be exactly what I needed.
+          this past semester has been nothing short of transformative. i've met so many incredible people who've expanded my world in ways i never expected. startup founders with audacious visions, industry leaders who somehow make time to mentor, and classmates who are both terrifyingly brilliant and refreshingly down-to-earth. it's humbling and exhilarating all at once.
         </motion.p>
         
         <motion.p 
@@ -345,7 +352,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          There's something magical about being thrown together with people you wouldn't have chosen. My roommate and I couldn't be more different on paper—he's a morning person, I'm a night owl; he's meticulously organized, I'm comfortably chaotic; he's from a small town, I grew up in the city. But late-night conversations about everything and nothing have created a surprising bond. It's like college has this way of accelerating friendships, compressing what might take years in the "real world" into just weeks.
+          one weekend, i ended up on an impromptu trip with people i barely knew from my econ class. we stayed in this tiny cabin upstate, and somehow between hiking mishaps and late-night conversations, these strangers became friends i now text daily. there's something about seeing people outside the classroom context—away from the polished performances we all put on—that accelerates closeness in ways that feel almost magical.
         </motion.p>
         
         <motion.div 
@@ -356,7 +363,7 @@ export default function CollegePost() {
           transition={{ duration: 0.5 }}
         >
           <p className="text-xl italic font-light text-gray-700 dark:text-gray-300">
-            "The beauty of college isn't in finding your people immediately—it's in discovering that your 'people' might look nothing like what you imagined."
+            "what connects us isn't just our ambitions but the moments we admit we're struggling to reach them."
           </p>
         </motion.div>
         
@@ -367,7 +374,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          Last week, I ended up at dinner with a completely random group—the friend of a friend of someone in my Econ class. We talked for four hours straight. About our childhood pets and global warming and whether cereal is technically soup. About our parents and our fears and that weird recurring dream I've had since I was twelve. It struck me afterward that this is the beauty of college—these unlikely intersections of lives that would never have crossed otherwise.
+          i've discovered pockets of creativity i didn't know existed on campus. a fashion collective that puts on guerrilla runway shows in unexpected campus locations. a group of art students who sneak onto rooftops to draw the cityscape at sunset. runners who meet at 5am and somehow make it seem fun rather than torturous. each community has its own language, inside jokes, and rituals that make being part of it feel special.
         </motion.p>
         
         <motion.p 
@@ -377,7 +384,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          There's Emma from my writing workshop who grew up on a farm in Nebraska and has the most incredible stories about birthing calves. Alex from my dorm floor who can solve a Rubik's cube in under 30 seconds and stress-bakes cookies for everyone during midterms. Tasha who sits next to me in chemistry and has a playlist for every mood imaginable—her "3AM existential crisis but make it lo-fi" mix has gotten me through some late study nights.
+          what's fascinating is the undercurrent of "duck syndrome" that connects us all—we're gliding seemingly effortlessly on the surface while paddling frantically underneath. it's weirdly comforting when someone i admire admits they're struggling too. the most profound bonding happens in those moments of vulnerability, when the façade cracks and we acknowledge how hard we're all working to stay afloat.
         </motion.p>
         
         {/* Second grainy gradient */}
@@ -388,7 +395,7 @@ export default function CollegePost() {
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
-          <GrainyGradient colorClass="bg-gradient-to-r from-pink-200 via-rose-300 to-orange-200" />
+          <GrainyGradient colorClass="bg-gradient-to-r from-orange-300 via-rose-300 to-pink-400" />
         </motion.div>
         
         <motion.p 
@@ -398,7 +405,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          I'm learning that college friendships have their own rhythm. There's the intense bonding of orientation week, when everyone's desperate to find their place. The comfortable routine of study groups and dining hall meetups. The unexpected depth that emerges at 2AM, when conversations turn from classes to childhood dreams and family dynamics. The way someone can become a fixture in your life when just months ago they were a complete stranger.
+          there's something powerful about being surrounded by people who are unapologetically pursuing their passions. my roommate who codes until 3am because she's building something she believes in. the guy from my writing workshop who's already published two sci-fi novellas. the international student who's creating a platform to connect rural artisans from her home country with global markets. their drive doesn't make me feel inadequate; it ignites something in me.
         </motion.p>
         
         <motion.p 
@@ -408,7 +415,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          College is this bizarre social experiment—take people from different backgrounds, throw them together in small spaces, add academic pressure and limited sleep, and see what happens. Sometimes it's messy. There are misunderstandings and awkward moments and times when I just want to hide in my room. But more often, it's unexpectedly beautiful.
+          i find myself wanting to match their energy, to contribute something meaningful. it's not competitive in a toxic way—it's this collective current pushing us all forward. when one person breaks through, achieves something remarkable, it expands our sense of what's possible. their success becomes proof that the rest of us can reach our goals too, even if those goals look completely different.
         </motion.p>
         
         <motion.p 
@@ -418,7 +425,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          Like dancing with my hallmates to early 2000s hits after acing a paper we'd all been stressing over. Watching the sunrise from the library steps with students I'd just pulled an all-nighter with, feeling delirious and invincible. The impromptu philosophy debate that broke out in the laundry room while we all waited for our clothes to dry. It's these random moments of connection that I didn't see coming.
+          we've created these core rituals that keep us grounded—weekly dinners where phones are banned, spontaneous study sessions that inevitably devolve into philosophical debates, celebrations for even minor victories. these shared experiences form a safety net. when imposter syndrome hits hard (which it does, regularly), there's always someone who can remind you of what you've already accomplished and why you belong here.
         </motion.p>
         
         <motion.p 
@@ -428,7 +435,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          I wonder if there's something special about finding your people in this in-between space. We're all figuring ourselves out, trying on different versions of who we might become. There's a vulnerability in that, an openness to others that might not exist in the same way once we've calcified into our adult selves. It's like we're building our identities together, piece by piece, borrowing bits from each other along the way.
+          i'm learning that being humbled by exceptional peers doesn't have to diminish me—it can actually expand my vision for myself. there's this quote i keep coming back to: "surround yourself with people who make you uncomfortable with settling for less." that's what this semester has given me—a community that simultaneously accepts me exactly as i am and inspires me to become more.
         </motion.p>
         
         {/* Third grainy gradient */}
@@ -439,7 +446,7 @@ export default function CollegePost() {
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
-          <GrainyGradient colorClass="bg-gradient-to-r from-blue-200 via-cyan-300 to-teal-200" />
+          <GrainyGradient colorClass="bg-gradient-to-r from-rose-300 via-pink-400 to-orange-300" />
         </motion.div>
         
         <motion.p 
@@ -449,7 +456,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          Sure, there are days when I feel overwhelmed or homesick or just plain exhausted. College isn't a non-stop highlight reel. But there's something truly amazing about creating a makeshift family from scratch, about finding your people in this temporary world. I'm starting to think that the academic lessons might end up being the least important part of these years.
+          there are days when i wonder if i belong among these incredible people. days when the gap between where i am and where i want to be feels impossibly wide. but then i remember that everyone starts somewhere, and that even the most accomplished people i've met are still works in progress themselves. we're all just at different points on similar journeys.
         </motion.p>
         
         <motion.p 
@@ -459,7 +466,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          So here's to the midnight conversations and inside jokes that make no sense to anyone else. To the friends who've seen me at my most sleep-deprived and still want to hang out. To the unexpected connections that make this strange, in-between time feel like home. College isn't always easy, but these moments of genuine connection make it all worthwhile. And I'm learning that the best friendships often come from the most unlikely beginnings.
+          as the semester ends, i'm grateful not just for what i've learned in classrooms, but for these unexpected connections that have shaped me. for late-night conversations that helped clarify my own dreams. for witnessing peers overcome obstacles that once seemed insurmountable. for finding a community that celebrates ambition while acknowledging vulnerability. college isn't just about building a resume—it's about building a constellation of relationships that illuminate possibilities i couldn't have imagined on my own.
         </motion.p>
       </motion.div>
     </div>

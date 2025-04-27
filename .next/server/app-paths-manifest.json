@@ -1,6 +1,13 @@
 {
+  "/admin/page": "app/admin/page.js",
+  "/api/blog/list/route": "app/api/blog/list/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/blog/generate/route": "app/api/blog/generate/route.js",
   "/blog/page": "app/blog/page.js",
-  "/blog/college/page": "app/blog/college/page.js",
+  "/api/blog/[slug]/route": "app/api/blog/[slug]/route.js",
+  "/api/blog/edit/route": "app/api/blog/edit/route.js",
+  "/api/blog/delete/route": "app/api/blog/delete/route.js",
   "/blog/happiness/page": "app/blog/happiness/page.js",
-  "/_not-found/page": "app/_not-found/page.js"
+  "/blog/college/page": "app/blog/college/page.js",
+  "/projects/page": "app/projects/page.js"
 }

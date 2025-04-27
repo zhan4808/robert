@@ -10,15 +10,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://robert.vercel.app';
 
 export const metadata = {
   title: 'robert',
-  description: 'Personal website and blog',
+  description: 'robert zhang - about me',
   openGraph: {
     title: 'robert',
-    description: 'Personal website and blog',
+    description: 'robert zhang - about me',
     url: siteUrl,
     siteName: 'robert',
     images: [
       {
-        url: '/og-fallback.svg',
+        url: '/WEBP to JPG 1.jpg',
         width: 1200,
         height: 630,
         alt: 'robert',
@@ -30,8 +30,8 @@ export const metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'robert',
-    description: 'Personal website and blog',
-    images: ['/og-fallback.svg'],
+    description: 'robert zhang - about me',
+    images: ['/WEBP to JPG 1.jpg'],
   },
 };
 
@@ -39,8 +39,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/gradient-icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/gradient-icon.svg" />
+        <link rel="icon" href="/WEBP to JPG 1.jpg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/WEBP to JPG 1.jpg" />
         <meta property="og:image" content={`${siteUrl}/og-fallback.svg`} />
         <meta name="twitter:image" content={`${siteUrl}/og-fallback.svg`} />
       </head>

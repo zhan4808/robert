@@ -3,6 +3,9 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRef, useEffect, useState } from 'react';
+import ImageIcon from '../../components/ImageIcon';
+import ImageGallery from '../../components/ImageGallery';
+import { FloatingGallery } from '../../components/ImageGallery';
 
 export default function HappinessPost() {
   const [scrollY, setScrollY] = useState(0);
@@ -161,14 +164,20 @@ export default function HappinessPost() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to blog
+            back to blog
           </Link>
         </motion.div>
         
         {/* Header with square gradient icon */}
         <div className="flex items-start mb-8">
-          <div className="mr-5 flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden shadow-sm">
-            <GrainyGradient colorClass="bg-gradient-to-r from-purple-200 via-pink-300 to-indigo-200" />
+          <div className="mr-5 flex-shrink-0">
+            <ImageIcon 
+              src="/oai1.jpg"
+              size="lg"
+              borderGradient="from-purple-200 via-pink-300 to-indigo-200"
+              withHoverEffect={true}
+              alt="Happiness post icon"
+            />
           </div>
           
           <div>
@@ -178,7 +187,7 @@ export default function HappinessPost() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              Happiness
+              happiness
             </motion.h1>
             
             <motion.h2
@@ -187,7 +196,7 @@ export default function HappinessPost() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              Ambition Has Made College My Prison
+              ambition has made college lose true happiness
             </motion.h2>
             
             <motion.div
@@ -196,7 +205,7 @@ export default function HappinessPost() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              April 25, 2025
             </motion.div>
           </div>
         </div>
@@ -324,7 +333,7 @@ export default function HappinessPost() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <GrainyGradient colorClass="bg-gradient-to-r from-purple-200 via-pink-300 to-indigo-200" />
+          <GrainyGradient colorClass="bg-gradient-to-r from-red-400 via-orange-300 to-indigo-300" />
         </motion.div>
         
         {/* Article content with cleaner typography */}
@@ -336,7 +345,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            Two years into college, and I've become someone I don't recognize. Last night at 3 AM, surrounded by empty coffee cups and scattered textbooks, I had this moment of clarity that knocked the wind out of me. What the hell am I doing? Who am I becoming? I've spent the past two years meticulously constructing my resume, obsessing over internships, and judging everyone—including myself—by a single metric: career potential.
+            two years into college, and i've become someone i don't recognize. last night at 3 am, surrounded by empty coffee cups and scattered textbooks, i had this moment of clarity that knocked the wind out of me. what the hell am i doing? who am i becoming? i've spent the past two years meticulously constructing my resume, obsessing over internships, and judging everyone—including myself—by a single metric: career potential.
           </motion.p>
           
           <motion.p 
@@ -346,7 +355,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            It started innocently enough. My first semester, I was just trying to "get ahead," to "set myself up for success." Now I find myself categorizing people within seconds of meeting them. Engineering major? Respect. Art history? What's your backup plan? I've become the human embodiment of LinkedIn, constantly calculating everyone's professional value while ignoring what makes them... human.
+            it started innocently enough. my first semester, i was just trying to "get ahead," to "set myself up for success." now i find myself categorizing people within seconds of meeting them. engineering major? respect. art history? what's your backup plan? i've become the human embodiment of linkedin, constantly calculating everyone's professional value while ignoring what makes them... human.
           </motion.p>
           
           {/* Quote box with minimal design */}
@@ -358,7 +367,7 @@ export default function HappinessPost() {
             transition={{ duration: 0.5 }}
           >
             <p className="text-xl italic font-light text-gray-700 dark:text-gray-300">
-              "I've been so busy building a career-worthy life that I forgot to build a life worth living."
+              "i've been so busy building a career-worthy life that i forgot to build a life worth living."
             </p>
           </motion.div>
           
@@ -369,7 +378,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            I wonder if my friends or classmates think I'm crushing it. From the outside, I'm this put-together, ambitious, cracked sophomore with a five-year plan and his shit figured out. They don't see me staring at the ceiling at night, wondering why success feels so empty. Or scrolling through texts from high school friends I never grew close to again because who knows why. Or realizing I haven't laughed—really laughed—in months.
+            i wonder if my friends or classmates think i'm crushing it. from the outside, i'm this put-together, ambitious, cracked sophomore with a five-year plan and his shit figured out. they don't see me staring at the ceiling at night, wondering why success feels so empty. or scrolling through texts from high school friends i never grew close to again because who knows why. or realizing i haven't laughed—really laughed—in months.
           </motion.p>
           
           <motion.p 
@@ -379,7 +388,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            Last week, my roommate invited me to a concert. My first instinct wasn't "sounds fun" but "who will be there that could be useful for my career?" That's when I knew something was broken in me. I'm 20 years old, and I've already turned my life into a never-ending job interview. The worst part? I'm not even passionate about the career I'm killing myself for. I'm chasing status, not fulfillment.
+            last week, my roommate invited me to a concert. my first instinct wasn't "sounds fun" but "who will be there that could be useful for my career?" that's when i knew something was broken in me. i'm 20 years old, and i've already turned my life into a never-ending job interview. the worst part? i'm not even passionate about the career i'm killing myself for. i'm chasing status, not fulfillment.
           </motion.p>
           
           {/* Second grainy gradient */}
@@ -390,7 +399,7 @@ export default function HappinessPost() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <GrainyGradient colorClass="bg-gradient-to-r from-pink-200 via-purple-300 to-fuchsia-200" />
+            <GrainyGradient colorClass="bg-gradient-to-r from-indigo-300 via-purple-400 to-fuchsia-300" />
           </motion.div>
           
           {/* Section with minimal design */}
@@ -401,15 +410,6 @@ export default function HappinessPost() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <motion.h3
-              className="text-xl font-semibold mb-4 text-black dark:text-white"
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              The Breaking Point
-            </motion.h3>
             
             <motion.p
               className="font-light text-lg leading-relaxed"
@@ -418,7 +418,7 @@ export default function HappinessPost() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              It hit me hard during winter break. I went home and couldn't connect with anyone. Old friends were talking about road trips and relationships and stupid, wonderful memories, while I was mentally drafting cover letters. My parents noticed something was off—asked if I was okay. "Just tired from finals," I said. But really, I was tired of myself.
+              it hit me hard during winter break. i went home and couldn't connect with anyone. old friends were talking about road trips and relationships and stupid, wonderful memories, while i was mentally drafting cover letters. my parents noticed something was off—asked if i was okay. "just tired from finals," i said. but really, i was tired of myself.
             </motion.p>
             
             <motion.p
@@ -428,7 +428,7 @@ export default function HappinessPost() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              I've become so focused on being impressive that I've forgotten how to be present. I scroll through social media and mentally rank everyone's career trajectories instead of appreciating their joy. I have 1500+ LinkedIn connections but can't name five people who really know me. I've sacrificed deep connections for shallow networking, genuine interests for resume-building activities.
+              i've become so focused on being impressive that i've forgotten how to be present. i scroll through social media and mentally rank everyone's career trajectories instead of appreciating their joy. i have 1500+ linkedin connections but can't name five people who really know me. i've sacrificed deep connections for shallow networking, genuine interests for resume-building activities.
             </motion.p>
           </motion.div>
           
@@ -439,7 +439,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            The most messed up part? I've internalized capitalism so completely that I evaluate my own worth through the lens of productivity. Watching a movie feels like wasted time. Going for a walk without listening to an educational podcast feels irresponsible. My self-worth has become completely entangled with my perceived market value. No wonder I'm miserable.
+            the most messed up part? i've internalized capitalism so completely that i evaluate my own worth through the lens of productivity. watching a movie feels like wasted time. going for a walk without listening to an educational podcast feels irresponsible. my self-worth has become completely entangled with my perceived market value. no wonder i'm miserable.
           </motion.p>
           
           <motion.p 
@@ -449,7 +449,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            I can't even remember the last time I genuinely talked to someone for hours to someone not about internships or classes, but about our families, our fears, our favorite movies from childhood. I don't feel like a real person, more like a walking resume. Now I wait for something revolutionary to come to me, most likely the reality is not. Still, I know I will be the one to dig myself out of this as I have so many times before. I've noticed I've built this terrible habit of just dropping things and not caring about them when things get hard, and this needs to change. Desperately waiting for someone to change me but I think I've realized that person is myself. Still, I'm lost and confused. ive slowly lost motivation discipline and commitment to work and becoming someone that is fine with whatever comes to them in life while not giving something their everything. i go in cycles of hyper productivity to extremely low points of doing zero work in a week. i dont think this is me burning out, its just me being lazy. how should i go about fixing this?
+            i can't even remember the last time i genuinely talked to someone for hours to someone not about internships or classes, but about our families, our fears, our favorite movies from childhood. i don't feel like a real person, more like a walking resume. now i wait for something revolutionary to come to me, most likely the reality is not. still, i know i will be the one to dig myself out of this as i have so many times before. i've noticed i've built this terrible habit of just dropping things and not caring about them when things get hard, and this needs to change. desperately waiting for someone to change me but i think i've realized that person is myself. still, i'm lost and confused. ive slowly lost motivation discipline and commitment to work and becoming someone that is fine with whatever comes to them in life while not giving something their everything. i go in cycles of hyper productivity to extremely low points of doing zero work in a week. i dont think this is me burning out, its just me being lazy. how should i go about fixing this?
           </motion.p>
           
           {/* Third grainy gradient */}
@@ -460,7 +460,7 @@ export default function HappinessPost() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <GrainyGradient colorClass="bg-gradient-to-r from-indigo-200 via-violet-300 to-purple-200" />
+            <GrainyGradient colorClass="bg-gradient-to-r from-fuchsia-300 via-pink-300 to-red-400" />
           </motion.div>
           
           <motion.p 
@@ -470,7 +470,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            being happy scares me. i don't think i deserve happiness, but it's more so the fear of happiness blinding me and inevitably causing more misery to ppl i care abt. tbh im so emotionally detached from everything. Isn't there the saying of how being alone means nobody can hurt you and you cannot hurt anyone who cares about you. I don't have some grand solution yet. I'm not suddenly "fixed." Small steps. I'm trying to relearn how to value people—including myself—not for what we can achieve, but for who we are. Because I'm starting to realize that being the perfect job candidate means nothing if you've lost yourself along the way.
+            being happy scares me. i don't think i deserve happiness, but it's more so the fear of happiness blinding me and inevitably causing more misery to ppl i care abt. tbh im so emotionally detached from everything. isn't there the saying of how being alone means nobody can hurt you and you cannot hurt anyone who cares about you. i don't have some grand solution yet. i'm not suddenly "fixed." small steps. i'm trying to relearn how to value people—including myself—not for what we can achieve, but for who we are. because i'm starting to realize that being the perfect job candidate means nothing if you've lost yourself along the way.
           </motion.p>
           
           <motion.p 
@@ -480,7 +480,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            So if you're like me—someone who's been measuring life in LinkedIn endorsements and forgotten how to just be—maybe we can figure this out together. Because I think there's more to these college years, more to life, than just preparing for some hypothetical career. At least, I really hope there is.
+            so if you're like me—someone who's been measuring life in linkedin endorsements and forgotten how to just be—maybe we can figure this out together. because i think there's more to these college years, more to life, than just preparing for some hypothetical career. at least, i really hope there is.
           </motion.p>
         </motion.div>
       </motion.div>

@@ -385,6 +385,19 @@ export default function SummerPost() {
           <GrainyGradient colorClass="bg-gradient-to-r from-yellow-100 via-blue-100 to-red-200" />
         </motion.div>
 
+        {/* Quote box */}
+        <motion.div
+          className="my-12 py-6 px-8 border-l-4 border-yellow-300 bg-blue-50 dark:bg-blue-900/40"
+          initial={{ opacity: 0, x: -5 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="text-xl italic font-light text-gray-700 dark:text-gray-300">
+            "to live in balance is to let disappointment pass through you, leaving only the shape of what you've learned."
+          </p>
+        </motion.div>
+
         <motion.p
           className="font-light text-lg leading-relaxed"
           custom={1}

@@ -144,6 +144,13 @@ export default function SummerPost() {
     })
   };
 
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.play();
+    }
+  }, [songIndex, isPlaying]);
+
   return (
     <div className="relative min-h-screen bg-white dark:bg-gray-900" ref={contentRef}>
       {/* Reading progress indicator */}

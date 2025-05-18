@@ -79,11 +79,13 @@ export default function SummerPost() {
     const updateDuration = () => setDuration(audio.duration);
     const handleEnded = () => {
       if (songIndex < songs.length - 1) {
+        setIsPlaying(false);
         setSongIndex(songIndex + 1);
-        setIsPlaying(true);
+        setTimeout(() => setIsPlaying(true), 0);
       } else if (isLooping) {
+        setIsPlaying(false);
         setSongIndex(0);
-        setIsPlaying(true);
+        setTimeout(() => setIsPlaying(true), 0);
       } else {
         setIsPlaying(false);
       }

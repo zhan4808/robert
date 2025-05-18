@@ -361,7 +361,7 @@ function SummerPost() {
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "mr-5 flex-shrink-0",
                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$components$2f$ImageIcon$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
-                                    src: "/oai2.jpeg",
+                                    src: "/WEBP TO JPG 4.jpg",
                                     size: "lg",
                                     borderGradient: "from-yellow-200 via-blue-200 to-red-200",
                                     withHoverEffect: true,
@@ -392,7 +392,7 @@ function SummerPost() {
                                             duration: 0.5,
                                             delay: 0.1
                                         },
-                                        children: "Summer: Finding Balance, Purpose, and Connection"
+                                        children: "may"
                                     }, void 0, false, {
                                         fileName: "[project]/app/blog/summer/page.tsx",
                                         lineNumber: 188,
@@ -412,7 +412,7 @@ function SummerPost() {
                                             duration: 0.5,
                                             delay: 0.2
                                         },
-                                        children: "finding balance, purpose, and connection"
+                                        children: "redefining balance, purpose, and connections"
                                     }, void 0, false, {
                                         fileName: "[project]/app/blog/summer/page.tsx",
                                         lineNumber: 197,

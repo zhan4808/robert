@@ -162,11 +162,11 @@ function BlogPage() {
     // Gradient backgrounds for blog posts
     const blogPosts = [
         {
-            slug: 'summer',
-            title: 'summer',
-            description: 'finding balance, purpose, and connection',
-            date: 'May 18, 2024',
-            image: '/oai2.jpeg',
+            slug: 'may',
+            title: 'may',
+            description: 'redefining balance, purpose, and connections',
+            date: 'May 17, 2025',
+            image: '/WEBP TO JPG 4.jpg',
             colors: [
                 'yellow',
                 'blue',

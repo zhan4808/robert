@@ -1,8 +1,9 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/blog/[slug]/page": "app/blog/[slug]/page.js",
   "/blog/page": "app/blog/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/blog/summer/page": "app/blog/summer/page.js",
-  "/blog/college/page": "app/blog/college/page.js",
-  "/blog/happiness/page": "app/blog/happiness/page.js"
+  "/blog/happiness/page": "app/blog/happiness/page.js",
+  "/blog/[slug]/page": "app/blog/[slug]/page.js",
+  "/blog/may/page": "app/blog/may/page.js",
+  "/blog/college/page": "app/blog/college/page.js"
 }

@@ -45,10 +45,11 @@ export default function BlogPage() {
       slug: 'may',
       title: 'may',
       description: 'redefining balance, purpose, and connections',
-      date: 'May 17, 2025',
+      date: 'May 18, 2024',
       image: '/WEBP TO JPG 4.jpg',
       colors: ['yellow', 'blue', 'red'],
-      gradientClass: 'from-yellow-100 via-blue-100 to-red-200'
+      gradientClass: 'from-yellow-100 via-blue-100 to-red-200',
+      href: '/blog/may',
     },
     {
       slug: 'happiness',
@@ -57,7 +58,8 @@ export default function BlogPage() {
       date: 'April 25, 2025',
       image: '/oai1.jpg',
       colors: ['red', 'orange', 'indigo'],
-      gradientClass: 'from-red-400 via-orange-300 to-indigo-300'
+      gradientClass: 'from-red-400 via-orange-300 to-indigo-300',
+      href: '/blog/happiness',
     },
     {
       slug: 'college',
@@ -66,7 +68,8 @@ export default function BlogPage() {
       date: 'April 14, 2025',
       image: '/oai3.jpg',
       colors: ['pink', 'rose', 'orange'],
-      gradientClass: 'from-pink-400 via-rose-300 to-orange-300'
+      gradientClass: 'from-pink-400 via-rose-300 to-orange-300',
+      href: '/blog/college',
     }
   ];
   
@@ -105,7 +108,7 @@ export default function BlogPage() {
                 className="relative"
               >
                 <Link 
-                  href={`/blog/${post.slug}`}
+                  href={post.href}
                   className="block group"
                 >
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative p-5">

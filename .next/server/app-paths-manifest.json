@@ -1,7 +1,20 @@
 {
-  "/blog/page": "app/blog/page.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/page": "app/page.js",
+  "/api/blog/[slug]/route": "app/api/blog/[slug]/route.js",
+  "/api/blog/delete/route": "app/api/blog/delete/route.js",
+  "/api/blog/edit/route": "app/api/blog/edit/route.js",
+  "/api/blog/generate/route": "app/api/blog/generate/route.js",
+  "/api/blog/list/route": "app/api/blog/list/route.js",
+  "/api/blog/route": "app/api/blog/route.js",
   "/about/page": "app/about/page.js",
-  "/projects/page": "app/projects/page.js"
+  "/admin/page": "app/admin/page.js",
+  "/projects/artsage/page": "app/projects/artsage/page.js",
+  "/blog/page": "app/blog/page.js",
+  "/projects/skin-ensemble/page": "app/projects/skin-ensemble/page.js",
+  "/projects/verigen/page": "app/projects/verigen/page.js",
+  "/blog/college/page": "app/blog/college/page.js",
+  "/page": "app/page.js",
+  "/blog/happiness/page": "app/blog/happiness/page.js",
+  "/projects/page": "app/projects/page.js",
+  "/blog/may/page": "app/blog/may/page.js"
 }

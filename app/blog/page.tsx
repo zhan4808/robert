@@ -45,7 +45,7 @@ export default function BlogPage() {
       slug: 'may',
       title: 'may',
       description: 'redefining balance, purpose, and connections',
-      date: 'May 18, 2024',
+      date: 'May 17, 2025',
       image: '/WEBP TO JPG 4.jpg',
       colors: ['yellow', 'blue', 'red'],
       gradientClass: 'from-yellow-100 via-blue-100 to-red-200',

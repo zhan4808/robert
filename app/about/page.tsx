@@ -158,8 +158,8 @@ export default function AboutPage() {
         {/* Paragraph */}
         <div className="w-3/4 pl-8 mb-10">
           <p className="text-small text-gray-700 dark:text-gray-300 leading-relaxed">
-            Good afternoon, I'm Robert Zhang! Originally from Palo Alto, I'm now based
-            in the vibrant place that is San Francisco.
+            Hey there, I'm Robert! Growing up in San Francisco and Palo Alto, I'm now based
+            in the vibrant place that is San Jose.
             <br />
             <br />
             My curiosity for computers began at age 10, which naturally led me to pursue

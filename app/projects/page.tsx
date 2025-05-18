@@ -3,56 +3,10 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useState } from 'react';
+import { projects } from './projectsData';
 
 export default function ProjectsPage() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-
-  // Updated project list
-  const projects = [
-    {
-      title: 'Triton GEMM Kernel for Small Batch Transformer Inference on Low Resource Hardware',
-      description: 'Open-source GEMM kernel for small batch transformer inference workloads with improved latency and throughput for low resource accelerated inference. Identifying efficient quantization algorithms in Triton.',
-      image: '/Qyyy.gif',
-      mediaType: 'gif',
-      link: 'https://github.com/zhan4808/gemmopt',
-    },
-    {
-      title: 'VeriGen: Agents for Accelerated Chip Design',
-      description: 'Integrated RTL design verification tool for testbench generation, script and trace analysis with multi-agent collaboration for accelerated RTL development.',
-      image: '/QwQ1.gif',
-      mediaType: 'gif',
-      link: '/projects/verigen',
-    },
-    {
-      title: 'ArtSage',
-      description: 'Interactive AI museum exploration tool with image recognition and RAG workflows to identify art, retrieve museum data, and answer user prompts for enriched museum experience. Expanding with agentic features and AR.',
-      image: '/QwQ1.gif',
-      mediaType: 'gif',
-      link: '/projects/artsage',
-    },
-    {
-      title: 'OmNom | TreeHacks 2025 Most Creative Hack Grand Prize',
-      description: 'An autonomous end-to-end 6-foot tall autonomous food delivery robot that navigates novel outdoor and indoor campus environments, interacts with ordering iPads, fetches and delives late-night food, allowing students to focus on their work while satisfying their cravings.',
-      image: '/murmure6.mp4',
-      mediaType: 'video',
-      link: 'https://devpost.com/software/omnom-hg16v3',
-    },
-    {
-      title: 'slynk: Turning Ads into Experiences',
-      description: 'Reimagining ads with interactive AR avatars. meet and talk with your favorite celebrities with sylnk, our AR app offering a new personalized immersive experience for discovering advertisements.',
-      image: '/murmure3.gif',
-      mediaType: 'gif',
-      link: 'https://devpost.com/software/slynk',
-    },
-    {
-      title: 'Using an Ensemble of GANs and CNNs to More Accurately Generate and Diagnose Skin Condition Datasets in Diverse Skin Types',
-      description: 'Generated and validated synthetic images to address ethical AI bias due to lack of diverse skin condition images.',
-      image: '/Murmure7.svg',
-      mediaType: 'image',
-      // Updated link to our new route with PDF viewer
-      link: '/projects/skin-ensemble',
-    },
-  ];
 
   return (
     <div className="bg-white dark:bg-black py-12 min-h-screen">
@@ -66,6 +20,9 @@ export default function ProjectsPage() {
         <div className="space-y-12">
           {projects.map((project, index) => {
             const reverse = index % 2 !== 0;
+            const href = project.external
+              ? project.link
+              : `/projects/${project.slug}`;
             return (
               <motion.div
                 key={project.title}
@@ -81,7 +38,9 @@ export default function ProjectsPage() {
               >
                 {/* Project Media */}
                 <Link
-                  href={project.link}
+                  href={href as string}
+                  target={project.external ? '_blank' : undefined}
+                  rel={project.external ? 'noopener noreferrer' : undefined}
                   className={`relative group w-full md:w-[40%] mx-auto cursor-pointer ${
                     hoveredIndex !== null && hoveredIndex !== index
                       ? 'opacity-50'

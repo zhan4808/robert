@@ -14,7 +14,7 @@ export const projects = [
     mediaType: 'gif',
     slug: 'verigen',
     external: false,
-    content: `# VeriGen\n\n![VeriGen](https://placehold.co/600x200)\n\nMulti-agent tool for RTL design verification.\n\n## Features\n- Testbench generation\n- Script and trace analysis\n- Multi-agent collaboration\n\n## Example Usage\n\n\`\`\`python\ndef verify_design(design):\n    # ...\n\`\`\`\n\nMore details coming soon.`
+    content: `# VeriGen\n\n![VeriGen](https://placehold.co/600x200)\n\n**VeriGen** is an integrated RTL design verification tool that accelerates chip design by automating testbench generation, script and trace analysis, and enabling multi-agent collaboration.\n\n## Features\n- Automated testbench generation for RTL designs\n- Script and trace analysis for rapid debugging\n- Multi-agent collaboration for parallel verification\n\n## How it works\nVeriGen leverages AI agents to generate and validate testbenches, analyze simulation traces, and suggest fixes. This reduces manual effort and speeds up the verification cycle.\n\n## Example Usage\n\n\`\`\`python\ndef verify_design(design):\n    # Generate testbench\n    testbench = verigen.generate_testbench(design)\n    # Run simulation\n    result = verigen.simulate(design, testbench)\n    # Analyze trace\n    verigen.analyze_trace(result.trace)\n    return result.passed\n\`\`\`\n\n---\n\n*Built with Python, SystemVerilog, and multi-agent systems.*`
   },
   {
     title: 'ArtSage',
@@ -23,7 +23,7 @@ export const projects = [
     mediaType: 'gif',
     slug: 'artsage',
     external: false,
-    content: `# ArtSage\n\n![ArtSage](https://placehold.co/600x200)\n\nAI-powered museum exploration.\n\n- Image recognition\n- RAG workflows\n- AR features (coming soon)\n\n## Example\n\n\`\`\`js\nconst queryArt = async (image) => {/* ... */}\n\`\`\`\n`
+    content: `# ArtSage\n\n![ArtSage](https://placehold.co/600x200)\n\n**ArtSage** is an interactive AI-powered tool for museum exploration. Snap a photo of any artwork and ArtSage will identify it, retrieve museum data, and answer your questions using Retrieval-Augmented Generation (RAG) workflows.\n\n## Features\n- Image recognition for artwork\n- RAG-based Q&A about art and artists\n- AR features for immersive museum experiences (coming soon)\n\n## Example\n\n\`\`\`js\nconst result = await artsage.queryArt(image);\nconsole.log(result.title, result.artist, result.year);\n\`\`\`\n\n---\n\n*Built with React Native, Python, and OpenAI APIs.*`
   },
   {
     title: 'OmNom | TreeHacks 2025 Most Creative Hack Grand Prize',
@@ -48,7 +48,7 @@ export const projects = [
     mediaType: 'image',
     slug: 'skin-ensemble',
     external: false,
-    content: `# Skin Ensemble\n\n![Skin Ensemble](https://placehold.co/600x200)\n\nSynthetic image generation and diagnosis for diverse skin types.\n\n- GANs and CNNs\n- Ethical AI\n- Dataset validation\n\n## PDF\n\n[View PDF](/skin-ensemble.pdf)\n`
+    content: `# Skin Ensemble\n\n![Skin Ensemble](https://placehold.co/600x200)\n\n**Skin Ensemble** uses an ensemble of GANs and CNNs to generate and diagnose skin condition datasets, focusing on diversity and ethical AI.\n\n## Motivation\nMedical AI models often lack training data for diverse skin types, leading to bias. This project generates synthetic images to fill those gaps and validates them with CNNs.\n\n## Approach\n- GANs generate realistic skin condition images for underrepresented skin types\n- CNNs validate the generated images for accuracy\n- Ensemble methods improve robustness\n\n## Results\n- Improved dataset diversity\n- Better diagnostic accuracy across skin types\n\n## PDF\n[View the full project PDF](/skin-ensemble.pdf)\n\n---\n\n*Built with PyTorch, TensorFlow, and medical datasets.*`
   },
 ];
 

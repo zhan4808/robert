@@ -77,7 +77,17 @@ export default function SummerPost() {
     if (!audio) return;
     const updateTime = () => setCurrentTime(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
-    const handleEnded = () => setIsPlaying(false);
+    const handleEnded = () => {
+      if (songIndex < songs.length - 1) {
+        setSongIndex(songIndex + 1);
+        setIsPlaying(true);
+      } else if (isLooping) {
+        setSongIndex(0);
+        setIsPlaying(true);
+      } else {
+        setIsPlaying(false);
+      }
+    };
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('durationchange', updateDuration);
     audio.addEventListener('ended', handleEnded);
@@ -86,7 +96,7 @@ export default function SummerPost() {
       audio.removeEventListener('durationchange', updateDuration);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, []);
+  }, [songIndex, isLooping, songs.length]);
   const formatTime = (time: number) => {
     if (!time || isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);

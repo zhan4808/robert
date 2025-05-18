@@ -352,7 +352,7 @@ export default function CollegePost() {
           animate="visible"
           variants={textVariants}
         >
-          one weekend, i ended up on an impromptu trip with people i barely knew from my econ class. we stayed in this tiny cabin upstate, and somehow between hiking mishaps and late-night conversations, these strangers became friends i now text daily. there's something about seeing people outside the classroom context—away from the polished performances we all put on—that accelerates closeness in ways that feel almost magical.
+          one weekend, i ended up on an impromptu trip with a mix of good friends and people i barely knew of. we stayed in some off grid cabin, and somehow in the span of two days, i genuinely enjoyed being around everyone. there's something about seeing people outside the classroom context—away from the polished performances we all put on—that accelerates closeness in ways that feel almost magical.
         </motion.p>
         
         <motion.div 

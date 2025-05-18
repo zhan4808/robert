@@ -412,16 +412,6 @@ export default function HappinessPost() {
           >
             
             <motion.p
-              className="font-light text-lg leading-relaxed"
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              it hit me hard during winter break. i went home and couldn't connect with anyone. old friends were talking about road trips and relationships and stupid, wonderful memories, while i was mentally drafting cover letters. my parents noticed something was off—asked if i was okay. "just tired from finals," i said. but really, i was tired of myself.
-            </motion.p>
-            
-            <motion.p
               className="font-light text-lg leading-relaxed mt-4"
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}

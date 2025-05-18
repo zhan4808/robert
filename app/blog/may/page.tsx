@@ -373,7 +373,7 @@ export default function SummerPost() {
           animate="visible"
           variants={textVariants}
         >
-          Summer always felt like a season of possibility, but also a time when I questioned my place in the world. This year, I'm learning to live summer with more purpose—balancing adventure, friendship, and self-discovery.
+          i am living may with more purpose—balancing adventure, friendship, and self-discovery. may always feels like a season of possibility, but also a time when i am questioning my place in the world.
         </motion.p>
 
         <motion.p
@@ -383,7 +383,7 @@ export default function SummerPost() {
           animate="visible"
           variants={textVariants}
         >
-          I used to hate being the one always reaching out to others to catch up. It felt like no one wanted to reach out to me, and I wondered if I was just forcing connections. But I've grown fine with that reality. I now see my initiative to catch up as a strength, not a weakness. I'm proud to be the one who brings people together, even if it sometimes feels one-sided.
+          i have always hated being the one reaching out to others to catch up. it has felt like no one wants to reach out to me, and i have wondered if i am just forcing connections. but i have grown fine with that reality. i am seeing my initiative to catch up as a strength, not a weakness. i am proud to be the one who brings people together, even if it sometimes feels one-sided.
         </motion.p>
 
         <motion.p
@@ -393,7 +393,7 @@ export default function SummerPost() {
           animate="visible"
           variants={textVariants}
         >
-          My friends are all incredibly progress- and career-driven. I admire that, but I hope we all see each other for more than just our career value. I want our friendships to be about more than what we achieve. I want us to celebrate the small moments, the spontaneous adventures, and the simple joy of being together.
+          my friends are all incredibly progress- and career-driven. i admire that, but i hope we all see each other for more than just our career value. i want our friendships to be about more than what we achieve. i want us to celebrate the small moments, the spontaneous adventures, and the simple joy of being together.
         </motion.p>
 
         {/* Second gradient */}
@@ -414,7 +414,7 @@ export default function SummerPost() {
           animate="visible"
           variants={textVariants}
         >
-          I've realized that most things I enjoy doing aren't meaningful without friends. That's a tough truth, but it's also an opportunity. Now, it's on me to grow some passions on my own—to find things that light me up, even when I'm alone. I want people to discover me for who I am, not just for what I do or who I know.
+          i have been realizing that most things i enjoy doing are not meaningful without friends. that is a tough truth, but it is also an opportunity. now, i am growing some passions on my own—finding things that light me up, even when i am alone. i want people to discover me for who i am, not just for what i do or who i know.
         </motion.p>
 
         <motion.p
@@ -424,7 +424,7 @@ export default function SummerPost() {
           animate="visible"
           variants={textVariants}
         >
-          I'm super excited for what's ahead. This summer, I'm embracing adventure, seeking out new opportunities, and learning to enjoy my own company. I'm reaching out, not because I have to, but because I want to. And I'm hopeful that the connections I make—old and new—will be deeper and more genuine than ever before.
+          i am excited for what is ahead. this may, i am embracing adventure, seeking out new opportunities, and learning to enjoy my own company. i am reaching out, not because i have to, but because i want to. and i am hopeful that the connections i am making—old and new—are deeper and more genuine than ever before.
         </motion.p>
 
         {/* Third gradient */}
@@ -444,7 +444,7 @@ export default function SummerPost() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          Here's to a summer of purpose, friendship, and discovery.
+          here&apos;s to a may of purpose, friendship, and discovery.
         </motion.div>
       </motion.div>
     </div>

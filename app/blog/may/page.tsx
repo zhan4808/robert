@@ -176,7 +176,7 @@ export default function SummerPost() {
         <div className="flex items-start mb-8">
           <div className="mr-5 flex-shrink-0">
             <ImageIcon
-              src="/WEBP to JPG 4.jpg"
+              src="/WEBPtoJPG4.jpg"
               size="lg"
               borderGradient="from-yellow-200 via-blue-200 to-red-200"
               withHoverEffect={true}

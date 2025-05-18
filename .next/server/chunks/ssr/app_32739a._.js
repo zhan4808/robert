@@ -165,8 +165,8 @@ function BlogPage() {
             slug: 'may',
             title: 'may',
             description: 'redefining balance, purpose, and connections',
-            date: 'May 18, 2024',
-            image: '/WEBP TO JPG 4.jpg',
+            date: 'May 17, 2025',
+            image: '/WEBPtoJPG4.jpg',
             colors: [
                 'yellow',
                 'blue',

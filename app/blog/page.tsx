@@ -46,7 +46,7 @@ export default function BlogPage() {
       title: 'may',
       description: 'redefining balance, purpose, and connections',
       date: 'May 17, 2025',
-      image: '/WEBP TO JPG 4.jpg',
+      image: '/WEBPtoJPG4.jpg',
       colors: ['yellow', 'blue', 'red'],
       gradientClass: 'from-yellow-100 via-blue-100 to-red-200',
       href: '/blog/may',

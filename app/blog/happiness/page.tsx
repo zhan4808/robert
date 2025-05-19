@@ -345,7 +345,7 @@ export default function HappinessPost() {
             animate="visible"
             variants={textVariants}
           >
-            two years into college, and i've become someone i don't recognize. last night at 3 am, surrounded by empty coffee cups and scattered textbooks, i had this moment of clarity that knocked the wind out of me. what the hell am i doing? who am i becoming? i've spent the past two years meticulously constructing my resume, obsessing over internships, and judging everyone—including myself—by a single metric: career potential.
+            two years into college and i'm asking myself again: what the hell am i doing? who am i becoming? i've spent the past two years meticulously constructing my resume, obsessing over internships, and judging everyone—including myself—by a single metric: career potential.
           </motion.p>
           
           <motion.p 

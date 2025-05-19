@@ -70,7 +70,17 @@ export default function BlogPage() {
       colors: ['pink', 'rose', 'orange'],
       gradientClass: 'from-pink-400 via-rose-300 to-orange-300',
       href: '/blog/college',
-    }
+    },
+    {
+      slug: 'purpose',
+      title: 'purpose',
+      description: 'finding what makes me',
+      date: 'December 22, 2024',
+      image: '/oai5.png',
+      colors: ['blue', 'purple', 'pink'],
+      gradientClass: 'from-blue-400 via-purple-400 to-pink-400',
+      href: '/blog/purpose',
+    },
   ];
   
   return (

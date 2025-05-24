@@ -14,7 +14,7 @@ export default function AboutPage() {
 
   const connectLinks = [
     { name: 'Collaborations', icon: '/gmail.svg', url: 'mailto:robertzhang930@gmail.com' },
-    { name: 'YouTube', icon: '/youtube.svg', url: 'https://youtube.com' },
+    { name: 'X', icon: '/x.svg', url: 'https://x.com/robdobflob' },
     { name: 'Instagram', icon: '/instagram.svg', url: 'https://instagram.com/robert.zhang_' },
     { name: 'LinkedIn', icon: '/linkedin.svg', url: 'https://www.linkedin.com/in/robert05/' },
     { name: 'GitHub', icon: '/github.svg', url: 'https://github.com/zhan4808' },

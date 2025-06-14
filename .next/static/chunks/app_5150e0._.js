@@ -181,6 +181,20 @@ function BlogPage() {
     // Gradient backgrounds for blog posts
     const blogPosts = [
         {
+            slug: 'june',
+            title: 'june',
+            description: 'choosing commitment over comfort',
+            date: 'June 12, 2025',
+            image: '/oai4.jpg',
+            colors: [
+                'pink',
+                'fuchsia',
+                'red'
+            ],
+            gradientClass: 'from-pink-300 via-fuchsia-300 to-red-300',
+            href: '/blog/june'
+        },
+        {
             slug: 'may',
             title: 'may',
             description: 'redefining balance, purpose, and connections',
@@ -275,7 +289,7 @@ function BlogPage() {
                             children: "blog"
                         }, void 0, false, {
                             fileName: "[project]/app/blog/page.tsx",
-                            lineNumber: 102,
+                            lineNumber: 112,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -283,13 +297,13 @@ function BlogPage() {
                             children: "thoughts, ideas, and explorations"
                         }, void 0, false, {
                             fileName: "[project]/app/blog/page.tsx",
-                            lineNumber: 105,
+                            lineNumber: 115,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/app/blog/page.tsx",
-                    lineNumber: 96,
+                    lineNumber: 106,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -327,12 +341,12 @@ function BlogPage() {
                                                     alt: `${post.title} post icon`
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/blog/page.tsx",
-                                                    lineNumber: 127,
+                                                    lineNumber: 137,
                                                     columnNumber: 25
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/app/blog/page.tsx",
-                                                lineNumber: 126,
+                                                lineNumber: 136,
                                                 columnNumber: 23
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -343,7 +357,7 @@ function BlogPage() {
                                                         children: post.title
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/blog/page.tsx",
-                                                        lineNumber: 137,
+                                                        lineNumber: 147,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -351,7 +365,7 @@ function BlogPage() {
                                                         children: post.description
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/blog/page.tsx",
-                                                        lineNumber: 141,
+                                                        lineNumber: 151,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -360,18 +374,18 @@ function BlogPage() {
                                                             children: post.date
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/blog/page.tsx",
-                                                            lineNumber: 146,
+                                                            lineNumber: 156,
                                                             columnNumber: 27
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/blog/page.tsx",
-                                                        lineNumber: 145,
+                                                        lineNumber: 155,
                                                         columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/blog/page.tsx",
-                                                lineNumber: 136,
+                                                lineNumber: 146,
                                                 columnNumber: 23
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -380,50 +394,50 @@ function BlogPage() {
                                                     className: `h-10 w-10 rounded-full bg-gradient-to-r ${post.gradientClass} group-hover:scale-110 transition-transform duration-300`
                                                 }, void 0, false, {
                                                     fileName: "[project]/app/blog/page.tsx",
-                                                    lineNumber: 151,
+                                                    lineNumber: 161,
                                                     columnNumber: 25
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/app/blog/page.tsx",
-                                                lineNumber: 150,
+                                                lineNumber: 160,
                                                 columnNumber: 23
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/blog/page.tsx",
-                                        lineNumber: 125,
+                                        lineNumber: 135,
                                         columnNumber: 21
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/app/blog/page.tsx",
-                                    lineNumber: 124,
+                                    lineNumber: 134,
                                     columnNumber: 19
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/app/blog/page.tsx",
-                                lineNumber: 120,
+                                lineNumber: 130,
                                 columnNumber: 17
                             }, this)
                         }, post.slug, false, {
                             fileName: "[project]/app/blog/page.tsx",
-                            lineNumber: 113,
+                            lineNumber: 123,
                             columnNumber: 15
                         }, this);
                     })
                 }, void 0, false, {
                     fileName: "[project]/app/blog/page.tsx",
-                    lineNumber: 110,
+                    lineNumber: 120,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/app/blog/page.tsx",
-            lineNumber: 95,
+            lineNumber: 105,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/app/blog/page.tsx",
-        lineNumber: 87,
+        lineNumber: 97,
         columnNumber: 5
     }, this);
 }

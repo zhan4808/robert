@@ -42,6 +42,16 @@ export default function BlogPage() {
   // Gradient backgrounds for blog posts
   const blogPosts = [
     {
+      slug: 'june',
+      title: 'june',
+      description: 'choosing commitment over comfort',
+      date: 'June 12, 2025',
+      image: '/oai4.jpg',
+      colors: ['pink', 'fuchsia', 'red'],
+      gradientClass: 'from-pink-300 via-fuchsia-300 to-red-300',
+      href: '/blog/june',
+    },
+    {
       slug: 'may',
       title: 'may',
       description: 'redefining balance, purpose, and connections',

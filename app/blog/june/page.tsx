@@ -335,6 +335,16 @@ export default function JunePost() {
 
         <motion.p
           className="font-light text-lg leading-relaxed"
+          custom={1.5}
+          initial="hidden"
+          animate="visible"
+          variants={textVariants}
+        >
+          i've realized i can't go through life just showing up, eating, sleeping—i'll get depressed. the human organism needs problem-solving, complex problems, stress, something difficult to overcome. it's through conquering these challenges that i can truly relax. i can't just have happiness all the time; that's not real. i have to experience discomfort to appreciate happiness. instead of dropping problems to avoid discomfort and never truly experiencing joy, i can actually value the things and people in my life by embracing that discomfort.
+        </motion.p>
+
+        <motion.p
+          className="font-light text-lg leading-relaxed"
           custom={2}
           initial="hidden"
           animate="visible"

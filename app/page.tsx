@@ -117,7 +117,7 @@ export default function HomePage() {
             {[
               { name: 'GitHub', url: 'https://github.com/zhan4808' },
               { name: 'LinkedIn', url: 'https://linkedin.com/in/robert05' },
-              { name: 'Instagram', url: 'https://instagram.com/robert.zhang_' },
+              { name: 'X', url: 'https://x.com/robdobflob' },
             ].map((button) => (
               <Link
                 key={button.name}

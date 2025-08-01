@@ -856,6 +856,18 @@ function JunePost() {
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
                         className: "font-light text-lg leading-relaxed",
+                        custom: 1.5,
+                        initial: "hidden",
+                        animate: "visible",
+                        variants: textVariants,
+                        children: "i've realized i can't go through life just showing up, eating, sleeping—i'll get depressed. the human organism needs problem-solving, complex problems, stress, something difficult to overcome. it's through conquering these challenges that i can truly relax. i can't just have happiness all the time; that's not real. i have to experience discomfort to appreciate happiness. instead of dropping problems to avoid discomfort and never truly experiencing joy, i can actually value the things and people in my life by embracing that discomfort."
+                    }, void 0, false, {
+                        fileName: "[project]/app/blog/june/page.tsx",
+                        lineNumber: 336,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
+                        className: "font-light text-lg leading-relaxed",
                         custom: 2,
                         initial: "hidden",
                         animate: "visible",
@@ -863,7 +875,7 @@ function JunePost() {
                         children: "lately, i've been reflecting on how i sometimes lose sight of my dreams. worse, i don't consistently establish and follow the goals needed to get closer to those dreams. i've been coasting, showing up just enough to say i'm in a space or working towards something, but not giving it my 100%. it's a comfortable lie i've been telling myself."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 336,
+                        lineNumber: 346,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
@@ -875,7 +887,7 @@ function JunePost() {
                         children: "i've convinced myself that my goals will work out with little bits of effort over time. maybe they will, but i personally feel that it's time to go 100% on something. if it doesn't work out, i need to have the discipline to go back to school and follow the traditional laid-out path. that's the deal i'm making with myself."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 346,
+                        lineNumber: 356,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -896,12 +908,12 @@ function JunePost() {
                             colorClass: "bg-gradient-to-r from-fuchsia-300 via-red-300 to-pink-300"
                         }, void 0, false, {
                             fileName: "[project]/app/blog/june/page.tsx",
-                            lineNumber: 364,
+                            lineNumber: 374,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 357,
+                        lineNumber: 367,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
@@ -913,7 +925,7 @@ function JunePost() {
                         children: "i live my life by the code of not following traditional footsteps. but in doing so, i take risks. and taking risks means i need to have a concrete plan. by the next blog post, i will have given my 100% towards something and made the decision whether to pursue it further or return to the laid-out path for a bit. this is my commitment to myself."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 367,
+                        lineNumber: 377,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
@@ -925,7 +937,7 @@ function JunePost() {
                         children: "because i haven't been giving 100% to anything recently, i find myself surrounded by amazing people yet somehow feeling empty and unworthy inside. months ago, i thought coming back to somewhere full of people i knew and admired would bring me meaning and happiness. now, i don't know if i'll ever be satisfied with enough of anything."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 377,
+                        lineNumber: 387,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
@@ -937,7 +949,7 @@ function JunePost() {
                         children: "this feeling has culminated from me valuing everything in my life very little for a while now. just like the higher i can get emotionally, the lower i can fall as well. right now, in this moment, i don't know what i'm searching for, how i can ever truly appreciate what i have, or what drives me and gives me meaning."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 387,
+                        lineNumber: 397,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -958,12 +970,12 @@ function JunePost() {
                             colorClass: "bg-gradient-to-r from-red-300 via-pink-300 to-fuchsia-300"
                         }, void 0, false, {
                             fileName: "[project]/app/blog/june/page.tsx",
-                            lineNumber: 405,
+                            lineNumber: 415,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 398,
+                        lineNumber: 408,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
@@ -975,7 +987,7 @@ function JunePost() {
                         children: "i've gotten much better at picking myself up from being down, but i still sporadically fall into periods of dissatisfaction and low self-esteem. i don't think it's sadness, but rather unhappiness with where i am given what i have and what i can do. the gap between my potential and my reality feels paralyzing."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 408,
+                        lineNumber: 418,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
@@ -987,7 +999,7 @@ function JunePost() {
                         children: "while i will continue growing my community of people that inspire me and i enjoy being around, i think what's important for me now is to work on motivating myself. the start to that is honestly pretending to be motivated when i am unmotivated, since that is really what motivation is at its core."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 418,
+                        lineNumber: 428,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].p, {
@@ -999,7 +1011,7 @@ function JunePost() {
                         children: "same with bravery—in moments of peril, pretending to be brave is what sparks bravery. so i'm going to start there. fake it until i make it, but with intention and commitment. no more half-measures, no more comfortable lies. it's time to choose commitment over comfort."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 428,
+                        lineNumber: 438,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -1020,12 +1032,12 @@ function JunePost() {
                             colorClass: "bg-gradient-to-r from-pink-300 via-red-300 to-fuchsia-300"
                         }, void 0, false, {
                             fileName: "[project]/app/blog/june/page.tsx",
-                            lineNumber: 446,
+                            lineNumber: 456,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 439,
+                        lineNumber: 449,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -1045,7 +1057,7 @@ function JunePost() {
                         children: "here's to giving 100%, even when i don't feel like it."
                     }, void 0, false, {
                         fileName: "[project]/app/blog/june/page.tsx",
-                        lineNumber: 449,
+                        lineNumber: 459,
                         columnNumber: 9
                     }, this)
                 ]

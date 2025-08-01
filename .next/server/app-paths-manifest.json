@@ -2,5 +2,5 @@
   "/page": "app/page.js",
   "/_not-found/page": "app/_not-found/page.js",
   "/blog/page": "app/blog/page.js",
-  "/blog/june/page": "app/blog/june/page.js"
+  "/blog/july/page": "app/blog/july/page.js"
 }

@@ -9,9 +9,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Robert Zhang - Engineer & Builder",
+  title: "robert zhang",
   description:
     "Product-focused portfolio featuring projects, journals, and visual experiments.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

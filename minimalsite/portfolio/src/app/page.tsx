@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ExperienceList } from "@/components/experience-list";
 import { Navigation } from "@/components/navigation";
 import { experiences, journalPosts, projects, socialLinks } from "@/lib/data";
@@ -16,10 +17,27 @@ export default function Home() {
         <section className="flex flex-col gap-6">
           <h1 className="font-medium text-lg">Robert Zhang</h1>
           <p className="text-muted-foreground leading-relaxed">
-            Electrical engineer and computer scientist from the Bay Area building
-            for AI-driven hardware and software optimizations. I also share the
-            process through project journals, visual experiments, and writing.
+            Hi! I'm Robert, an EE student at Purdue University passionate about
+            optimized compute systems for AI. I'm interested in the intersection
+            of compilers, ML systems, and hardware that turn models into fast
+            usable systems at scale. Currently exploring accelerator operator
+            libraries, compiler-hardware codesign, and agent-based systems.
+            Building side projects with passion. Love all things sports, nature,
+            and jazz related.
           </p>
+          <div className="flex flex-wrap gap-2">
+            {socialLinks.map((link) => (
+              <a
+                key={link.name}
+                href={link.url}
+                target={link.url.startsWith("mailto:") ? undefined : "_blank"}
+                rel={link.url.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+                className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                {link.name}
+              </a>
+            ))}
+          </div>
         </section>
 
         {/* Featured Projects */}
@@ -149,3 +167,7 @@ export default function Home() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: "robert zhang",
+};

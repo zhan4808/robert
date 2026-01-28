@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Navigation } from "@/components/navigation";
 import { getJournalsByYear } from "@/lib/data";
 import Link from "next/link";
@@ -72,3 +73,7 @@ export default function BlogPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: "blog",
+};

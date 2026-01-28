@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ContentBlocks } from "@/components/content-blocks";
 import { Navigation } from "@/components/navigation";
 import { projects } from "@/lib/data";
@@ -137,4 +138,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       </div>
     </div>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: ProjectPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const project = projects.find((entry) => entry.slug === slug);
+  return {
+    title: project ? project.title.toLowerCase() : "projects",
+  };
 }

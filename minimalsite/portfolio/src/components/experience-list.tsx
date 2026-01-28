@@ -28,7 +28,7 @@ export function ExperienceList({ experiences }: ExperienceListProps) {
         return (
           <li
             key={experience.id}
-            className="rounded-md border border-border px-4 py-3 transition-colors"
+            className="group rounded-md border border-border px-4 py-3 transition-colors hover:bg-secondary/40"
           >
             <button
               type="button"
@@ -62,7 +62,23 @@ export function ExperienceList({ experiences }: ExperienceListProps) {
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <span>{experience.period}</span>
                 {hasDetails && (
-                  <span className="text-xs">{isOpen ? "Hide" : "Details"}</span>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`transition-all ${
+                      isOpen
+                        ? "rotate-90 text-foreground"
+                        : "translate-x-0.5 opacity-60 group-hover:translate-x-1 group-hover:opacity-100"
+                    }`}
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
                 )}
               </div>
             </button>

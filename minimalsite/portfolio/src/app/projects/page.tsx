@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Navigation } from "@/components/navigation";
 import { projects } from "@/lib/data";
 import Link from "next/link";
@@ -86,3 +87,7 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: "projects",
+};

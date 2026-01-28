@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Navigation } from "@/components/navigation";
 import { aboutLinks } from "@/lib/data";
 
@@ -71,3 +72,7 @@ export default function AboutPage() {
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: "about",
+};

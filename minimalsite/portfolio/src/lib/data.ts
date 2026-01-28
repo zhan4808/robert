@@ -133,6 +133,43 @@ export const experiences: Experience[] = [
 
 export const journalPosts: JournalPost[] = [
   {
+    slug: "website-refresh",
+    month: "website refresh",
+    subtitle: "my website refresh",
+    date: "January 21, 2026",
+    year: 2026,
+    coverGradient: "from-slate-800 via-slate-700 to-zinc-900",
+    tracks: [],
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          "i used to wonder why my professors kept such simple websites--just lists of publications and projects. now i understand: they focused on their work, letting it speak for itself.",
+      },
+      {
+        type: "paragraph",
+        text:
+          "for a long time, i treated my own site like a sandbox, full of half-baked posts and scattered components. it felt distracting and directionless. so i'm making a little change.",
+      },
+      {
+        type: "quote",
+        text:
+          "there's a tremendous power in using the least amount of information to get a point across.",
+        author: "Rick Rubin",
+      },
+      {
+        type: "paragraph",
+        text:
+          "that's the spirit behind this 2025 version of my personal website. rather than implementing every new ui trend that catches my attention, i'm focusing on what matters most--curating work and references that reflect my journey and interests.",
+      },
+      {
+        type: "paragraph",
+        text:
+          "don't get me wrong, i still enjoy experimenting with new web technologies, but i'm keeping that separate. this will be a focused space for sharing my work and the occasional life update. peace.",
+      },
+    ],
+  },
+  {
     slug: "july",
     month: "july",
     subtitle: "finding excitement in the everyday",

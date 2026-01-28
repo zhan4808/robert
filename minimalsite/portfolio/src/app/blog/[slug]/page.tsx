@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AudioPlayer } from "@/components/audio-player";
 import { ContentBlocks } from "@/components/content-blocks";
 import { Navigation } from "@/components/navigation";
@@ -83,4 +84,14 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       </article>
     </div>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: BlogPostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const post = journalPosts.find((entry) => entry.slug === slug);
+  return {
+    title: post ? post.month : "blog",
+  };
 }

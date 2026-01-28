@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description:
     "Product-focused portfolio featuring projects, journals, and visual experiments.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/site-icon.jpg",
   },
 };
 

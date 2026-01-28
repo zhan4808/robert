@@ -6,7 +6,15 @@ export type ContentBlock =
   | { type: "video"; src: string; caption?: string }
   | { type: "gradient"; className: string }
   | { type: "list"; items: string[] }
-  | { type: "link"; label: string; href: string; description?: string };
+  | { type: "link"; label: string; href: string; description?: string }
+  | { type: "code"; code: string }
+  | {
+      type: "visualization";
+      title: string;
+      prompt: string;
+      caption: string;
+      media?: { type: "image" | "video"; src: string; alt: string };
+    };
 
 export interface JournalTrack {
   title: string;
@@ -45,38 +53,77 @@ export interface Project {
 }
 
 export interface Experience {
+  id: string;
   title: string;
   company: string;
-  logo: string;
+  logo?: string;
   period: string;
+  highlights?: string[];
 }
 
 export const experiences: Experience[] = [
   {
+    id: "sandisk-2025",
     title: "Advanced Memory Intern",
     company: "SanDisk",
     logo: "/sandisk.svg",
-    period: "Jan 2025 - May 2025",
+    period: "Feb 2025 - Aug 2025",
+    highlights: [
+      "Built ML trim optimization platform to predict read-window outcomes using XGBoost, configurable DNNs, and clustering to guide trim selection across process corners.",
+      "Scaled ingestion and feature pipelines to 48TB+ with NumPy, Pandas, and SQL, using parallelism and batching to cut manual optimization time by 7x.",
+      "Automated experiments with an LLM-backed reporting stack and Dockerized workflows for reproducible execution across test sites.",
+    ],
   },
   {
+    id: "socet-2024",
     title: "ASIC Design Flow Researcher",
-    company: "SoCET Lab",
+    company: "Purdue SoC Extension Technologies",
     logo: "/socetlogo.svg",
     period: "2023 - ",
+    highlights: [
+      "Built a Cadence Genus/Innovus physical flow for MITLL 20nm with automated congestion and IR-drop checks.",
+      "Developed C operator kernels (GEMM, Softmax, ReLU) and integrated PyTorch with an in-house systolic-array accelerator.",
+      "Optimized a GPU compiler to reduce divergence and improve scheduling for higher throughput.",
+    ],
   },
   {
+    id: "endian-2025",
+    title: "Engineer",
+    company: "Endian",
+    period: "Mar 2025 - May 2025",
+    highlights: [
+      "Built an automation platform with Node.js and FastAPI, Dockerized and backed by Supabase, orchestrating a 20-agent browser-use fleet.",
+      "Designed a security-first credential flow with incremental capture, client-side encryption, and secrets management.",
+    ],
+  },
+  {
+    id: "comma-2025",
+    title: "Comma Capital Fellow",
+    company: "Comma Capital",
+    period: "2025",
+    highlights: [
+      "Selected fellow focused on frontier systems and AI infrastructure; collaborated on product and investment research.",
+    ],
+  },
+  {
+    id: "stars-2024",
     title: "Chip Design Intern",
     company: "STARS @Purdue",
     logo: "/purduelogo.svg",
     period: "Summer 2024",
+    highlights: [
+      "Designed and taped out a wireless messaging ASIC in SKY130 with GPIO, Wishbone bus control, and maskable interrupts.",
+    ],
   },
   {
+    id: "stanford-2022",
     title: "Student Researcher",
     company: "Stanford Cornfield Lab",
     logo: "/stanfordlogo.svg",
     period: "2022 - 2022",
   },
   {
+    id: "ibm-2021",
     title: "Research Intern",
     company: "IBM Almaden",
     logo: "/ibmlogo.svg",
@@ -535,19 +582,24 @@ export const journalPosts: JournalPost[] = [
 
 export const projects: Project[] = [
   {
-    slug: "gemmopt",
-    title:
-      "Triton GEMM Kernel for Small Batch Transformer Inference on Low Resource Hardware",
+    slug: "tiny-gemm",
+    title: "Tiny-GEMM",
     description:
-      "Open-source GEMM kernel for small batch transformer inference workloads with improved latency and throughput for low resource accelerated inference. Identifying efficient quantization algorithms in Triton.",
+      "Optimized Triton GEMM + fused transformer kernels for small-batch inference.",
     longDescription:
-      "A low-latency Triton GEMM kernel focused on small batch transformer inference. The work emphasizes throughput and latency improvements with quantization-aware optimizations for constrained hardware.",
+      "Tiny-GEMM is a collection of fused Triton kernels that make decode-time transformer inference fast on resource-constrained GPUs by minimizing memory traffic and fusing sublayers.",
     date: "2025",
     year: 2025,
-    tags: ["Triton", "Transformers", "Quantization", "CUDA"],
+    tags: [
+      "Triton",
+      "Kernel Fusion",
+      "INT4",
+      "Transformer Inference",
+      "Profiling",
+    ],
     featured: true,
-    externalUrl: "https://github.com/zhan4808/gemmopt",
-    hero: { type: "image", src: "/Qyyy.gif", alt: "Triton GEMM kernel demo" },
+    githubUrl: "https://github.com/zhan4808/gemmopt",
+    hero: { type: "image", src: "/Qyyy.gif", alt: "Tiny-GEMM hero visual" },
     sections: [
       {
         id: "overview",
@@ -556,14 +608,245 @@ export const projects: Project[] = [
           {
             type: "paragraph",
             text:
-              "a research-driven kernel that targets small batch inference workloads. the focus is on fast matmul at low batch sizes where conventional kernels fall short.",
+              "modern transformer inference is often bottlenecked not by flops, but by memory traffic, kernel launch overhead, and poor cache utilization--especially in the small-batch, low-latency regime (batch = 1-8).",
+          },
+          {
+            type: "paragraph",
+            text:
+              "tiny-gemm targets the two most dominant transformer compute paths: multi-head attention and feed-forward networks (mlps / ffns). the goal is to make decode-time inference fast by fusing operations, maximizing reuse in sram/cache, and exploiting packed int4 weights.",
+          },
+        ],
+      },
+      {
+        id: "why-small-batch",
+        title: "Why small-batch inference is hard",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "most optimized gpu kernels are tuned for training-like throughput: large batch sizes, long steady-state compute, and high arithmetic intensity. real deployment looks different: batch size ~ 1, decode steps are sequential, memory dominates compute, and launch overhead matters.",
           },
           {
             type: "list",
             items: [
-              "optimizations tuned for small batch sizes",
-              "quantization-aware paths for lower precision inference",
-              "measurable latency gains on resource-constrained hardware",
+              "fusing whole transformer sublayers",
+              "io-aware tiling",
+              "weight-only quantization",
+              "cache-aligned layouts",
+            ],
+          },
+          {
+            type: "visualization",
+            title: "Figure 1 — Transformer Inference Bottleneck Map",
+            prompt:
+              "Show an attention + MLP block with arrows labeled 'HBM traffic dominates'. Emphasize memory movement and launch overhead over compute.",
+            caption:
+              "Small-batch inference is constrained less by compute and more by memory movement and kernel launch overhead.",
+            media: {
+              type: "image",
+              src: "/visuals/tiny-gemm/fig-01.svg",
+              alt: "Transformer inference bottleneck map",
+            },
+          },
+        ],
+      },
+      {
+        id: "fused-attention",
+        title: "Fused multi-head attention kernel",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "transformer attention is conceptually: Attn(Q,K,V) = Softmax((QK^T) / sqrt(d_k)) V. naively, this pipeline allocates large intermediate matrices (QK^T, masked scores, softmax probabilities).",
+          },
+          {
+            type: "paragraph",
+            text:
+              "tiny-gemm computes attention in one fused triton kernel using a flashattention-style tiling approach. attention must be io-aware, minimizing reads/writes to hbm by keeping working tiles inside sram/registers.",
+          },
+          {
+            type: "list",
+            items: [
+              "block tiling for batch=1 decode workloads",
+              "fused causal masking (autoregressive safe)",
+              "locality-aware q/k/v access",
+              "optional dropout support",
+            ],
+          },
+          {
+            type: "visualization",
+            title: "Figure 2 — Naive vs Fused Attention Pipeline",
+            prompt:
+              "Left: QK^T -> mask -> softmax -> V with four kernel boxes. Right: single fused block. Use minimal arrows and labels.",
+            caption:
+              "Tiny-GEMM computes attention in one fused Triton kernel, avoiding intermediate writes.",
+            media: {
+              type: "image",
+              src: "/visuals/tiny-gemm/fig-02.svg",
+              alt: "Naive vs fused attention pipeline",
+            },
+          },
+          {
+            type: "visualization",
+            title: "Figure 3 — FlashAttention-Style Tiling in SRAM",
+            prompt:
+              "Block matrix tiles inside GPU SRAM with arrows showing on-chip reuse. Emphasize 'on-chip' vs 'HBM'.",
+            caption:
+              "IO-aware tiling keeps score computation and softmax normalization on-chip, reducing HBM reads/writes.",
+            media: {
+              type: "image",
+              src: "/visuals/tiny-gemm/fig-03.svg",
+              alt: "FlashAttention-style tiling in SRAM",
+            },
+          },
+        ],
+      },
+      {
+        id: "fused-ffn",
+        title: "Fused feed-forward network (ffn)",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "the transformer mlp block is typically: Y = sigma(XW1 + B1) W2 + B2. standard implementations launch gemm, bias add, activation, gemm, bias add. tiny-gemm fuses the full pipeline to reduce kernel boundaries, intermediate writes, and memory bandwidth.",
+          },
+          {
+            type: "visualization",
+            title: "Figure 4 — FFN Fusion: GEMM -> Act -> GEMM",
+            prompt:
+              "Show two GEMMs with activation between, crossed-out intermediate buffers, and a single fused box on the right.",
+            caption:
+              "FFN fusion eliminates bandwidth-heavy intermediate activations.",
+            media: {
+              type: "image",
+              src: "/visuals/tiny-gemm/fig-04.svg",
+              alt: "FFN fusion diagram",
+            },
+          },
+        ],
+      },
+      {
+        id: "int4",
+        title: "Packed INT4 quantization framework",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "for inference, weights dominate memory footprint. tiny-gemm implements per-channel int4 weight packing, custom dequantization in kernel, and packed int4 gemm primitives. int4 provides ~8x compression vs fp32 and boosts throughput in memory-bound regimes.",
+          },
+          {
+            type: "visualization",
+            title: "Figure 5 — Packed INT4 Weight Layout",
+            prompt:
+              "Diagram showing two INT4 packed into one byte. Use a simple 8-bit box split into two 4-bit halves.",
+            caption:
+              "Packed INT4 weights reduce memory footprint and improve cache residency, enabling faster weight-only inference.",
+            media: {
+              type: "image",
+              src: "/visuals/tiny-gemm/fig-05.svg",
+              alt: "Packed INT4 layout",
+            },
+          },
+        ],
+      },
+      {
+        id: "pytorch",
+        title: "PyTorch operator integration",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "tiny-gemm registers fused attention + ffn as first-class pytorch ops using torch.library. this enables integration into torch.compile graphs, transformer backends, and higher-level inference runtimes.",
+          },
+          {
+            type: "code",
+            code:
+              "import tiny_gemm.ops\n\nout = torch.ops.tiny_gemm.fused_attention(q, k, v, causal=True)",
+          },
+          {
+            type: "visualization",
+            title: "Figure 7 — PyTorch Op Registration Stack",
+            prompt:
+              "Stacked diagram: torch.compile -> torch.library -> Triton kernel. Show flow arrows.",
+            caption:
+              "Custom operator registration makes fused kernels composable inside modern PyTorch inference graphs.",
+            media: {
+              type: "image",
+              src: "/visuals/tiny-gemm/fig-07.svg",
+              alt: "PyTorch op registration stack",
+            },
+          },
+        ],
+      },
+      {
+        id: "profiling",
+        title: "Profiling + bottleneck discovery",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "optimization work is only meaningful when guided by measurement. tiny-gemm includes pytorch profiler integration, tensorboard traces, and kernel-level bottleneck surfacing.",
+          },
+          {
+            type: "list",
+            items: [
+              "profile -> identify io wall -> fuse -> retile -> benchmark -> repeat",
+            ],
+          },
+        ],
+      },
+      {
+        id: "benchmarks",
+        title: "Benchmark highlights",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "benchmarks compare baseline pytorch attention/ffn, fused triton kernels, and int4 quantized weights. gains are largest for batch=1-4, sequence length <= 2k, decode-style inference workloads.",
+          },
+          {
+            type: "visualization",
+            title: "Figure 6 — Benchmark Plot",
+            prompt:
+              "Line chart: PyTorch FP16 baseline, Tiny-GEMM fused, Tiny-GEMM INT4. Emphasize batch=1 decode gains.",
+            caption:
+              "Fused kernels + INT4 quantization provide the largest speedups in batch=1 decode workloads.",
+            media: {
+              type: "image",
+              src: "/visuals/tiny-gemm/fig-06.svg",
+              alt: "Benchmark plot",
+            },
+          },
+        ],
+      },
+      {
+        id: "structure",
+        title: "Project structure",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "triton_fused_transformer.py -- fused attention + ffn kernels",
+              "triton_gemm.py -- packed int4 gemm",
+              "quantize_utils.py -- quant/dequant utilities",
+              "benchmark_fused_transformer.py -- benchmarking harness",
+              "tiny_gemm/ops.py -- torch.library op registration",
+              "docker/ -- reproducible cuda runtime",
+            ],
+          },
+        ],
+      },
+      {
+        id: "future",
+        title: "Future work",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "flashattention-2 style scheduling improvements",
+              "additional fused blocks: layernorm + residual",
+              "broader int4 support across hidden dimension patterns",
+              "compiler-level integration into full transformer runtimes",
             ],
           },
         ],
@@ -671,7 +954,7 @@ export const projects: Project[] = [
     date: "2025",
     year: 2025,
     tags: ["Robotics", "Autonomy", "HCI"],
-    externalUrl: "https://devpost.com/software/omnom-hg16v3",
+    liveUrl: "https://devpost.com/software/omnom-hg16v3",
     hero: { type: "video", src: "/murmure6.mp4", alt: "OmNom demo video" },
     sections: [
       {
@@ -682,6 +965,33 @@ export const projects: Project[] = [
             type: "paragraph",
             text:
               "omnom is a six-foot autonomous food delivery robot that navigates indoor and outdoor campus environments, interacts with ordering tablets, and completes end-to-end deliveries.",
+          },
+        ],
+      },
+      {
+        id: "system",
+        title: "System Architecture",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "planned: animated system diagram showing perception, planning, navigation, and manipulation loops with live sensor feeds.",
+          },
+          {
+            type: "video",
+            src: "/murmure6.mp4",
+            caption: "demo clip placeholder; replace with manim or rive overlay.",
+          },
+        ],
+      },
+      {
+        id: "interaction",
+        title: "Human Interaction",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "this section will visualize the ordering flow and interaction loop with the kiosk using a stepwise animated diagram.",
           },
         ],
       },
@@ -697,7 +1007,7 @@ export const projects: Project[] = [
     date: "2024",
     year: 2024,
     tags: ["AR", "Mobile", "Experiential"],
-    externalUrl: "https://devpost.com/software/slynk",
+    liveUrl: "https://devpost.com/software/slynk",
     hero: { type: "image", src: "/murmure3.gif", alt: "slynk demo" },
     sections: [
       {
@@ -708,6 +1018,23 @@ export const projects: Project[] = [
             type: "paragraph",
             text:
               "slynk explores how advertising can feel more like a conversation. interactive ar avatars help users meet, talk, and discover products through a personalized lens.",
+          },
+        ],
+      },
+      {
+        id: "experience",
+        title: "Experience Flow",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              "planned: conceptual animation of the avatar interaction loop and the personalization engine.",
+          },
+          {
+            type: "image",
+            src: "/murmure3.gif",
+            alt: "slynk concept placeholder",
+            caption: "placeholder visual; replace with manim or rive animation.",
           },
         ],
       },

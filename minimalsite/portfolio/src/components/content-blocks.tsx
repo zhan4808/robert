@@ -120,6 +120,52 @@ export function ContentBlocks({ blocks }: ContentBlocksProps) {
           );
         }
 
+        if (block.type === "code") {
+          return (
+            <pre
+              key={index}
+              className="rounded-lg border border-border bg-muted px-4 py-3 text-xs text-muted-foreground overflow-x-auto"
+            >
+              <code>{block.code}</code>
+            </pre>
+          );
+        }
+
+        if (block.type === "visualization") {
+          return (
+            <section key={index} className="rounded-lg border border-border bg-card p-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-medium">{block.title}</h3>
+                  <p className="text-xs text-muted-foreground">{block.caption}</p>
+                </div>
+                {block.media && (
+                  <div className="rounded-md border border-border bg-muted p-3">
+                    {block.media.type === "video" ? (
+                      <video
+                        src={block.media.src}
+                        controls
+                        playsInline
+                        className="w-full rounded-md"
+                      />
+                    ) : (
+                      <img
+                        src={block.media.src}
+                        alt={block.media.alt}
+                        className="w-full rounded-md"
+                      />
+                    )}
+                  </div>
+                )}
+                <div className="rounded-md border border-dashed border-border bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Diagram prompt</p>
+                  <p className="text-sm text-muted-foreground">{block.prompt}</p>
+                </div>
+              </div>
+            </section>
+          );
+        }
+
         return null;
       })}
     </div>

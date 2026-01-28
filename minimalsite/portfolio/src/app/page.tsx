@@ -1,3 +1,4 @@
+import { ExperienceList } from "@/components/experience-list";
 import { Navigation } from "@/components/navigation";
 import { experiences, journalPosts, projects, socialLinks } from "@/lib/data";
 import Link from "next/link";
@@ -19,6 +20,50 @@ export default function Home() {
             for AI-driven hardware and software optimizations. I also share the
             process through project journals, visual experiments, and writing.
           </p>
+        </section>
+
+        {/* Featured Projects */}
+        <section className="flex flex-col gap-6">
+          <h2 className="font-medium">Selected Work</h2>
+          <div className="-mx-4 flex flex-col gap-2">
+            {featuredProjects.length > 0 ? (
+              featuredProjects.map((project) => (
+                <Link
+                  key={project.slug}
+                  href={project.externalUrl ?? `/projects/${project.slug}`}
+                  target={project.externalUrl ? "_blank" : undefined}
+                  rel={project.externalUrl ? "noopener noreferrer" : undefined}
+                  className="group block px-4 py-3 rounded-md hover:bg-secondary transition-colors"
+                >
+                  <h3 className="font-medium group-hover:text-foreground transition-colors">
+                    {project.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    {project.description}
+                  </p>
+                </Link>
+              ))
+            ) : (
+              <p className="text-muted-foreground px-4">
+                I enjoy building products and experimenting with new technologies.
+              </p>
+            )}
+          </div>
+          <Link
+            href="/projects"
+            className="text-muted-foreground hover:text-foreground transition-colors text-sm w-fit"
+          >
+            View all projects
+          </Link>
+        </section>
+
+        {/* Experience Section */}
+        <section className="flex flex-col gap-6">
+          <h2 className="font-medium">Experience</h2>
+          <p className="text-muted-foreground">
+            Research and industry roles spanning hardware, systems, and applied AI.
+          </p>
+          <ExperienceList experiences={experiences} />
         </section>
 
         {/* Latest Journals Section */}
@@ -65,72 +110,6 @@ export default function Home() {
           >
             View all writings
           </Link>
-        </section>
-
-        {/* Featured Projects */}
-        <section className="flex flex-col gap-6">
-          <h2 className="font-medium">Selected Work</h2>
-          <div className="-mx-4 flex flex-col gap-2">
-            {featuredProjects.length > 0 ? (
-              featuredProjects.map((project) => (
-                <Link
-                  key={project.slug}
-                  href={project.externalUrl ?? `/projects/${project.slug}`}
-                  target={project.externalUrl ? "_blank" : undefined}
-                  rel={project.externalUrl ? "noopener noreferrer" : undefined}
-                  className="group block px-4 py-3 rounded-md hover:bg-secondary transition-colors"
-                >
-                  <h3 className="font-medium group-hover:text-foreground transition-colors">
-                    {project.title}
-                  </h3>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    {project.description}
-                  </p>
-                </Link>
-              ))
-            ) : (
-              <p className="text-muted-foreground px-4">
-                I enjoy building products and experimenting with new technologies.
-              </p>
-            )}
-          </div>
-          <Link
-            href="/projects"
-            className="text-muted-foreground hover:text-foreground transition-colors text-sm w-fit"
-          >
-            View all projects
-          </Link>
-        </section>
-
-        {/* Experience Section */}
-        <section className="flex flex-col gap-6">
-          <h2 className="font-medium">Experience</h2>
-          <p className="text-muted-foreground">
-            Research and industry roles spanning hardware, systems, and applied AI.
-          </p>
-          <ul className="flex flex-col gap-4">
-            {experiences.map((experience) => (
-              <li
-                key={experience.title}
-                className="flex items-center justify-between gap-6 rounded-md border border-border px-4 py-3"
-              >
-                <div className="flex items-center gap-4">
-                  <img
-                    src={experience.logo}
-                    alt={`${experience.company} logo`}
-                    className="h-10 w-10 rounded-full object-contain"
-                  />
-                  <div>
-                    <p className="font-medium">{experience.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {experience.company}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-sm text-muted-foreground">{experience.period}</span>
-              </li>
-            ))}
-          </ul>
         </section>
 
         {/* Connect Section */}

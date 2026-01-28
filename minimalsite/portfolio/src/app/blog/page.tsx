@@ -11,7 +11,7 @@ export default function BlogPage() {
 
       <main className="flex flex-col gap-8">
         <section className="flex flex-col gap-4">
-          <h1 className="font-medium text-lg">Journal</h1>
+          <h1 className="font-medium text-lg">Blog</h1>
           <p className="text-muted-foreground">
             Project journals, monthly reflections, and visual notes. Each entry
             includes a soundtrack.

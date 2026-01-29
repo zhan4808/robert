@@ -22,17 +22,17 @@ export function Navigation() {
   };
 
   return (
-    <nav className="flex items-center justify-between gap-4 border-b border-border pb-2.5">
+    <nav className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-2.5">
       <div className="flex items-center">
         <Link href="/" className="flex items-center">
           <img
             src="/rob-logo-dark.svg"
             alt="Robert Zhang logo"
-            className="h-6 w-6"
+            className="h-7 w-7 md:h-8 md:w-8"
           />
         </Link>
       </div>
-      <div className="relative flex gap-0">
+      <div className="relative flex flex-wrap items-center gap-0">
         {navItems.map((item) => (
           <Link
             key={item.href}

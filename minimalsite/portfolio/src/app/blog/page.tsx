@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Navigation } from "@/components/navigation";
-import { getJournalsByYear } from "@/lib/data";
+import { getVisibleJournalsByYear } from "@/lib/data";
 import Link from "next/link";
 
 export default function BlogPage() {
-  const journalsByYear = getJournalsByYear();
+  const journalsByYear = getVisibleJournalsByYear();
 
   return (
     <div className="mx-auto mt-8 mb-16 flex max-w-[652px] flex-col gap-12 px-6 md:mt-16 md:gap-16">

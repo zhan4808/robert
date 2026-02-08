@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { ExperienceList } from "@/components/experience-list";
 import { Navigation } from "@/components/navigation";
-import { experiences, journalPosts, projects, socialLinks } from "@/lib/data";
+import { experiences, getVisibleJournals, projects, socialLinks } from "@/lib/data";
 import Link from "next/link";
 
 export default function Home() {
-  const latestJournals = journalPosts.slice(0, 3);
+  const latestJournals = getVisibleJournals().slice(0, 3);
   const featuredProjects = projects.filter((p) => p.featured).slice(0, 3);
 
   return (

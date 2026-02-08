@@ -34,6 +34,7 @@ export interface JournalPost {
   coverGradient?: string;
   tracks: JournalTrack[];
   blocks: ContentBlock[];
+  hidden?: boolean;
 }
 
 export interface Project {
@@ -277,6 +278,7 @@ export const journalPosts: JournalPost[] = [
     subtitle: "choosing commitment over comfort",
     date: "June 12, 2025",
     year: 2025,
+    hidden: true,
     coverImage: "/oai4.jpg",
     coverGradient: "from-pink-300 via-fuchsia-300 to-red-300",
     tracks: [
@@ -486,6 +488,7 @@ export const journalPosts: JournalPost[] = [
     subtitle: "unexpected friends and experiences",
     date: "April 14, 2025",
     year: 2025,
+    hidden: true,
     coverImage: "/oai3.jpg",
     coverGradient: "from-pink-200 via-rose-300 to-orange-200",
     tracks: [
@@ -1145,6 +1148,23 @@ export const aboutLinks = [
 export function getJournalsByYear(): Map<number, JournalPost[]> {
   const postsByYear = new Map<number, JournalPost[]>();
   for (const post of journalPosts) {
+    const yearPosts = postsByYear.get(post.year) || [];
+    yearPosts.push(post);
+    postsByYear.set(post.year, yearPosts);
+  }
+  return new Map([...postsByYear.entries()].sort((a, b) => b[0] - a[0]));
+}
+
+export function getVisibleJournals(): JournalPost[] {
+  return journalPosts.filter((post) => !post.hidden);
+}
+
+export function getVisibleJournalsByYear(): Map<number, JournalPost[]> {
+  const postsByYear = new Map<number, JournalPost[]>();
+  for (const post of journalPosts) {
+    if (post.hidden) {
+      continue;
+    }
     const yearPosts = postsByYear.get(post.year) || [];
     yearPosts.push(post);
     postsByYear.set(post.year, yearPosts);

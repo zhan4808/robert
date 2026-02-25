@@ -139,37 +139,37 @@ export const journalPosts: JournalPost[] = [
   {
     slug: "cuda-mmm",
     month: "How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance",
-    subtitle: "a worklog",
-    date: "December 2022",
-    year: 2022,
+    subtitle: "going from naive to 94% of cuBLAS, one kernel at a time",
+    date: "October 2025",
+    year: 2025,
     tracks: [],
     blocks: [
       {
         type: "paragraph",
-        text: "In this post, I'll iteratively optimize an implementation of matrix multiplication written in CUDA. My goal is not to build a cuBLAS replacement, but to deeply understand the most important performance characteristics of the GPUs that are used for modern deep learning. This includes coalescing global memory accesses, shared memory caching and occupancy optimizations, among others. You can download the code for all kernels from Github. Also checkout wangzyon's repo from which I copied the benchmarking setup. This post is less polished than my normal uploads, and includes many more sidenotes. I used it as notepad for ideas and scribbles while writing the kernels. That's why I called it a worklog :)",
+        text: "SGEMM is probably the single most important computational kernel in modern deep learning — if you could only profile one operation in a transformer, it would be this one. I wanted to understand from first principles why GPUs are so good at it, and what it actually takes to close the gap with cuBLAS. This is my attempt to work through that iteratively, going from a naive kernel to something that hits ~94% of cuBLAS on an A6000.",
       },
       {
         type: "paragraph",
-        text: "Matrix multiplication on GPUs may currently be the most important algorithm that exists, considering it makes up almost all the FLOPs during the training and inference of large deep-learning models. So how much work is it to write a performant CUDA SGEMM from scratch? I'll start with a naive kernel and step-by-step apply optimizations until we get within 95% (on a good day) of the performance of cuBLAS (NVIDIA's official matrix library).",
+        text: "The thing I find fascinating about this exercise is that the gap between the naive implementation and cuBLAS is about 75x in raw throughput. Almost none of that gap comes from algorithmic cleverness — it's all about understanding the memory hierarchy and feeding the compute units correctly. The math is simple; the hard part is data movement.",
       },
       {
         type: "paragraph",
-        text: "In the CUDA programming model, computation is ordered in a three-level hierarchy. Each invocation of a CUDA kernel creates a new grid, which consists of multiple blocks. Each block consists of up to 1024 individual threads. Threads that are in the same block have access to the same shared memory region (SMEM).",
+        text: "Before diving in: CUDA organizes computation into a three-level hierarchy. A kernel launch creates a grid of blocks, each block contains up to 1024 threads, and threads within the same block share a fast on-chip scratchpad called shared memory (SMEM). This hierarchy exists primarily to map cleanly onto GPU hardware — blocks map to streaming multiprocessors (SMs), and threads within a block share SMEM.",
       },
       {
         type: "paragraph",
-        text: "The number of threads in a block can be configured using a variable normally called blockDim, which is a vector consisting of three ints. The entries of that vector specify the sizes of blockDim.x, blockDim.y and blockDim.z, as visualized below:",
+        text: "The blockDim variable is a 3D integer vector specifying how many threads live in each block dimension. Combined with gridDim (the number of blocks), this determines the full thread layout:",
       },
       {
         type: "image",
         src: "/cuda-mmm/CUDA_thread_hierarchy.png",
         alt: "CUDA thread hierarchy diagram showing blockDim and threadIdx relationships",
-        caption: "The CUDA thread hierarchy: grids contain blocks, blocks contain threads.",
+        caption: "The CUDA thread hierarchy. blockDim.x × blockDim.y gives threads per block; gridDim.x × gridDim.y gives the total block count.",
         invert: true,
       },
       {
         type: "paragraph",
-        text: "Similarly, the number of blocks in a grid is configurable using the gridDim variable. When we launch a new kernel from the host, it creates a single grid, containing the blocks and threads as specified. From here on I'll only be talking about 2D grids and blocks, partly because the 3D-structure is seldom used and because drawing in 3D is too hard. It's important to keep in mind that the thread hierarchy we just talked about mostly concerns program correctness. For program performance, as we'll see later, it's not a good idea to treat all threads in the same block as equals.",
+        text: "One important mental model shift: the thread hierarchy is primarily a correctness tool, not a performance one. For performance, you have to think in terms of warps — groups of 32 threads that execute in lockstep on the hardware. The block/grid structure tells you who can communicate; the warp structure tells you what the hardware actually schedules.",
       },
       // Kernel 1
       {
@@ -179,7 +179,7 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "For our first kernel, we'll use the grid, block and thread hierarchy to assign each thread a unique entry in the result matrix C. Then that thread will compute the dot product of the corresponding row of A and column of B, and write the result to C. Due to each location of C being written to by only one thread, we have to do no synchronization.",
+        text: "The simplest possible kernel: assign each thread one output element in C, then loop over the K dimension accumulating the dot product. Dead simple, and predictably slow. Each thread independently reads a full row of A and full column of B, with essentially no data reuse.",
       },
       {
         type: "image",
@@ -207,11 +207,11 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "CUDA code is written from a single-thread perspective. In the code of the kernel, we access the blockIdx and threadIdx built-in variables. These will return different values based on the thread that's accessing them. In our example, threadIdx.x and threadIdx.y will vary from 0 to 31 based on the position of the thread in the grid. Same for blockIdx.x and blockIdx.y.",
+        text: "CUDA kernels are written from a single-thread perspective — you write what one thread does, and the runtime stamps out N copies of that logic across the grid. The blockIdx and threadIdx builtins tell each thread where it sits. The math for your global index is always the same pattern: blockIdx * blockDim + threadIdx.",
       },
       {
         type: "paragraph",
-        text: "If the size of the matrix is not divisible by the size of the block, we'll have to launch extra blocks to process the remainder. This artifact is called tile quantization, and appears whenever we try to map a fixed-sized volume across a variable-sized input.",
+        text: "One subtlety worth flagging: if the matrix dimension isn't cleanly divisible by BLOCKSIZE, you need to launch extra blocks to cover the remainder. Those blocks will have some inactive threads (tile quantization). It's a small overhead for large matrices, but matters at small sizes — which is part of why cuBLAS switches kernels depending on matrix dimensions.",
       },
       {
         type: "image",
@@ -223,32 +223,24 @@ export const journalPosts: JournalPost[] = [
       {
         type: "heading",
         level: 3,
-        text: "Lower Bounding the Fastest Possible Runtime",
+        text: "Napkin Math: How Fast Can This Be?",
       },
       {
         type: "paragraph",
-        text: "This kernel takes about 0.5s to process three 4092² fp32 matrices on an A6000 GPU. Let's do some non-implementation-specific calculations. For a matrix multiplication of two 4092² matrices, followed by an addition of a 4092² matrix (to make the GEMM):",
-      },
-      {
-        type: "list",
-        items: [
-          "Total FLOPS: For each of the 4092² entries of C, we perform a dot product of two vectors of size 4092, involving a multiply and an add at each step. 2*4092³ + 4092² = 137 GFLOPS.",
-          "Total data to read (minimum): 3 * 4092² * 4B = 201MB.",
-          "Total data to store: 4092² * 4B = 67MB.",
-        ],
+        text: "Before profiling, let's bound the problem. For two 4092² matrices, the GEMM requires 2×4092³ ≈ 137 GFLOPs. The minimum GMEM transfer is 268MB (3 matrices × 4092² × 4B). On an A6000 with 30 TFLOPs/s compute and 768 GB/s bandwidth, compute takes ~4.5ms and memory takes ~0.34ms. The kernel is ~13x more compute-intensive than memory-intensive — so it should be compute-bound once we stop wasting memory bandwidth. cuBLAS itself loads about 500MB during the computation (not the theoretical minimum), which is the target to beat.",
       },
       {
         type: "paragraph",
-        text: "So 268MB is the absolute minimum of memory that any implementation would have to transfer from/to global GPU memory, assuming it has a big enough cache. The cuBLAS kernel loads a total of 500MB of GMEM during the whole calculation. The GPU is advertised with 30TFLOPs/s of fp32 compute throughput and 768GB/s of global memory bandwidth. If we achieved those numbers, we'd need 4.5ms for the calculation and 0.34ms for the memory transfers. So in our napkin math, the calculation takes ~10x more time than the memory accesses. This means our final optimized kernel will be compute-bound.",
+        text: "I find this ratio really useful to keep in mind as we go through each optimization. The question to ask at each step is: are we closer to being compute-bound, or are we still hemorrhaging bandwidth? The roofline model makes this explicit.",
       },
       {
         type: "heading",
         level: 3,
-        text: "Memory Access Pattern of the Naive Kernel",
+        text: "Why the Naive Kernel is Terrible",
       },
       {
         type: "paragraph",
-        text: "In our kernel, two threads in the same block with ThreadIds (0, 0) and (0, 1) will load the same column of B but different rows of A. If we assume the worst case of zero caching, then each thread has to load 2*4092+1 floats from global memory. As we have 4092² threads total, this would result in 548GB of memory traffic.",
+        text: "Two threads in the same block with threadIds (0,0) and (0,1) load the same column of B but different rows of A. With no caching, each thread loads 2×4092 floats, so 4092² threads produce 548GB of memory traffic for a 268MB problem — a 2× overshoot even in theory, and in practice much worse because there's no data reuse at all across threads.",
       },
       {
         type: "image",
@@ -259,7 +251,7 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "So to recap, when this kernel runs on an A6000 GPU it achieves ~300GFLOPs when multiplying two 4092x4092 float32 matrices. Pretty bad, considering that the A6000 is advertised as being able to achieve almost 30 TFLOPs. 300 GFLOPs is also roughly the performance achieved by the optimized BLAS library on a 2015 Haswell CPU. So how can we start to make this faster? One way is to optimize the memory access pattern of our kernel such that global memory accesses can be coalesced (=combined) into fewer accesses.",
+        text: "Result: ~300 GFLOPs on an A6000. For context, that's about what a well-tuned 2015 Haswell CPU achieves. A GPU with 100× the memory bandwidth is performing at CPU level because we're completely ignoring its access pattern requirements.",
       },
       // Kernel 2
       {
@@ -269,11 +261,11 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "Before we get into global memory coalescing, we need to learn about the concept of a warp. For execution, the threads of a block are grouped into so-called warps, consisting of 32 threads. A warp is then assigned to a warp scheduler, which is the physical core that executes the instructions. Before the Volta architecture, all threads of a warp were fed from the same instruction stream. However, since Volta, it's no longer a good idea to rely on this 'warp-synchronous' behaviour, as instructions from different branches may be interleaved even for the same threads within a warp.",
+        text: "The key GPU concept here is the warp. Threads within a block are grouped into warps of 32, and a warp is the actual unit of execution on the hardware — all 32 threads in a warp execute the same instruction simultaneously (SIMT). The warp scheduler is what actually dispatches instructions to the CUDA cores.",
       },
       {
         type: "paragraph",
-        text: "The grouping into warps happens based on a consecutive threadId. If we set the blockDim to be multi-dimension, then the threadId is calculated like so: threadId = threadIdx.x + blockDim.x*(threadIdx.y + blockDim.y*threadIdx.z). Then, threads with neighbouring threadId become part of the same warp.",
+        text: "Warps are formed from consecutive threadIds: threadId = threadIdx.x + blockDim.x*(threadIdx.y + blockDim.y*threadIdx.z). The x dimension is the fast-varying one. Think of it as column-major in 'warp space' — threads with adjacent threadIdx.x values end up in the same warp.",
       },
       {
         type: "image",
@@ -284,7 +276,7 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "The concept of a warp is relevant for this second kernel, as sequential memory accesses by threads that are part of the same warp can be grouped and executed as one. This is referred to as global memory coalescing. It's the most important thing to keep in mind when optimizing a kernel's GMEM memory accesses toward achieving the peak bandwidth.",
+        text: "Global memory coalescing is the single most important GMEM optimization on GPU. When threads in the same warp issue memory requests to consecutive addresses, the hardware can combine them into one transaction. 32 threads × 4 bytes = 128 bytes, which fits exactly in one L2 cache line — perfect coalescing means 1 transaction per warp instead of 32.",
       },
       {
         type: "image",
@@ -295,7 +287,7 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "In reality, the GPU supports 32B, 64B and 128B memory accesses. So, if each thread is loading a 32bit float from global memory, the warp scheduler can coalesce this 32*4B=128B load into a single transaction. This is only possible if the floats loaded are consecutive in memory, and if access is aligned. Interestingly, to allow coalescing the threads within a warp have to access consecutive addresses, but the accesses don't have to be consecutive within-warp.",
+        text: "An interesting nuance: threads within a warp don't have to access memory in threadIdx order for coalescing to work — they just need to collectively touch a consecutive, aligned 128B region. The hardware figures out which transaction to issue based on the union of all the addresses. Non-consecutive within-warp access patterns can still coalesce as long as the addresses themselves are contiguous.",
       },
       {
         type: "image",
@@ -306,7 +298,7 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "Looking back at the previous kernel, we assigned threads their entry of C such that threads of the same warp (those with consecutive threadIdx.x) were loading the rows of A non-consecutively from memory. The naive kernel's memory access pattern for A looked like this:",
+        text: "In the naive kernel we mapped threadIdx.x to the row of A. Threads with consecutive threadIdx.x (i.e., in the same warp) therefore load consecutive rows of A — but A is row-major, so consecutive rows are strided by K floats. That's 32 × K × 4B of cache-line fetches for K dot-product steps. No coalescing at all.",
       },
       {
         type: "image",
@@ -317,7 +309,7 @@ export const journalPosts: JournalPost[] = [
       },
       {
         type: "paragraph",
-        text: "To enable coalescing, we can change how we assign positions of the result matrix C to threads. This change in the global memory access pattern is illustrated below:",
+        text: "The fix: swap how we assign output elements to threads. Instead of threadIdx.x → row, use threadIdx.x → column. Threads in the same warp now compute the same row of C but consecutive columns — meaning they load the same row of A (broadcast-friendly) and consecutive columns of B (coalesced).",
       },
       {
         type: "image",
@@ -346,11 +338,11 @@ if (x < M && y < N) {
       },
       {
         type: "paragraph",
-        text: "This wasn't immediately obvious, but enabling GMEM coalescing changes nothing in the assembly. Access coalescing is done at kernel runtime by the hardware. This makes sense since coalescing requires aligned access, which cannot be guaranteed at compile time as we pass the matrix pointers as function arguments.",
+        text: "What I found surprising: enabling coalescing changes zero assembly instructions. Coalescing is handled entirely by the hardware memory system at runtime — the PTX and SASS look identical. That makes sense: the compiler can't know at compile time whether the base pointers will be aligned, so it can't emit different instructions. The hardware figures it out dynamically per transaction.",
       },
       {
         type: "paragraph",
-        text: "Global memory coalescing increases memory throughput from 15GB/s to 110GB/s. Performance reaches 2000 GFLOPS, a big improvement compared to the 300 GFLOPS of the first, naive kernel. For the next kernel, we'll use the GPU's fast on-chip memory, called shared memory, to cache data that will be re-used.",
+        text: "The payoff is huge: memory throughput jumps from 15 GB/s to 110 GB/s, and FLOP/s goes from ~300 to ~2000 GFLOPS. We haven't changed any math, any shared memory usage, or any arithmetic — just the index assignment. It's a pure access pattern win.",
       },
       // Kernel 3
       {
@@ -360,7 +352,7 @@ if (x < M && y < N) {
       },
       {
         type: "paragraph",
-        text: "Next to the large global memory, a GPU has a much smaller region of memory that is physically located on the chip, called shared memory (SMEM). Physically, there's one shared memory per SM. Logically, this shared memory is partitioned among the blocks. This means that a thread can communicate with the other threads in its block via the shared memory chunk. On an A6000 GPU, each block has access to a maximum of 48KB of shared memory. As the shared memory is located on-chip, it has a much lower latency and higher bandwidth than global memory — benchmarks for Volta report 750GiB/s of global memory bandwidth vs. 12,080GiB/s of shared memory bandwidth.",
+        text: "The GPU memory hierarchy has a crucial middle tier: shared memory (SMEM). It sits on-chip, physically next to the CUDA cores, and is partitioned among blocks — every thread in a block can read and write the same SMEM region. On Volta-era hardware, SMEM bandwidth is measured at ~12 TB/s vs. ~750 GB/s for DRAM — roughly a 16× difference. On an A6000, each block gets up to 48KB of SMEM.",
       },
       {
         type: "image",
@@ -371,7 +363,7 @@ if (x < M && y < N) {
       },
       {
         type: "paragraph",
-        text: "So for this next kernel, we'll load a chunk of A and a chunk of B from global memory into shared memory. Then we'll perform as much work as possible on the two chunks, with each thread still being assigned one entry of C. We'll move the chunks along the columns of A and the rows of B performing partial sums on C until the result is computed.",
+        text: "The cache-blocking idea: instead of every thread independently fetching from GMEM, a group of threads cooperatively loads a tile of A and a tile of B into SMEM. Then everyone computes on the fast local copy. We slide the tile along the K dimension, accumulating partial sums. Each float in SMEM gets used by multiple threads, so the GMEM traffic per FLOP drops significantly.",
       },
       {
         type: "image",
@@ -408,7 +400,7 @@ C[threadRow * N + threadCol] =
       },
       {
         type: "paragraph",
-        text: "This kernel achieves ~2200 GFLOPS, a 50% improvement over the previous version. There's only a 50% improvement partly because our previous kernel already had pretty good L1 cache hit rates. We're still far away from hitting the ~30 TFLOPs that the GPU can provide. This is obvious from the roofline plot below — notice how we're achieving a higher memory bandwidth than cuBLAS, but because we're doing much less work per byte loaded from memory (lower arithmetic intensity), overall performance is worse.",
+        text: "The result is ~2200 GFLOPS — only a 50% improvement. That might seem small given the effort. The reason: Kernel 2 already got decent L1 hit rates due to the access pattern change, so the explicit SMEM tiling doesn't buy as much as you'd hope. More importantly, the roofline reveals the real problem.",
       },
       {
         type: "image",
@@ -420,24 +412,15 @@ C[threadRow * N + threadCol] =
       {
         type: "heading",
         level: 3,
-        text: "Occupancy Calculation for Kernel 3",
+        text: "The Roofline and the Arithmetic Intensity Problem",
       },
       {
         type: "paragraph",
-        text: "At a CHUNKSIZE of 32, this uses 2*32*32*4B=8KB of shared memory space. The A6000 GPU has a maximum of 48KB of shared memory space available for each block, so we're far away from hitting that limit. Each multiprocessor (SM) has a maximum of 100KB of SMEM available. This means that if we modified our kernel to use the full 48KB of SMEM, each SM could only keep two blocks loaded at the same time. Increasing per-block SMEM utilization can decrease occupancy.",
+        text: "The roofline model plots achieved FLOPs/s vs. arithmetic intensity (FLOPs per byte of memory traffic). It has two limits: a horizontal line at peak compute (30 TFLOPs/s), and a diagonal line at peak memory bandwidth (768 GB/s × FLOPs/byte). If you're below the diagonal, you're memory-bound. If you're at the horizontal ceiling, you're compute-bound. Kernel 3 sits far below both — its arithmetic intensity is too low to be compute-bound, but it's also not saturating bandwidth. It's stalling on SMEM.",
       },
       {
         type: "paragraph",
-        text: "Occupancy is defined as the ratio between the number of active warps per SM and the maximum possible number of active warps per SM. High occupancy allows us to hide the high latency of our operations, by having a bigger pool of issue-able instructions available. There are three main limits to keeping more active blocks loaded on an SM: register count, warp count and SMEM capacity. For this kernel, occupancy works out to ~66%, limited primarily by thread count — not bad, so this doesn't explain why our kernel runs so slow.",
-      },
-      {
-        type: "heading",
-        level: 3,
-        text: "Areas of Improvement: Arithmetic Intensity",
-      },
-      {
-        type: "paragraph",
-        text: "Looking at the profiler, most instructions are memory loads (LDS = shared memory loads, FMA = fused multiply-add, IADD3 = three-input integer addition for pointer arithmetic). We're stalling on SMEM accesses rather than making progress on compute. The solution is to have each thread compute more than one output element, which allows us to perform more work in registers and rely less on SMEM.",
+        text: "Occupancy at CHUNKSIZE=32 is ~66% (limited by thread count, not SMEM or registers). That's not terrible. But the profiler tells the real story: the instruction mix is dominated by LDS (shared memory loads) rather than FMA. We're spending cycles fetching from SMEM, not doing math. The fix: each thread needs to compute more output elements per SMEM access — reduce the ratio of loads to FMAs by doing more work in registers.",
       },
       // Kernel 4
       {
@@ -447,7 +430,7 @@ C[threadRow * N + threadCol] =
       },
       {
         type: "paragraph",
-        text: "The optimization strategy involves having each thread compute multiple output elements instead of just one, which increases register usage while reducing shared memory pressure. Each thread will compute a column of TM output elements, keeping a thread-local register array for partial sums across the outer loop.",
+        text: "Instead of each thread computing one output element, we assign it a column of TM output elements. Each thread now keeps an array of TM partial sums in registers across the K-dimension loop. The critical loop reordering: put dotIdx (the position within the BK tile) as the outer inner loop, and resIdx (which of the TM outputs) as the inner loop. This way, for each dotIdx we load one value of Bs into a register (Btmp) and reuse it across all TM multiply-accumulates. One SMEM load, TM FMAs.",
       },
       {
         type: "image",
@@ -482,11 +465,11 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
       {
         type: "heading",
         level: 3,
-        text: "Sidenote on Compiler Optimizations",
+        text: "What the Compiler Does for You",
       },
       {
         type: "paragraph",
-        text: "The key insight of this kernel is reordering the inner loops so that the dot-product dimension (dotIdx) is the outermost inner loop. This allows the compiler to cache the Btmp value in a register and reuse it across all TM output elements. The compiler also performs automatic loop unrolling, eliminating redundant shared memory loads.",
+        text: "With TM known at compile time (it's a template parameter), the compiler can unroll the inner resIdx loop and allocate the threadResults array entirely in registers. The Btmp caching happens automatically too — the compiler sees that Bs[dotIdx * BN + threadCol] doesn't change across the resIdx iterations and hoists it into a register. This is why templating the tile sizes matters: without compile-time knowledge, the compiler has to be conservative.",
       },
       {
         type: "image",
@@ -497,7 +480,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
       },
       {
         type: "paragraph",
-        text: "This kernel achieves approximately 8,600 GFLOPs — a 2.2x improvement over the shared-memory-only approach. Profiler data shows substantially fewer stall cycles caused by memory pipeline congestion compared to Kernel 3.",
+        text: "Result: ~8,600 GFLOPs, a 4× jump from Kernel 3. The profiler confirms the story — MIO stall cycles (shared memory contention) drop dramatically. We've shifted the bottleneck from 'waiting for SMEM' to actually doing FMAs. But we're still only doing 1D output tiling; we can push further.",
       },
       // Kernel 5
       {
@@ -507,7 +490,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
       },
       {
         type: "paragraph",
-        text: "The fundamental optimization: computing a square grid of output elements per thread rather than a linear column improves data reuse and reduces memory operations. Each thread now computes a grid of TM×TN elements of C, enabling shared inputs across both dimensions.",
+        text: "Extend the idea to 2D: each thread now computes a TM×TN output tile. The arithmetic intensity improvement is multiplicative — instead of reusing a Bs value across TM rows, we now reuse a regM value across TN columns and a regN value across TM rows. The inner loop becomes an outer product: load TM values from As into regM, load TN values from Bs into regN, then compute the full TM×TN outer product and accumulate into threadResults.",
       },
       {
         type: "image",
@@ -577,7 +560,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
       },
       {
         type: "paragraph",
-        text: "This kernel achieves ~16 TFLOPs — another 2x improvement over Kernel 4. Memory efficiency gains are substantial: we now perform K/64 GMEM and K/4 SMEM accesses per computed result, demonstrating the power of increased arithmetic intensity.",
+        text: "Result: ~16 TFLOPs — another 2× improvement. The GMEM accesses per output element drop to K/64, and SMEM accesses to K/4. We're now genuinely close to the compute roofline. The remaining gap to cuBLAS is about vectorized loads (memory efficiency) and warp-level data locality, which Kernels 6 and 10 address.",
       },
       // Kernel 6
       {
@@ -587,7 +570,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
       },
       {
         type: "paragraph",
-        text: "Vectorization strategy: transpose matrix As in shared memory during the GMEM-to-SMEM transfer, enabling automatic 128-bit load operations instead of 32-bit. Previously sequential SMEM loads become a 128b LDS.128 load, improving throughput.",
+        text: "Two tricks in one kernel. First, vectorized GMEM loads: use float4 to load 128 bits (4 floats) per instruction, turning LDG.E.32 into LDG.E.128. You have to explicitly promise the compiler the pointer is 128-bit aligned via reinterpret_cast — it can't figure that out from a generic float* argument. Second, transpose As during the SMEM load so that the subsequent SMEM reads along the column dimension become sequential (enabling LDS.128 instead of strided scalar loads).",
       },
       {
         type: "image",
@@ -612,11 +595,11 @@ __syncthreads();`,
       },
       {
         type: "paragraph",
-        text: "Global memory vectorization requires promising alignment to the compiler through reinterpret_cast<float4 *> operations on input pointers. The compiler cannot verify 128-bit alignment of user-provided pointers, necessitating explicit type casts to trigger vectorized GMEM loads. This converts 32-bit LDG.E instructions into 128-bit LDG.E.128 equivalents.",
+        text: "The As transpose is the subtle part. In Kernel 5, loading a column of As during the inner computation required strided SMEM reads (bad for bank conflicts). By storing As transposed (column-major) during the loading phase, the inner reads become row-sequential, which both avoids bank conflicts and enables vectorized LDS.128. The extra work during loading is cheap compared to the savings during compute.",
       },
       {
         type: "paragraph",
-        text: "Performance improvement from Kernel 5 to Kernel 6: approximately 500 GFLOPs gain, reaching ~18,200 GFLOPs. Profiler analysis identified remaining bottlenecks: shared-memory bank conflicts, occupancy higher than necessary, and no double buffering yet.",
+        text: "Performance: ~18,200 GFLOPs, about 500 GFLOP/s over Kernel 5. Meaningful but not dramatic — the low-hanging fruit is mostly picked. The remaining gap to cuBLAS at this point is bank conflicts in SMEM, no double buffering (the GPU stalls waiting for SMEM loads to complete instead of overlapping compute and fetch), and the warp-level register locality that warptiling exploits.",
       },
       // Kernel 9
       {
@@ -626,15 +609,15 @@ __syncthreads();`,
       },
       {
         type: "paragraph",
-        text: "The kernel accumulated five template parameters: BM, BN, BK for shared memory caching, and TM, TN for register caching. Initial settings were BM=BN=128, BK=TM=TN=8. A bash script systematically searched sensible parameter combinations and benchmarked performance.",
+        text: "By this point, the kernel has accumulated five template parameters: BM and BN for the shared memory tile dimensions, BK for the K-dimension tile, and TM and TN for the per-thread register tile. The initial guess — BM=BN=128, BK=8, TM=TN=8 — is reasonable but almost certainly not optimal. Autotuning is just a grid search with validation: write a bash script, sweep sensible combinations, benchmark each, pick the winner.",
       },
       {
         type: "paragraph",
-        text: "Implementation required ensuring parameter combinations were valid and that the kernel performed correctly across approximately 400 different hyperparameter configurations. For example, vectorized SMEM loads required BM * BK divisibility by 4 * NUM_THREADS.",
+        text: "The tricky part is keeping the search space honest. Not all combinations are valid — vectorized SMEM loads require BM*BK to be divisible by 4*NUM_THREADS, for instance. Out of ~400 configurations, maybe 200 compile and produce correct results. Validating each against a reference prevents accepting fast-but-wrong kernels.",
       },
       {
         type: "paragraph",
-        text: "Optimal parameters varied significantly by GPU model. On the A6000, settings of BM=BN=128, BK=16, TM=TN=8 improved performance by 5%, reaching ~20 TFLOPs from 19. Different hardware yielded different optimal configurations. Understanding why specific parameters produce optimal results remains unclear, despite autotuning's effectiveness in high-performance libraries.",
+        text: "On the A6000, the winner was BM=BN=128, BK=16, TM=TN=8 — only the K-tile changed. That tweak alone pushed throughput from ~19 to ~20 TFLOPs, a ~5% gain. What's humbling is that we can't fully explain *why* BK=16 beats BK=8 on this GPU. Larger BK means more data loaded per SMEM phase, which reduces the total number of GMEM loads — but it also increases register pressure and affects occupancy. The optimal balance is hardware-specific and analytically difficult to predict. This is why production libraries like CUTLASS and cuDNN literally ship hundreds of kernel variants selected at runtime by a dispatcher — the hardware landscape is too fragmented for any single 'best' configuration.",
       },
       // Kernel 10
       {
@@ -644,7 +627,7 @@ __syncthreads();`,
       },
       {
         type: "paragraph",
-        text: "Kernel 10 adds another tiling hierarchy between blocktiling and threadtiling: warptiling. Unlike blocks and threads which appear explicitly in CUDA code, warps don't show up anywhere explicitly — they're hardware features calculable as warpId = threadIdx.x / warpSize.",
+        text: "Kernel 10 introduces a third level of tiling between blocktiling and threadtiling: warptiling. This is the sneaky level that CUDA hides from you — warps don't appear as an explicit concept in your code, but they're very real in the hardware. Every 32 threads are grouped into a warp that executes in lockstep, and the warp ID is just threadIdx.x / 32. The hardware scheduler thinks in warps, not threads.",
       },
       {
         type: "image",
@@ -662,7 +645,7 @@ __syncthreads();`,
       },
       {
         type: "paragraph",
-        text: "Warps matter for performance in multiple ways: they're the scheduling units mapped to warp-schedulers (four per SM on A6000), shared-memory bank conflicts occur within warps, and recent GPUs have register caches that benefit from tighter threadtiling. Warptiling elegantly exposes all parallelism levels: blocktiling allows different blocks on different SMs, warptiling allows different warps on different schedulers concurrently, and threadtiling provides instruction-level parallelism.",
+        text: "Warps matter for three distinct reasons. First, they're the unit of scheduling — the A6000 has four warp schedulers per SM, so four warps can issue instructions concurrently each cycle. If your block only has one warp's worth of useful work at a time, you're leaving 3/4 of the scheduler capacity idle. Second, SMEM bank conflicts happen at the warp level — when 32 threads in a warp all access the same bank, those accesses serialize. Third, recent GPUs have register file caches that provide faster access to recently used registers; warptiling ensures that the threads in a warp all operate on adjacent data, maximizing cache locality at the register level. Warptiling is what makes the three levels of the memory hierarchy map cleanly to the three levels of the GPU compute hierarchy: GMEM → block, SMEM → warp, registers → thread.",
       },
       {
         type: "image",
@@ -706,7 +689,7 @@ __syncthreads();`,
       },
       {
         type: "paragraph",
-        text: "After autotuning, performance improved from 19.7 TFLOPs to 21.7 TFLOPs. cuBLAS contains hundreds of SGEMM implementations, selecting at runtime based on dimensions. Testing revealed 16 different kernels for square matrices up to 4096, which explains cuBLAS's superior small-matrix performance.",
+        text: "After autotuning kernel 10, throughput climbed from ~19.7 to ~21.7 TFLOPs — a 10% jump from warptiling alone. The gap to cuBLAS at large sizes is now small, maybe 5-10%. But look at the small-matrix performance in the chart below: cuBLAS crushes us on small dimensions. The reason is instructive. By using nvcc --generate-code and peeling apart the cuBLAS binary, you can see it contains ~16 distinct SGEMM implementations, dispatched at runtime based on matrix shape and size. For small square matrices it uses a split-K variant that partitions the K-dimension across thread blocks, enabling more parallelism when M and N are small. Writing one kernel that's optimal at every shape is essentially impossible — cuBLAS doesn't try.",
       },
       {
         type: "image",
@@ -730,27 +713,31 @@ __syncthreads();`,
       },
       {
         type: "paragraph",
-        text: "Writing this worklog paralleled optimizing SGEMM on CPU in educational value. Iterative SGEMM optimization deeply revealed hardware performance characteristics. Visualization proved surprisingly effective for implementation once kernel designs were clarified.",
+        text: "The thing that surprised me most about this project wasn't any particular optimization — it was the shape of the progress curve. The first two kernels (naive → coalesced) covered about 80% of the gap to cuBLAS and took maybe a weekend to understand and implement. The remaining 14% took weeks more. Every optimization past the low-hanging fruit required deeper hardware knowledge, better profiling intuition, and a higher tolerance for ambiguity. The power law of optimization effort is real.",
       },
       {
         type: "paragraph",
-        text: "Power laws appeared throughout the optimization process: reaching 80% of peak FLOPs required two weekends across initial kernels; four additional weekends achieved 94% through autotuning and warptiling. Learning gains diminished with each optimization step. All code is available on GitHub.",
+        text: "Looking back, what SGEMM teaches about GPU programming transfers everywhere. Memory bandwidth is almost always the binding constraint, and every layer of the memory hierarchy (GMEM → L2 → SMEM → registers) is there to fight that constraint at a progressively smaller scale. The tiling pattern — identify a bottleneck, tile across the level of memory hierarchy that resolves it, repeat — shows up in virtually every high-performance GPU kernel. Attention kernels (FlashAttention), convolutions, sparse operations: they're all variations on the same theme. Learning SGEMM from scratch is basically learning the vocabulary of GPU optimization.",
+      },
+      {
+        type: "paragraph",
+        text: "One thing I'd add beyond the original: if you want to understand why cuBLAS is so hard to beat, spend time with a profiler looking at your kernel's warp efficiency, memory throughput, and SM occupancy simultaneously. These numbers are often at tension with each other — maximizing occupancy can hurt register reuse, maximizing tile size can hurt occupancy. The art is in the tradeoffs. CUTLASS's design, with its hierarchical policy system and autotuned dispatch, is essentially a systematic solution to that multi-objective problem. If you're building production ML infrastructure, using CUTLASS as a foundation is almost certainly the right call. If you're learning, writing kernels from scratch like this is irreplaceable.",
       },
       {
         type: "heading",
         level: 2,
-        text: "Further Resources and References",
+        text: "Further Resources",
       },
       {
         type: "list",
         items: [
-          "wangzyon's GitHub repository and NVIDIA's CUTLASS library blog post — the benchmarking setup and initial inspiration.",
-          "Official CUDA documentation: Toolkit Programming Guide, Best Practices Guide, and Kernel Profiling Guide.",
-          "Onur Mutlu's YouTube lectures on Computer Architecture and Heterogeneous Systems acceleration.",
-          "Lei Mao's CUDA blog content covering error handling and best practices.",
-          "'Understanding Latency Hiding on GPUs' PhD thesis by V. Volkov — examining workload design for full hardware utilization.",
-          "NVIDIA's CUDA binary utilities documentation and open-source SASS assemblers like turingas.",
-          "Readable optimized CUDA implementations from ONNX Runtime's CUDA provider and NVIDIA's CUTLASS library, including double-buffering prefetching techniques.",
+          "wangzyon's GitHub repository — the benchmarking harness used here as a starting point. Well-structured for iterating on kernel variants.",
+          "NVIDIA CUTLASS library — readable, production-grade CUDA for GEMM and related ops. The source of truth for how modern GPU kernels are structured.",
+          "Official CUDA docs: Toolkit Programming Guide, Best Practices Guide, Kernel Profiling Guide — dense but complete.",
+          "Onur Mutlu's YouTube lectures on Computer Architecture and Heterogeneous Systems — best free resource for building a mental model of GPU hardware.",
+          "'Understanding Latency Hiding on GPUs' (Volkov, 2016) — the canonical deep-dive on occupancy, ILP, and warp scheduling. Required reading if you want to understand why occupancy != utilization.",
+          "Lei Mao's CUDA blog — pragmatic, code-first coverage of CUDA patterns and pitfalls.",
+          "ONNX Runtime CUDA provider and cuDNN source — when you want to see what a production system actually looks like under the hood.",
         ],
       },
       {
@@ -766,31 +753,31 @@ __syncthreads();`,
     slug: "cpu-mmm",
     month: "Fast Multidimensional Matrix Multiplication on CPU from Scratch",
     subtitle: "loop reordering, tiling, and multithreading",
-    date: "August 2022",
-    year: 2022,
+    date: "January 2026",
+    year: 2026,
     tracks: [],
     blocks: [
       {
         type: "paragraph",
-        text: "Numpy can multiply two 1024x1024 matrices on a 4-core Intel CPU in ~8ms. This is incredibly fast, considering this boils down to 18 FLOPs / core / cycle, with a cycle taking a third of a nanosecond.",
+        text: "NumPy can multiply two 1024×1024 float32 matrices on a quad-core Intel CPU in roughly 8ms. That translates to ~250 GFLOP/s — about 18 FLOPs per core per clock cycle at 3.4 GHz. For a CPU released in 2015, that's absurd. And it's not magic: it's the result of decades of highly specific, hand-tuned assembly in libraries like Intel MKL and OpenBLAS.",
       },
       {
         type: "paragraph",
-        text: "Numpy does this using a highly optimized BLAS implementation. BLAS is short for Basic Linear Algebra Subprograms. These are libraries providing fast implementations of e.g. matrix multiplications or dot-products. They are sometimes tailored to one specific (family of) CPUs, like Intel's MKL or Apple's accelerate. However, non-vendor specific implementations like OpenBLAS are also available.",
+        text: "The question I kept coming back to: how far can you get starting from a simple nested for-loop in C++? Not to beat BLAS — OpenBLAS's SGEMM is ~7,000 lines of hand-written x86 assembly — but to understand *why* the gap exists, and what techniques close it. This is the CPU companion to my CUDA SGEMM post. Same algorithm, same hierarchical optimization story, different hardware.",
       },
       {
         type: "paragraph",
-        text: "How hard is it to recreate performance that's roughly similar using plain C++?",
+        text: "Spoiler: we end up at ~9 FLOPs/core/cycle (half of peak) using cache-aware loop ordering, tiling, and OpenMP multithreading. The final kernel works only for fixed matrix sizes and makes no attempt to generalize. The goal isn't a production library — it's a working mental model of how CPU memory hierarchies interact with compute.",
       },
       // Section: Calculating total FLOPs
       {
         type: "heading",
         level: 2,
-        text: "Calculating total FLOPs",
+        text: "FLOPs and Arithmetic Intensity",
       },
       {
         type: "paragraph",
-        text: "For simplicity, let's assume both matrices are square. For each entry of our NxN result matrix, we have to perform a dot product between a row vector and a column vector, both of length N.",
+        text: "For square matrices of size N×N, computing C = A×B requires one dot product per output element. Each dot product is N multiply-accumulate operations. Total: N² output entries × N inner multiplications × 2 FLOPs (mul + add) = 2N³ FLOPs.",
       },
       {
         type: "image",
@@ -801,7 +788,7 @@ __syncthreads();`,
       },
       {
         type: "paragraph",
-        text: "This results in N(=rows) * N(=columns) * N(=dot product) * 2(mul + add) = 2N³ FLOPs.",
+        text: "For N=1024: 2 × 1024³ ≈ 2.1 billion FLOPs. Memory footprint for three 1024×1024 float32 matrices: 3 × 4MB = 12MB. Arithmetic intensity = 2N³ / (3 × 4 × N²) ≈ N/6 ≈ 170 FLOP/byte for N=1024. At L3 bandwidth of ~40 GB/s and peak compute of ~250 GFLOP/s, the compute-to-bandwidth ratio for this size is already squarely in the compute-bound regime. Once you get the data into cache and stop thrashing it, the bottleneck is FP throughput, not memory.",
       },
       {
         type: "code-highlighted",
@@ -818,7 +805,7 @@ __syncthreads();`,
       {
         type: "heading",
         level: 2,
-        text: "Running on a physical machine",
+        text: "Benchmarking the Baseline: NumPy on Haswell",
       },
       {
         type: "code-highlighted",
@@ -831,58 +818,54 @@ end = time.time_ns() - start`,
       },
       {
         type: "paragraph",
-        text: "When run on a dedicated server equipped with an Intel i7-6700 (a quad-core Haswell CPU) it takes 8ms. Total FLOPs: 2 Billion. Total memory (LOAD): 8MB using fp32. Total cycles: 8ms × 3.4GHz = 27 Million. That's 18 FLOPS / core / cycle, or ~250GFLOP/s, on hardware released in 2015.",
+        text: "On an Intel i7-6700 Haswell (quad-core, 3.4 GHz), this takes ~8ms. 2.1B FLOPs in 8ms = 263 GFLOP/s = 18.5 FLOPs/core/cycle. On silicon from 2015. NumPy dispatches to Intel MKL's SGEMM kernel here — the BLAS routine for single-precision general matrix multiply: C = α·A·B + β·C.",
       },
       {
         type: "paragraph",
-        text: "On a Haswell server, Numpy uses Intel's MKL implementation of BLAS. Particularly we care about how the SGEMM function is implemented, which is called for matrix multiplications. SGEMM is short for single-precision general matrix multiply. GEMM performs: C = α*A*B + β*C. A, B, C are matrices and α, β are scalars.",
+        text: "Where does 18.5 FLOPs/core/cycle come from? The theoretical peak for Haswell with AVX2 and FMA is 2 × (256/32) = 16 FLOPs per VFMADD instruction, at 2 instructions/cycle = 32 FLOPs/cycle. MKL achieves 18.5/32 ≈ 58% of peak — excellent for a general-purpose BLAS on arbitrary matrices. We'll aim to hit half that.",
       },
       // Section: How can a single core do 18 FLOPs in a cycle?
       {
         type: "heading",
         level: 2,
-        text: "How can a single core do 18 FLOPs in a cycle?",
+        text: "SIMD and FMA: The Secret to 18 FLOPs/Cycle",
       },
       {
         type: "paragraph",
-        text: "Looking closely at the relevant sgemm_kernel_HASWELL, the speed comes from using vectorized instructions. A vectorized / SIMD instruction performs the same instruction on all entries of the vector input at once:",
+        text: "A scalar float multiply takes one execution unit one clock. But a 256-bit AVX2 YMM register holds 8 floats, so a VMULPS (vectorized multiply) executes 8 multiplications in the same slot. That's 8× instruction-level throughput for free — the silicon is already there, you just have to tell the compiler to use it.",
       },
       {
         type: "image",
         src: "/cpu-mmm/Scalar_vs_Vectorized.png",
         alt: "Scalar vs vectorized operations comparison",
-        caption: "SIMD instructions operate on multiple floats simultaneously, multiplying throughput.",
+        caption: "SIMD: one instruction, multiple data. AVX2 processes 8 floats per operation.",
         invert: true,
       },
       {
         type: "paragraph",
-        text: "FMA stands for Fused Multiply Add — performing A = A + B*C using a single (fused) instruction. It operates on three 256-bit YMM registers, calculating (YMM1 * YMM2) + YMM3, allowing the CPU to perform 16 single-precision FLOPs in one instruction.",
+        text: "FMA (Fused Multiply-Add) fuses a multiply and add into a single instruction: A += B * C. On Haswell, VFMADD213PS operates on three 256-bit YMM registers, performing 8 fused multiply-adds — 16 FLOPs — in one instruction. According to Agner Fog's tables, VFMADD has a throughput of 0.5 cycles on Haswell (two execution ports can handle it). So theoretical peak is 2 VFMADD/cycle × 16 FLOP/VFMADD = 32 FLOP/cycle per core.",
       },
       {
         type: "paragraph",
-        text: "Checking Agner Fog's instruction tables and uops.info, VFMADD has a throughput of 0.5 cycles. This means our theoretical upper limit should be 2 × VFMADD instructions per cycle, or 32 FLOPS/cycle. At a latency of 5 cycles, this means we need to find 10 × 16 FLOPs that we can schedule independently, fully exploiting instruction-level parallelism (ILP).",
-      },
-      {
-        type: "paragraph",
-        text: "So to conclude, Intel's BLAS library achieves 18 FLOPs/core/cycle, where the theoretical upper bound is 32 FLOPs/core/cycle. Note how even though the matrices aren't that big, we're strongly compute bound already. Loading 8MB from RAM takes maybe 200μs at 40GB/s bandwidth. If the matrices get bigger, we become more compute-bound since we perform 2n³ FLOPs for 2n² loads.",
+        text: "But VFMADD has a latency of 5 cycles — meaning you have to wait 5 cycles for the result before using it as an input to the next FMA. To sustain 2 FMAs/cycle despite that 5-cycle latency, you need at least 5 × 2 = 10 independent FMA operations in flight simultaneously — 160 FLOPs of in-flight work. That's where instruction-level parallelism (ILP) comes in: structure your inner loop so that the compiler can issue multiple independent FMA instructions without waiting on data dependencies. This is why the MKL SGEMM kernel uses multiple accumulator registers — each register holds an independent partial sum, eliminating the dependency chain.",
       },
       // Section: Trying to recreate from scratch
       {
         type: "heading",
         level: 2,
-        text: "Trying to recreate this performance from scratch",
+        text: "Starting from Scratch: Naive C++",
       },
       {
         type: "paragraph",
-        text: "To spoiler the outcome: we'll end up with an implementation that performs 9 FLOPS/core/cycle, but only works for matrices of a specific size. The goal is not to write a competitive BLAS implementation, but to learn about common performance optimizations. For comparison, the MMM implementation in OpenBLAS is ~7K LOC of handwritten assembly.",
+        text: "Target hardware: Intel i7-6700, quad-core Haswell @ 3.4GHz. Cache layout: 32KiB L1d per core, 256KiB L2 per core, 8MB shared L3. Compiler: clang 14.0 with -O3 -march=native -ffast-math. Benchmarking via Google Benchmark; every variant validated against PyTorch's output for numerical correctness.",
       },
       {
         type: "paragraph",
-        text: "Running on a quad-core Intel i7-6700 CPU @ 3.40GHz with 32KiB per-core L1d cache, 256KiB of per-core L2 cache, and a shared 8MB L3 cache. Compiler: clang v14.0. Benchmarking via Google Benchmark. After each benchmark, the result is compared to PyTorch's MMM implementation for correctness.",
+        text: "The target is ~9 FLOPs/core/cycle — roughly half of the theoretical peak. Not competitive with BLAS (which is 18), but above the noise floor of a naive implementation. The constraint: our kernel only works for fixed matrix sizes known at compile time (template parameters). We sacrifice generality for speed, and that tradeoff is entirely intentional.",
       },
       {
         type: "paragraph",
-        text: "Let's start with a basic nested for-loop:",
+        text: "Starting point — the most straightforward thing you'd write:",
       },
       {
         type: "code-highlighted",
@@ -902,7 +885,7 @@ inline void matmulImplNaive(const float *left, const float *right,
       },
       {
         type: "paragraph",
-        text: "Compiled with clang and default flags, this takes 4.4s. With -O3 -march=native -ffast-math the runtime drops to 1.6s. Another improvement is to accumulate the inner dot-product in a register and only write the result once finished:",
+        text: "Without optimization flags: 4.4s. With -O3 -march=native -ffast-math: 1.6s — a 2.75× speedup from the compiler alone. That's already a reminder that the compiler is doing real work. But 1.6s is still ~20× slower than NumPy. A small improvement: accumulate the inner dot product in a local register and write it to C once at the end:",
       },
       {
         type: "code-highlighted",
@@ -923,39 +906,39 @@ inline void matmulImplNaiveRegisterAcc(const float *left, const float *right,
       },
       {
         type: "paragraph",
-        text: "This brings runtime down to 1.5s. It's better to write the register accumulation by hand rather than relying on the compiler to optimize it.",
+        text: "Down to 1.5s. Modest, but real. The reason: without the explicit accumulator, the compiler has to prove it's safe to keep partial sums in a register rather than writing them to `result[]` on every iteration (pointer aliasing can prevent this). Being explicit removes the ambiguity. We're still nowhere near BLAS — the next bottleneck is the memory access pattern.",
       },
       // Section: Cache-aware implementation
       {
         type: "heading",
         level: 2,
-        text: "Cache-aware implementation",
+        text: "Cache-Aware Loop Ordering",
       },
       {
         type: "paragraph",
-        text: "Multidimensional matrices are represented in memory using a strided representation. In most programming languages the matrix is row-continuous, meaning that iterating through a single row by incrementing the column results in sequential memory access.",
+        text: "C and most systems languages use row-major storage: matrix elements are laid out row by row in memory. A[i][j] and A[i][j+1] are adjacent. A[i][j] and A[i+1][j] are N floats apart.",
       },
       {
         type: "image",
         src: "/cpu-mmm/stride_matrix_representation.png",
         alt: "Strided matrix memory layout",
-        caption: "Row-major memory layout: rows are contiguous, columns stride across memory.",
+        caption: "Row-major memory layout: rows are contiguous, columns are strided by N×4 bytes.",
         invert: true,
       },
       {
         type: "paragraph",
-        text: "This makes it clear why the inner, most important loop of our matrix multiplication is very cache unfriendly. When iterating over the row of A, we incur a cache miss on the first entry, but the cache-line fetch holds the next 15 floats — good. However, for matrix B, we walk down the rows, incurring a cache miss at every step. At 1024 rows × 64 byte cache lines, we load 64KB from memory for each column — far exceeding a 32KB L1d cache.",
+        text: "In the naive row-col-inner loop order, the innermost loop walks across a row of A (sequential — good, cache-line friendly) but walks down a *column* of B (stride-N — terrible). For N=1024 with float32, each step down a column of B jumps 4KB. A full column traversal touches 1024 × 4KB = 4MB, and our L1d is only 32KB. Every access to B in the inner loop is a cache miss. This is why the naive implementation is so slow — it's memory-bound despite the problem being arithmetically intensive.",
       },
       {
         type: "image",
         src: "/cpu-mmm/cache-unaware-dot-product.png",
         alt: "Cache-unfriendly access pattern for matrix B",
-        caption: "The naive loop order accesses B column-by-column, thrashing the L1 cache.",
+        caption: "The naive loop order walks B column-by-column — every inner step is a cache miss.",
         invert: true,
       },
       {
         type: "paragraph",
-        text: "To fix this, we reorder the two inner-most loops:",
+        text: "The fix: swap the col and inner loop order. Instead of iterating over all columns before advancing the inner index, iterate over the inner index first:",
       },
       {
         type: "code-highlighted",
@@ -977,12 +960,12 @@ inline void matmulImplLoopOrder(const float *left, const float *right,
         type: "image",
         src: "/cpu-mmm/cache-aware-dot-prod-reorder-loops.png",
         alt: "Optimized cache-aware access pattern after loop reordering",
-        caption: "After loop reordering: B and C are accessed sequentially, enabling vectorization.",
+        caption: "After loop reordering: the inner loop traverses B and C sequentially — cache-line friendly, vectorizable.",
         invert: true,
       },
       {
         type: "paragraph",
-        text: "The improvement is quite spectacular, bringing runtime down to 89ms — a 16x improvement! Our inner loops now iterate through B and C in a memory-sequential manner. The loop reordering also enabled the compiler to use vectorized VFMADD instructions:",
+        text: "Runtime: 89ms. That's a 17× speedup from a one-line loop swap — the most dramatic win in the whole optimization journey. The inner loop now walks rows of B and C sequentially, so every cache miss fetches 16 useful floats. And because the memory pattern is predictable, the hardware prefetcher kicks in. More importantly, the compiler can now auto-vectorize: the sequential access pattern is exactly what allows it to emit VFMADD instructions:",
       },
       {
         type: "code-highlighted",
@@ -1010,22 +993,22 @@ vmovups ymmword ptr [rcx + 4*rbp], ymm4`,
       {
         type: "heading",
         level: 2,
-        text: "Tiling",
+        text: "Tiling: Making the Cache Work Harder",
       },
       {
         type: "paragraph",
-        text: "We just saw how reordering loops made the caches happy. Next we'll cover a technique called tiling, sometimes also called cache blocking. Consider multiplying two 6×6 matrices with an L1d cache that fits 36 floats. When we reach the end of our middle for-loop, our cache is full and early rows of B have been evicted, causing cache misses when we restart.",
+        text: "Loop reordering solved one cache problem but introduced another. In the reordered implementation, the middle loop (over `inner`) scans through full rows of B. For a 1024×1024 matrix, a full row is 4KB. By the time the outer `row` loop increments and we start the `inner` loop again, the B rows we just processed have been evicted from L1 (32KB). We reload them for every row of A — same data, cold cache every time.",
       },
       {
         type: "image",
         src: "/cpu-mmm/Basic_tiling_inner.png",
         alt: "Cache tiling concept visualization",
-        caption: "Tiling splits the middle loop, ensuring the working set stays in cache across iterations.",
+        caption: "Without tiling: by the time we revisit a tile of B for the next row of A, it's been evicted from cache.",
         invert: true,
       },
       {
         type: "paragraph",
-        text: "To solve this, we tile on the middle for-loop by introducing an additional outer loop. By splitting the middle-loop into two parts, we ensure no cache misses in the middle loop after the first iteration:",
+        text: "Tiling (also called cache blocking) fixes this by splitting the middle loop into an outer tile loop and an inner tile loop. The tile loop processes a chunk of the `inner` dimension that fits in L1, then moves to the next chunk. Crucially, multiple rows of A are processed within each tile before moving on — so the tile of B stays hot in cache across those rows:",
       },
       {
         type: "code-highlighted",
@@ -1047,7 +1030,7 @@ vmovups ymmword ptr [rcx + 4*rbp], ymm4`,
         type: "image",
         src: "/cpu-mmm/Tiling_on_inner.png",
         alt: "Tiling visualization with block boxes and colored arrows",
-        caption: "Tiling the inner loop: colored arrows show two iterations over the same tile of B.",
+        caption: "Tiling: the colored arrows show that the same tile of B is reused across multiple rows of A before eviction.",
         invert: true,
       },
       {
@@ -1071,47 +1054,55 @@ inline void matmulImplTiling(const float *left, const float *right,
       },
       {
         type: "paragraph",
-        text: "At an L1d cache size of 32KB, the theoretical optimal tile size is ~3.5. Grid searching all reasonable values, the optimal tile sizes ended up being significantly bigger. At a tile size of 16, runtime went to 70ms. The optimal tile size is also influenced by loop overhead and prefetcher behavior.",
+        text: "At tile size = 16, runtime drops to 70ms — another 21% improvement over the loop-reordering baseline. The analytically 'optimal' tile size based purely on L1 capacity comes out to ~3.5 (just enough rows of B to fit in 32KB), but grid searching finds 16 to be better empirically. The discrepancy comes from loop overhead, the hardware prefetcher's preference for larger strides, and L2 reuse: tiles that are too small are evicted from L1 into L2 but may still be warm when re-accessed.",
       },
       // Section: Tiling on multiple dimensions
       {
         type: "heading",
         level: 2,
-        text: "Tiling on multiple dimensions",
+        text: "Multi-Dimensional Tiling",
       },
       {
         type: "paragraph",
-        text: "Similar to tiling on the inner dimension, we can also tile on the rows, and eventually on the columns. There are diminishing returns for our small-sized matrices, but for larger matrices this makes sense. Each new dimension tiled allows a smaller inner working set while introducing extra overhead.",
+        text: "We tiled the `inner` dimension — but we can also tile `rows` and `columns`. Each new tiled dimension creates a smaller inner working set that fits more comfortably in a shallower cache level, at the cost of extra loop overhead. For our 1024×1024 matrices, tiling all three dimensions gives diminishing returns; the dataset is small enough that L3 handles most of the traffic anyway. For larger matrices (say 8192×8192), multi-level tiling is essential — otherwise the B tile you worked so hard to keep in L1 gets evicted to L3 before the next row of A even starts.",
       },
       {
         type: "image",
         src: "/cpu-mmm/full_tiling.png",
         alt: "Multi-dimensional tiling visualization",
-        caption: "Tiling on all three dimensions: each tile fits in L1, L2, or L3 cache as appropriate.",
+        caption: "Tiling all three dimensions: outer tiles target L3, inner tiles target L2, innermost tiles target L1.",
         invert: true,
+      },
+      {
+        type: "paragraph",
+        text: "The connection to CUDA SGEMM is direct: blocktiling is L3-equivalent (GMEM → SMEM), and threadtiling is L1-equivalent (SMEM → registers). The CPU just lets you say 'tileSize=16' in a loop; CUDA forces you to manage the shared memory buffer explicitly. Same idea, more control.",
       },
       // Section: Multithreaded
       {
         type: "heading",
         level: 2,
-        text: "Multithreaded matrix multiplication",
+        text: "Multithreading with OpenMP",
       },
       {
         type: "paragraph",
-        text: "As the last step, we'll enable multithreading using OpenMP. To pick a good strategy it's important to consider the dependencies of each entry in the result matrix C. We want to avoid having to do partial summing between threads, which would require atomics or locking.",
+        text: "The i7-6700 has 4 physical cores with hyperthreading — 8 logical cores. We've been using one. OpenMP makes adding parallelism trivial syntactically, but you have to think carefully about data dependencies before slapping a `#pragma omp parallel for` on the outermost loop.",
       },
       {
         type: "image",
         src: "/cpu-mmm/tiled_MMM_dependecies.png",
         alt: "Thread dependency partitioning for matrix multiplication",
-        caption: "Dependency analysis: partitioning by output rows and columns avoids inter-thread communication.",
+        caption: "Dependency structure: C[i][j] depends only on row i of A and column j of B — no cross-output dependencies.",
         invert: true,
+      },
+      {
+        type: "paragraph",
+        text: "The key insight: different output tiles C[rowTile][colTile] have no write dependencies between them — each thread writes to a disjoint region of C. Partition C into (rows/256) × (cols/256) chunks and assign each chunk to a thread. Threads read from A and B (shared, read-only) and write to non-overlapping regions of C. Zero synchronization needed.",
       },
       {
         type: "image",
         src: "/cpu-mmm/Thread_partitioning.png",
         alt: "Work distribution across threads",
-        caption: "Each thread independently computes its chunk of C — no synchronization needed.",
+        caption: "Partitioning C into 16 chunks (4×4 blocks) assigned to 8 hyperthreads — roughly 2 chunks per thread.",
         invert: true,
       },
       {
@@ -1143,7 +1134,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "The runtime of the final implementation is around 16ms. Each half of A and B needs to be read by two threads, but each thread computes its chunk of the output matrix C independently. We split both rows and columns into chunks of 4, giving 16 pieces of work divided among 8 hyperthreads.",
+        text: "With 8 threads (collapse(2) across rowTile and columnTile loops), runtime drops to ~16ms. That's a 5.5× speedup from 8 threads — reasonable given hyperthreading sharing physical execution units. Total path from naive to final: 4400ms → 89ms → 70ms → 16ms. About 5× slower than NumPy/MKL, which achieves 8ms. The gap is register tiling (MKL manually manages accumulator registers across multiple output rows simultaneously), better loop unrolling, and handwritten SIMD that the compiler misses.",
       },
       // Conclusion
       {
@@ -1153,11 +1144,15 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "Optimizing matrix multiplication is a fun exercise. It touches upon loop reordering, cache-aware programming and proper work distribution during multithreading. A BLAS implementation will also implement tiling for registers, and multi-dimensional tiling for all caches of the L1-L2-L3 hierarchy.",
+        text: "CPU SGEMM and GPU SGEMM are the same algorithm in different hardware costumes. Both are fundamentally about managing a three-level memory hierarchy to keep compute units fed. The CPU's hierarchy is L1/L2/L3 caches; the GPU's is registers/SMEM/GMEM. The tiling patterns are identical — the GPU just makes you spell them out explicitly in CUDA rather than letting a compiler figure them out.",
       },
       {
         type: "paragraph",
-        text: "While writing this code it became apparent how easy it is to get lost while optimizing even a simple algorithm like matrix multiplication. You really need to have a strong mental model of the workings of your CPU, and a well-oiled benchmarking and testing setup to iterate quickly.",
+        text: "What surprised me most: a single loop-order swap (naive → cache-aware) produced a 17× speedup with zero algorithmic change. The naive implementation wasn't compute-bound or even particularly memory-bandwidth-bound in an absolute sense — it was *cache-thrashing* at an absurd rate, stalling the execution units waiting for DRAM. Performance optimization is often less about raw compute and more about reducing the latency of waiting for data. The patterns that matter: sequential access, reuse, prefetching, and not fighting the hardware prefetcher.",
+      },
+      {
+        type: "paragraph",
+        text: "The gap to production BLAS (~5× in our case) comes from three things we didn't implement: register-level tiling (maintaining multiple independent FMA accumulators to exploit ILP), hand-tuned SIMD intrinsics for the inner kernel, and full multi-level tiling calibrated for each cache level. OpenBLAS's SGEMM kernel is 7,000 lines of x86 assembly for a reason. We got about 50% of theoretical peak; BLAS gets ~56%. That remaining margin is years of engineering.",
       },
       {
         type: "link",
@@ -1172,17 +1167,17 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
     slug: "pipeline-parallel",
     month: "Pipeline Parallelism",
     subtitle: "distributed training via model partitioning",
-    date: "October 2022",
-    year: 2022,
+    date: "February 2026",
+    year: 2026,
     tracks: [],
     blocks: [
       {
         type: "paragraph",
-        text: "Pipeline parallelism makes it possible to train large models that don't fit into a single GPU's memory. Example: Huggingface's BLOOM model is a 175B parameter Transformer model. Storing the weights as bfloat16 requires 350GB, but the GPUs used to train BLOOM 'only' have 80GB of memory, and training requires much more memory than just loading the model weights. Their final training was distributed across 384 GPUs, made possible by assigning different layers of the model to different GPUs — a process called model partitioning.",
+        text: "At some point, a model stops fitting in a single GPU's memory and you have to split it across multiple GPUs. BLOOM, Huggingface's 175B parameter Transformer, requires ~350GB just to store weights in bfloat16. A100 80GB GPUs hold roughly a quarter of that. Training on 384 GPUs required spreading different layers across machines — a technique called model partitioning or pipeline parallelism.",
       },
       {
         type: "paragraph",
-        text: "Implemented naively, model partitioning results in low GPU utilization. In this post, we'll first discuss the naive implementation of pipeline parallelism and some of its problems. Then, we'll talk about GPipe and PipeDream, two more recent algorithms that alleviate some of the issues with naive pipeline parallelism.",
+        text: "The naive version of this is embarrassingly bad at GPU utilization. If GPU2 can't start until GPU1 finishes, you've essentially serialized your compute across machines that are supposed to run in parallel. This post walks through three approaches — naive, GPipe, and PipeDream — and explains the concrete tradeoffs between GPU utilization, memory consumption, and mathematical equivalence to single-GPU training. Along the way I'll highlight the parts that didn't fully click for me until I traced through the actual scheduling logic.",
       },
       // Section: Naive model parallelism
       {
@@ -1192,15 +1187,11 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "Naive model parallelism is the most straightforward way of implementing pipeline-parallel training. We split our model into multiple parts, and assign each one to a GPU. Then we run regular training on minibatches, inserting communication steps at the boundaries where we've split the model.",
+        text: "The most straightforward implementation: split the model layers into contiguous groups, assign each group to a GPU, and run training one minibatch at a time. For a 4-layer model split across 2 GPUs: GPU1 runs layers L1–L2, produces the intermediate activation tensor, and MPI-sends it to GPU2. GPU2 runs L3–L4, computes the loss, and begins the backward pass. At the L2→L3 boundary in the backward direction, GPU2 sends its input gradients back to GPU1, which finishes backprop. Gradient updates happen locally on each GPU.",
       },
       {
         type: "paragraph",
-        text: "For a 4-layer sequential model, we split computation among two GPUs: GPU1 computes intermediate activations through layers L1 and L2; GPU2 completes the forward pass through L3 and L4. To complete a forward pass, we compute intermediate on GPU1 and transfer the resulting tensor to GPU2. For the backward pass, we send the gradients w.r.t. intermediate from GPU2 to GPU1, which completes the backward pass. This makes naive model-parallel training bit-equal to sequential training.",
-      },
-      {
-        type: "paragraph",
-        text: "The pebble graph below illustrates naive model parallelism. GPU1 performs its forward pass and caches the activations. Then it uses MPI to send the outputs of L2 to GPU2. GPU2 finishes the forward pass, calculates the loss, and starts the backward pass. Notice how we only use node-to-node communication (MPI.Send and MPI.Recv) and don't need any collective communication primitives.",
+        text: "This approach is bit-exact with single-GPU training — same math, same numerics. The communication is point-to-point (MPI.Send/MPI.Recv), not collective, so there's no need for AllReduce or broadcast primitives. Simple and correct. But watch the pebble graph below and you'll immediately see the problem:",
       },
       {
         type: "image",
@@ -1210,40 +1201,44 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "By looking at the pebble graph, we can observe some inefficiencies:",
+        text: "Three problems are immediately visible:",
       },
       {
         type: "list",
         items: [
-          "Low GPU utilization: at any given time, only one GPU is busy. If we added more GPUs, each would be busy only (1/#GPUs)% of the time.",
-          "No interleaving of communication and computation: while sending intermediate outputs (FWD) and gradients (BWD) over the network, no GPU is doing anything.",
-          "High memory demand: GPU1 holds all activations for the whole minibatch cached until the very end. Large batch sizes can cause memory problems.",
+          "GPU utilization is 1/n: at any given moment, exactly one GPU is computing and the rest are idle. With 8 pipeline stages, each GPU is productive only 12.5% of the time.",
+          "Communication and computation don't overlap: while the activation tensor is in flight over the network, no GPU does useful work. The interconnect stall is dead time.",
+          "Memory blowup on early stages: GPU1 must cache all forward-pass activations for the entire minibatch until the backward pass reaches it — potentially gigabytes of intermediate tensors kept alive for the full forward+backward duration.",
         ],
       },
       // Section: GPipe
       {
         type: "heading",
         level: 2,
-        text: "The GPipe Algorithm: Splitting Minibatches into Microbatches",
+        text: "GPipe: Microbatches and Gradient Accumulation",
       },
       {
         type: "paragraph",
-        text: "GPipe increases efficiency by splitting each minibatch into even smaller, equal-sized microbatches. We can then compute the forward and backward pass independently for each microbatch. If we sum up the gradients for each microbatch, we get back the gradient over the whole batch — because the gradient of a sum is the sum of the gradients of each term. This process is called gradient accumulation. The local gradient accumulation is equal to sequential training mathematically speaking.",
+        text: "GPipe's core idea: split each minibatch into m equal-sized microbatches, process them sequentially through the pipeline, and accumulate gradients before applying the optimizer step. The math is exact: the gradient of a sum is the sum of the gradients, so summing microbatch gradients gives you the same gradient estimate as processing the full minibatch at once. This is called gradient accumulation, and it's mathematically bit-equivalent to single-GPU training.",
+      },
+      {
+        type: "paragraph",
+        text: "The key win: while GPU2 is running the forward pass for microbatch 2, GPU1 can already start the forward pass for microbatch 3. Multiple microbatches are in flight simultaneously, keeping more GPUs busy at once.",
       },
       {
         type: "heading",
         level: 3,
-        text: "GPipe: Interleaving of Computation and Communication",
+        text: "GPipe: Interleaving and Its Limits",
       },
       {
         type: "image",
         src: "/pipeline-parallel/interleaved-GPipe.png",
         alt: "Sketch of interleaved GPipe showing dependency arrows",
-        caption: "Interleaved GPipe: arrows show dependencies for the first half of the first microbatch.",
+        caption: "GPipe with interleaving: dependency arrows show which microbatch results each GPU is waiting on.",
       },
       {
         type: "paragraph",
-        text: "Unfortunately, there is not a lot of opportunity to interleave communication and compute if the forward and backward passes take the same amount of time for each GPU. Each GPU cannot start processing a given microbatch before the previous GPU has finished processing that same microbatch. If all stages take the same amount of time, we'll still get distinct phases of communication and computation.",
+        text: "In practice, the interleaving of communication and computation is limited. A GPU can't start processing microbatch i until the previous stage has finished and transmitted its output. If all stages take the same time, you get a clean pipeline — but you still get startup and teardown overhead where some GPUs are idle. These idle slots are called pipeline bubbles.",
       },
       {
         type: "heading",
@@ -1252,7 +1247,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "Bubbles are spots in the pipeline where no useful work is being done, caused by dependencies between operations. For example, GPU4 cannot execute F1 until GPU3 has executed F1 and transmitted the result. The fraction of time wasted on the bubble depends on the pipeline depth n and the number of microbatches m:",
+        text: "A bubble is idle time in the pipeline caused by a data dependency that hasn't resolved yet. GPU4 can't run forward pass for microbatch 1 until GPU3 has finished it and sent the activation. Similarly in the backward pass, each stage has to wait for the next stage to send back its input gradient. The fraction of time wasted in bubbles is a function of pipeline depth n (number of GPU stages) and number of microbatches m:",
       },
       {
         type: "math",
@@ -1261,7 +1256,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "So increasing the size of minibatches (which increases m) is necessary for making the bubble fraction small. Large minibatch sizes require careful learning rate scaling and increase the memory demand for caching activations.",
+        text: "As m → ∞, the bubble fraction → 0. In practice, m ≈ 4n is a common target (bubble fraction ≈ 20%). The tradeoff: larger m means larger total batch size, which requires learning rate scaling (linear scaling rule) and increases the amount of activation memory you're caching. There's no free lunch — you're trading memory pressure for utilization.",
       },
       {
         type: "image",
@@ -1278,15 +1273,15 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       {
         type: "heading",
         level: 3,
-        text: "GPipe: Memory demand",
+        text: "GPipe: Memory and Gradient Checkpointing",
       },
       {
         type: "paragraph",
-        text: "Increasing the batch size increases the memory demand for cached activations linearly. In GPipe, we cache activations for each microbatch from the time it was forwarded until the corresponding backward. In the GPipe paper, the authors use gradient checkpointing: instead of caching all activations, they recompute them on the fly during the backward pass. This lowers memory demand at the cost of extra computation.",
+        text: "The memory problem in GPipe is stark: all m microbatch activations are in flight simultaneously during the all-forward phase. Each GPU must cache activations from the time a microbatch was forwarded until the corresponding backward reaches it. For m=8 microbatches on a 4-GPU pipeline, GPU1 holds 8 microbatches worth of activations simultaneously — that's 8× the activation memory of a single-GPU run.",
       },
       {
         type: "paragraph",
-        text: "The memory demand for caching activations without gradient checkpointing is O(batchsize · (#total layers / #GPUs)) for each GPU. With gradient checkpointing, caching only inputs at layer boundaries, the peak memory demand becomes:",
+        text: "GPipe's solution: gradient checkpointing (also called activation recomputation). Instead of caching all intermediate activations, cache only the inputs at pipeline-stage boundaries and recompute activations on the fly during the backward pass. This trades compute for memory. Without gradient checkpointing, peak memory per GPU is O(batchsize × layers_per_gpu). With it:",
       },
       {
         type: "math",
@@ -1297,27 +1292,31 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         type: "image",
         src: "/pipeline-parallel/GPipe-gradient-checkpointing.png",
         alt: "Memory state during backward pass with gradient checkpointing",
-        caption: "Gradient checkpointing: only layer boundary activations are cached; others are recomputed during backward.",
+        caption: "Gradient checkpointing: only boundary inputs are cached. Activations are recomputed during backward, adding ~33% compute overhead.",
+      },
+      {
+        type: "paragraph",
+        text: "The 33% compute overhead from recomputation is usually worth it for large models — it's often the only way to fit a model in GPU memory at all. PyTorch's `torch.utils.checkpoint.checkpoint()` and Megatron-LM's activation recomputation are both GPipe-style gradient checkpointing. If you've used either, you've used this idea.",
       },
       // Section: PipeDream
       {
         type: "heading",
         level: 2,
-        text: "The PipeDream Algorithm: Interleaving Forwards- and Backwards-Passes for Different Microbatches",
+        text: "PipeDream: 1F1B and Earlier Backward Passes",
       },
       {
         type: "paragraph",
-        text: "PipeDream starts the backward pass for a microbatch as soon as the final pipeline stage has completed the corresponding forward pass. We can discard the cached activation for the mth microbatch as soon as we perform the corresponding backward pass. With PipeDream, this backward pass happens earlier than in GPipe, which lessens the memory demand.",
+        text: "PipeDream's key insight: you don't have to wait until all microbatches have been forwarded before starting any backward passes. As soon as the last stage completes the forward pass for microbatch 1, it can immediately start the backward pass for microbatch 1 — even while earlier stages are still processing microbatches 2, 3, 4... This is the 1F1B (one forward, one backward) pattern: in steady state, each GPU alternates between a forward pass for a new microbatch and a backward pass for an older one.",
       },
       {
         type: "image",
         src: "/pipeline-parallel/PipeDream_schedule.png",
         alt: "PipeDream schedule with 4 GPUs and 8 microbatches showing 1F1B pattern",
-        caption: "PipeDream 1F1B schedule: blue = forward passes, green = backward passes, numbered by microbatch.",
+        caption: "PipeDream 1F1B schedule: blue = forward, green = backward. Numbered by microbatch ID.",
       },
       {
         type: "paragraph",
-        text: "For both GPipe and PipeDream, the memory demand for caching activations can be formalized as (without gradient checkpointing):",
+        text: "The memory benefit is substantial. In GPipe, all m microbatches are in flight during the all-forward phase, so you need activation memory proportional to m. In PipeDream's steady state, GPU1 starts a backward as soon as it finishes a forward — so at most n microbatches are in flight simultaneously (where n is pipeline depth). For both algorithms, activation memory without gradient checkpointing is:",
       },
       {
         type: "math",
@@ -1326,7 +1325,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "With the PipeDream schedule, we have at most as many microbatches in flight as the pipeline is deep. This becomes obvious when looking at GPU1 in the above plot: during the steady state, GPU1 forwards a new microbatch only after completing a backward pass.",
+        text: "The max-microbatches-in-flight term is where GPipe and PipeDream differ: GPipe's all-forward phase puts all m microbatches in flight; PipeDream's 1F1B schedule keeps at most n in flight (the pipeline depth). Look at GPU1 in the diagram during steady state — it alternates F and B, never starting a new forward without completing a backward first.",
       },
       {
         type: "image",
@@ -1336,46 +1335,46 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "paragraph",
-        text: "Contrast this with GPipe, where all microbatches are in flight at some point during the schedule, resulting in higher memory demand. Using the above example, with PipeDream we'd have a maximum of 4 microbatches in flight, while with GPipe it'd be 8 — doubling the memory demand for cached activations. In terms of bubble fraction, there is no difference between PipeDream and GPipe. Visually, if you shift the blue forward passes left and the green backward passes right in the PipeDream plot, you get GPipe.",
+        text: "In the example above (4 GPUs, 8 microbatches): PipeDream has at most 4 microbatches in flight, GPipe has 8. PipeDream halves the activation memory overhead. The bubble fraction is identical between the two algorithms — that's determined by the pipeline structure (n stages, m microbatches), not by when backwards start. You can verify this visually: take the PipeDream schedule and slide all the backward passes to the right (consolidating them after all forwards complete) and you recover GPipe. Same total time, different activation memory profile.",
       },
       {
         type: "heading",
         level: 3,
-        text: "Pipeline parallelism: Communication Volume",
+        text: "Communication Volume: Pipeline vs Data Parallelism",
       },
       {
         type: "paragraph",
-        text: "For simplicity, assume a model with only dense layers of equal dimension N. During the forward pass, each GPU will send and receive data of size (batchsize × N). The same holds for the backward pass, bringing total communication volume to (#GPUs - 1) × 2 × batchsize × N floats. In data parallelism using Ring AllReduce, each GPU transfers roughly 2 × (#layers × N² / #GPUs) floats. Depending on configuration, data parallelism may be more communication intensive — but as we saw, data-parallel communication can be interleaved with computation, which is harder for pipeline parallelism.",
+        text: "For a model with dense layers of hidden dimension N, each pipeline stage boundary sends activations of size (microbatch_size × N) forward and gradients of the same size backward. Total pipeline communication per minibatch: (n-1) × 2 × batchsize × N floats — it scales with pipeline depth and activation size, not parameter count. Data parallelism (Ring AllReduce) transfers roughly 2 × (total_params / n_gpus) floats per step — scales with model size, not activations. For very large models with small activations, pipeline parallelism can be cheaper to communicate. For models with large activations (vision, long-context language models), it can be more expensive. The other critical difference: data-parallel AllReduce overlaps with the backward pass naturally; pipeline-parallel point-to-point transfers are on the critical path and harder to hide.",
       },
       // Section: Combining DP and PP
       {
         type: "heading",
         level: 2,
-        text: "Combining Data and Pipeline Parallelism",
+        text: "Combining Pipeline and Data Parallelism",
       },
       {
         type: "paragraph",
-        text: "Data and pipeline parallelism are orthogonal and can both be used at the same time, as long as the batchsize is big enough to result in a sensible microbatch size. For pipeline parallelism, each GPU needs to communicate with the next pipeline stage (during FWD) and the previous stage (during BWD). For data parallelism, each GPU needs to AllReduce gradients among all GPUs assigned the same model layers. We can interleave the AllReduce with the backward pass of the final microbatch to reduce training time.",
+        text: "Pipeline and data parallelism are orthogonal — you can use both simultaneously. In a combined setup, you run multiple pipeline *replicas* (data parallelism across replicas) where each replica is itself a pipeline (pipeline parallelism across stages). The constraint: your effective batch size is (microbatch_size × n_microbatches × n_data_parallel_replicas), so you need a large enough batch to keep both dimensions busy without gradient noise from tiny microbatches.",
       },
       {
         type: "image",
         src: "/pipeline-parallel/DP_and_PP.png",
         alt: "Illustration of orthogonal communication partners in combined data and pipeline parallelism",
-        caption: "Data + pipeline parallelism: orthogonal MPI communicators handle each communication pattern independently.",
+        caption: "Combined DP + PP: each GPU participates in two communicators — one for pipeline neighbors, one for data-parallel peers.",
       },
       {
         type: "paragraph",
-        text: "In practice, orthogonal communication partners for pipeline and data parallelism are implemented using MPI Communicators — subgroups that allow collective communication only within the subgroup. Any given GPU-X is part of two communicators: one containing all GPUs that hold the same layer slice as GPU-X (data parallelism), and one containing the GPUs that hold the other layer slices of GPU-X's model replica (pipeline parallelism).",
+        text: "The implementation uses MPI Communicators — subgroups of GPUs that only communicate within the group. Each GPU belongs to two: one for its pipeline stage peers (all GPUs with the same layer slice, for AllReduce), and one for its pipeline neighbors (the stages before and after, for point-to-point activations and gradients). These communicators partition the GPU cluster into a 2D grid: pipeline depth × data-parallel width. DeepSpeed, Megatron-LM, and FairScale all implement this pattern. In practice, large training runs often use a 3rd dimension — tensor parallelism within each layer — giving a 3D parallelism grid: pipeline × data × tensor.",
       },
       // Section: Implementation
       {
         type: "heading",
         level: 2,
-        text: "Pipeline Parallelism: Implementation of GPipe",
+        text: "Implementation: GPipe in Python",
       },
       {
         type: "paragraph",
-        text: "Contrary to data parallelism, pipeline parallelism requires no collective communication and therefore no explicit synchronization between workers. Microsoft's DeepSpeed library uses a design where each GPU contains a single worker processing instructions given by a static schedule. Before starting the processing of a minibatch, we first zero out the current gradients. Once done, we update the weights through an optimizer step.",
+        text: "Unlike data parallelism (which requires AllReduce — a collective operation requiring coordination among all workers), pipeline parallelism uses only point-to-point sends and receives between adjacent stages. This means each GPU can follow a simple, static schedule without global synchronization. DeepSpeed's pipeline engine uses exactly this design: one worker per GPU, executing a sequence of commands determined before the minibatch starts.",
       },
       {
         type: "code-highlighted",
@@ -1398,6 +1397,10 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
     yield [OptimizerStep()]`,
       },
       {
+        type: "paragraph",
+        text: "This is the GPipe schedule: all forwards first, then all backwards in reverse order. The comment at peak memory is key — between the last FWD and the first BWD, every microbatch's activations are live simultaneously. For the forward pass of each microbatch:",
+      },
+      {
         type: "code-highlighted",
         language: "python",
         code: `def steps_FWD_microbatch(self, microbatch_id):
@@ -1415,6 +1418,10 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         # all but the last pipeline stage send their output to next stage
         cmds.append(SendActivations())
     return cmds`,
+      },
+      {
+        type: "paragraph",
+        text: "Load input (or receive activations), run the forward pass, send activations to the next stage. Clean and self-contained. The backward pass is symmetric but runs in reverse — the last stage has the loss, so it loads targets instead of receiving gradients. A notable detail: the `BackwardGradAllReduce` on the first microbatch (processed last in backward order) overlaps the gradient AllReduce with the actual backward computation, hiding some of the data-parallel communication cost:",
       },
       {
         type: "code-highlighted",
@@ -1439,39 +1446,55 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         cmds.append(SendInputGrad())
     yield cmds`,
       },
+      {
+        type: "paragraph",
+        text: "The `BackwardGradAcc` vs `BackwardGradAllReduce` distinction is subtle but important. For all but the last microbatch (in backward order), we accumulate gradients locally without synchronizing with other data-parallel replicas. Only on the last backward do we AllReduce — and by launching it as a background NCCL operation overlapping with the final backprop, we hide part of the network round-trip latency.",
+      },
       // Section: Hardware appendix
       {
         type: "heading",
-        level: 3,
-        text: "General Hardware Setting",
+        level: 2,
+        text: "Hardware Context: Interconnects and Scaling",
       },
       {
         type: "image",
         src: "/pipeline-parallel/distributed-computing-hardware.png",
         alt: "Hardware hierarchy showing multi-node GPU clusters with PCIe, NVLink, InfiniBand",
-        caption: "Distributed training hardware: NVLink (~900GB/s) connects GPUs within a node; InfiniBand (~10-50GB/s) connects nodes.",
+        caption: "Distributed training hardware: NVLink at ~900GB/s within a node; InfiniBand HDR at ~200Gbps between nodes.",
         invert: true,
+      },
+      {
+        type: "paragraph",
+        text: "The bandwidth numbers matter a lot for pipeline parallelism design. NVLink bandwidth within a node is ~900GB/s bidirectional — fast enough that intra-node pipeline stages are almost never bandwidth-limited. Cross-node InfiniBand is 25–200Gbps depending on generation — easily 10-100× slower. A good rule of thumb: place pipeline stage boundaries at intra-node boundaries where possible, and use pipeline parallelism to handle the inter-node communication that you can't avoid.",
       },
       {
         type: "image",
         src: "/pipeline-parallel/strong-vs-weak-scaling.png",
         alt: "Visual comparison of strong vs weak scaling strategies",
-        caption: "Strong scaling: fixed problem size across more GPUs. Weak scaling: problem size grows with GPU count.",
+        caption: "Strong vs weak scaling: strong = fixed problem size across more GPUs; weak = fixed per-GPU workload.",
         invert: true,
+      },
+      {
+        type: "paragraph",
+        text: "Pipeline parallelism is a form of weak scaling for model size: each GPU holds a fixed number of layers, and you scale up the total parameter count by adding more GPUs to the pipeline. Bubble overhead is independent of model size (it's determined by pipeline depth and microbatch count). This is why pipeline parallelism is a first-class citizen in the infrastructure of LLM training — adding more layers doesn't increase utilization loss.",
       },
       // Conclusion
       {
         type: "heading",
         level: 2,
-        text: "Conclusion and Summary",
+        text: "Conclusion",
       },
       {
         type: "paragraph",
-        text: "That concludes the introduction to pipeline parallelism. Pipeline parallelism is a way of training large models that do not fit into a single GPU's memory, by partitioning the model's layers across GPUs. We perform GPU-to-GPU communication between model partitions during the forward pass (to send activations) and the backward pass (to send gradients).",
+        text: "Pipeline parallelism is ultimately about scheduling. Given that a model must be split across GPUs, the question is: in what order do you run forward and backward passes across microbatches to maximize utilization and minimize memory? Naive MP gives you correctness but terrible utilization. GPipe restores utilization with microbatches but blows up activation memory. PipeDream halves the activation memory with 1F1B while maintaining the same bubble fraction. None of these choices are free — every improvement comes with a cost somewhere else.",
       },
       {
         type: "paragraph",
-        text: "We saw how naive model parallelism suffers from poor GPU utilization. This is alleviated by GPipe, which splits minibatches into smaller microbatches, keeping multiple GPUs busy at any given time. We saw how PipeDream achieves a smaller memory footprint than GPipe by starting backward passes earlier. Pipeline parallelism can be combined with data parallelism to further decrease the memory demand for each worker.",
+        text: "What I find most interesting about this space is the interaction between pipeline depth and batch size. Deep pipelines (more stages) have higher bubble overhead unless you increase microbatch count, which increases batch size, which requires learning rate scaling. At some point you're constrained by convergence — very large batches don't generalize as well without careful warmup and decay schedules. The scheduling algorithm and the optimization algorithm aren't actually independent. Modern large-scale training infrastructure (Megatron-LM, DeepSpeed, FairScale) has to co-design both.",
+      },
+      {
+        type: "paragraph",
+        text: "If you're building or debugging a multi-GPU training setup, the most common failure mode I've seen is incorrect gradient accumulation — treating microbatch gradients as independent updates instead of accumulating them before the optimizer step. Always validate against single-GPU training numerics before debugging performance. Correctness first, then throughput.",
       },
       {
         type: "link",
@@ -1705,6 +1728,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
     subtitle: "redefining balance, purpose, and connections",
     date: "May 17, 2025",
     year: 2025,
+    hidden: true,
     coverImage: "/WEBPtoJPG4.jpg",
     coverGradient: "from-yellow-100 via-blue-100 to-red-200",
     tracks: [
@@ -1764,6 +1788,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
     subtitle: "ambition has made college lose true happiness",
     date: "April 25, 2025",
     year: 2025,
+    hidden: true,
     coverImage: "/oai1.jpg",
     coverGradient: "from-purple-500 via-pink-500 to-blue-500",
     tracks: [

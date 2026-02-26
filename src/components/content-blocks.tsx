@@ -1,6 +1,7 @@
 import type { ContentBlock } from "@/lib/data";
 import { codeToHtml } from "shiki";
 import katex from "katex";
+import { ImageLightbox } from "@/components/image-lightbox";
 
 interface ContentBlocksProps {
   blocks: ContentBlock[];
@@ -43,18 +44,13 @@ export async function ContentBlocks({ blocks }: ContentBlocksProps) {
 
       if (block.type === "image") {
         return (
-          <figure key={index} className="flex flex-col gap-2">
-            <img
-              src={block.src}
-              alt={block.alt}
-              className={`w-full rounded-lg${block.invert ? " invert hue-rotate-180" : ""}`}
-            />
-            {block.caption && (
-              <figcaption className="text-xs text-muted-foreground">
-                {block.caption}
-              </figcaption>
-            )}
-          </figure>
+          <ImageLightbox
+            key={index}
+            src={block.src}
+            alt={block.alt}
+            caption={block.caption}
+            className={block.invert ? "invert hue-rotate-180" : undefined}
+          />
         );
       }
 
@@ -62,18 +58,12 @@ export async function ContentBlocks({ blocks }: ContentBlocksProps) {
         return (
           <div key={index} className="grid grid-cols-2 gap-4 md:grid-cols-3">
             {block.images.map((image, imageIndex) => (
-              <figure key={imageIndex} className="flex flex-col gap-2">
-                <img
-                  src={image.src}
-                  alt={image.alt}
-                  className="w-full rounded-lg object-cover"
-                />
-                {image.caption && (
-                  <figcaption className="text-xs text-muted-foreground">
-                    {image.caption}
-                  </figcaption>
-                )}
-              </figure>
+              <ImageLightbox
+                key={imageIndex}
+                src={image.src}
+                alt={image.alt}
+                caption={image.caption}
+              />
             ))}
           </div>
         );

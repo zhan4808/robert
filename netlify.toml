@@ -12,7 +12,15 @@
   package = "@netlify/plugin-nextjs"
 
 [[headers]]
+  for = "/**/*.pdf"
+  [headers.values]
+    Content-Type = "application/pdf"
+    Content-Disposition = "inline"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
   for = "/*.pdf"
   [headers.values]
     Content-Type = "application/pdf"
     Content-Disposition = "inline"
+    X-Content-Type-Options = "nosniff"

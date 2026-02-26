@@ -59,6 +59,16 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <div className="flex items-center gap-4 text-sm">
               <time className="text-muted-foreground">{project.date}</time>
               <div className="flex gap-2">
+                {project.paperUrl && (
+                  <a
+                    href={project.paperUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="connect-link"
+                  >
+                    Paper
+                  </a>
+                )}
                 {project.liveUrl && (
                   <a
                     href={project.liveUrl}
@@ -66,7 +76,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                     rel="noopener noreferrer"
                     className="connect-link"
                   >
-                    {project.liveUrl.endsWith(".pdf") ? "Paper" : "Live Demo"}
+                    Live Demo
                   </a>
                 )}
                 {project.githubUrl && (

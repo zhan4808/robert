@@ -53,6 +53,7 @@ export interface Project {
   hidden?: boolean;
   externalUrl?: string;
   liveUrl?: string;
+  paperUrl?: string;
   githubUrl?: string;
   hero?: { type: "image" | "video"; src: string; alt: string };
   sections: { id: string; title: string; blocks: ContentBlock[] }[];
@@ -2005,7 +2006,7 @@ export const projects: Project[] = [
     tags: ["Triton", "CUDA", "LLM Inference", "Quantization", "GPU Kernels"],
     featured: true,
     githubUrl: "https://github.com/zhan4808/gemmopt",
-    liveUrl: "/tiny-gemm/Tiny-GEMM.pdf",
+    paperUrl: "https://raw.githubusercontent.com/zhan4808/robert/main/public/tiny-gemm/Tiny-GEMM.pdf",
     sections: [
       {
         id: "motivation",

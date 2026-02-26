@@ -3,9 +3,9 @@ import { Navigation } from "@/components/navigation";
 import { aboutLinks } from "@/lib/data";
 
 const aboutImages = [
-  { src: "/robert1.svg", alt: "Robert" },
-  { src: "/sf1.svg", alt: "San Francisco" },
-  { src: "/tahoe1.svg", alt: "Lake Tahoe" },
+  { src: "/robert1.svg", alt: "Robert", offset: "mt-6" },
+  { src: "/sf1.svg", alt: "San Francisco", offset: "mt-0" },
+  { src: "/tahoe1.svg", alt: "Lake Tahoe", offset: "mt-10" },
 ];
 
 export default function AboutPage() {
@@ -20,11 +20,11 @@ export default function AboutPage() {
         </header>
 
         {/* Top row — 3 photos, each sized to its own natural aspect ratio */}
-        <section className="flex flex-wrap items-end gap-4">
+        <section className="flex items-start gap-4">
           {aboutImages.map((image) => (
             <div
               key={image.src}
-              className="overflow-hidden rounded-lg border border-border bg-card p-3 flex-1 min-w-[140px]"
+              className={`overflow-hidden rounded-lg border border-border bg-card p-3 flex-1 min-w-[140px] ${image.offset}`}
             >
               <img
                 src={image.src}

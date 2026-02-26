@@ -225,6 +225,35 @@ export async function ContentBlocks({ blocks }: ContentBlocksProps) {
         );
       }
 
+      if (block.type === "table") {
+        return (
+          <div key={index} className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-border">
+                  {block.headers.map((h, i) => (
+                    <th key={i} className="py-2 pr-4 text-left text-xs font-medium text-foreground whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {block.rows.map((row, ri) => (
+                  <tr key={ri} className="border-b border-border/50">
+                    {row.map((cell, ci) => (
+                      <td key={ci} className="py-2 pr-4 text-xs text-muted-foreground whitespace-nowrap">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
       return null;
     })
   );

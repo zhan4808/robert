@@ -1,9 +1,0 @@
-{
-  "/_not-found/page": "/_not-found",
-  "/about/page": "/about",
-  "/blog/[slug]/page": "/blog/[slug]",
-  "/page": "/",
-  "/projects/page": "/projects",
-  "/projects/[slug]/page": "/projects/[slug]",
-  "/blog/page": "/blog"
-}

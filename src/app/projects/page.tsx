@@ -3,6 +3,8 @@ import { Navigation } from "@/components/navigation";
 import { projects } from "@/lib/data";
 import Link from "next/link";
 
+const visibleProjects = projects.filter((p) => !p.hidden);
+
 export default function ProjectsPage() {
   return (
     <div className="mx-auto mt-8 mb-16 flex max-w-[652px] flex-col gap-12 px-6 md:mt-16 md:gap-16">
@@ -17,7 +19,7 @@ export default function ProjectsPage() {
         </section>
 
         <div className="flex flex-col gap-2">
-          {projects.map((project) => (
+          {visibleProjects.map((project) => (
             <Link
               key={project.slug}
               href={project.externalUrl ?? `/projects/${project.slug}`}

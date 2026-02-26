@@ -2005,7 +2005,7 @@ export const projects: Project[] = [
     tags: ["Triton", "CUDA", "LLM Inference", "Quantization", "GPU Kernels"],
     featured: true,
     githubUrl: "https://github.com/zhan4808/gemmopt",
-    hero: { type: "image", src: "/tiny-gemm/hero_figure.png", alt: "Tiny-GEMM speedup overview" },
+    // hero: { type: "image", src: "/tiny-gemm/hero_figure.png", alt: "Tiny-GEMM speedup overview" },
     sections: [
       {
         id: "overview",
@@ -2190,12 +2190,6 @@ export const projects: Project[] = [
             type: "paragraph",
             text: "Weight-only INT4 should not be applied uniformly across all decode layers. Kernel-aware deployment — applying INT4 selectively to FFN layers while keeping narrow projections in FP16 — consistently outperforms blanket quantization policies. The decision boundary is the arithmetic intensity threshold, not the layer type per se.",
           },
-          {
-            type: "image",
-            src: "/tiny-gemm/family_summary_table.png",
-            alt: "Family summary table",
-            caption: "Summary across all tested shapes and families. Deploy INT4 on ffn_up/ffn_down; keep kv_proj in FP16.",
-          },
         ],
       },
       {
@@ -2308,19 +2302,19 @@ export const projects: Project[] = [
           },
           {
             type: "table",
-            headers: ["Build date", "Config", "Cycles", "CPUCLK Fmax", "MAIN Fmax"],
+            headers: ["Processor Type", "Config", "Cycles", "CPUCLK Fmax", "MAIN Fmax"],
             rows: [
-              ["Feb 05", "LAT=0",  "6,907",  "51.62 MHz", "105.46 MHz"],
-              ["Feb 05", "LAT=2",  "13,814", "51.99 MHz", "101.53 MHz"],
-              ["Feb 22", "LAT=0",  "9,239",  "81.50 MHz", "157.33 MHz"],
-              ["Feb 22", "LAT=2",  "17,887", "91.12 MHz", "161.34 MHz"],
-              ["Feb 26", "LAT=0",  "7,741",  "80.42 MHz", "142.41 MHz"],
-              ["Feb 26", "LAT=2",  "15,640", "80.37 MHz", "149.21 MHz"],
+              ["Singlecycle", "LAT=0",  "6,907",  "51.62 MHz", "105.46 MHz"],
+              ["Singlecycle", "LAT=2",  "13,814", "51.99 MHz", "101.53 MHz"],
+              ["Pipeline", "LAT=0",  "9,239",  "81.50 MHz", "157.33 MHz"],
+              ["Pipeline", "LAT=2",  "17,887", "91.12 MHz", "161.34 MHz"],
+              ["Pipeline w/ Branch Prediction", "LAT=0",  "7,741",  "80.42 MHz", "142.41 MHz"],
+              ["Pipeline w/ Branch Prediction", "LAT=2",  "15,640", "80.37 MHz", "149.21 MHz"],
             ],
           },
           {
             type: "paragraph",
-            text: "The Feb 22 build shows the highest Fmax (91.12 MHz at LAT=2) but more cycles than Feb 26 — indicating a different microarchitectural tradeoff. The final Feb 26 design converges at ~80 MHz, exceeding the 70 MHz synthesis target.",
+            text: "The LAT = 2 Pipeline build shows the highest Fmax (91.12 MHz at LAT=2) but more cycles than Pipeline w/ Branch Prediction, indicating a different microarchitectural tradeoff. The final Pipeline w/ Branch Prediction design converges at ~80 MHz, exceeding the 70 MHz synthesis target.",
           },
         ],
       },
@@ -2330,11 +2324,11 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Verified in ModelSim with directed assembly tests covering: all R-type instructions (ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU), load/store (LW, SW), branches (BEQ, BNE, BLT, BGE taken and not-taken), jumps (JAL, JALR), and all forwarding paths including the double-forwarding case where both rs1 and rs2 require simultaneous bypass from different pipeline stages.",
+            text: "Verified in QuestaSim with directed assembly tests covering: all R-type instructions (ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU), load/store (LW, SW), branches (BEQ, BNE, BLT, BGE taken and not-taken), jumps (JAL, JALR), and all forwarding paths including the double-forwarding case where both rs1 and rs2 require simultaneous bypass from different pipeline stages.",
           },
           {
             type: "paragraph",
-            text: "Synthesis was run in Cadence Genus targeting the CPUCLK domain at 70 MHz. Timing reports confirmed no setup violations at 70 MHz; Fmax was determined by iterative tightening of the constraint until the first failing path.",
+            text: "Synthesis was run in AMD Xilinx Vivado targeting the CPUCLK domain at 70 MHz. Timing reports confirmed no setup violations at 70 MHz; Fmax was determined by iterative tightening of the constraint until the first failing path.",
           },
         ],
       },

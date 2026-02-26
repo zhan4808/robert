@@ -2009,7 +2009,7 @@ export const projects: Project[] = [
     tags: ["Triton", "CUDA", "LLM Inference", "Quantization", "GPU Kernels"],
     featured: true,
     githubUrl: "https://github.com/zhan4808/gemmopt",
-    paperUrl: "https://raw.githubusercontent.com/zhan4808/robert/main/public/tiny-gemm/Tiny-GEMM.pdf",
+    paperUrl: "/tiny-gemm/Tiny-GEMM.pdf",
     sections: [
       {
         id: "motivation",

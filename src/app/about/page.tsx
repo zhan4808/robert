@@ -19,12 +19,12 @@ export default function AboutPage() {
           <p className="text-muted-foreground">A glimpse into me.</p>
         </header>
 
-        {/* Top row — 3 photos only */}
-        <section className="grid gap-4 md:grid-cols-3">
+        {/* Top row — 3 photos, each sized to its own natural aspect ratio */}
+        <section className="flex flex-wrap items-end gap-4">
           {aboutImages.map((image) => (
             <div
               key={image.src}
-              className="overflow-hidden rounded-xl border border-border bg-card"
+              className="overflow-hidden rounded-lg border border-border bg-card p-3 flex-1 min-w-[140px]"
             >
               <img
                 src={image.src}

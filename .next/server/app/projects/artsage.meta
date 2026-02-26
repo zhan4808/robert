@@ -1,7 +1,7 @@
 {
   "headers": {
-    "x-nextjs-stale-time": "4294967294",
+    "x-nextjs-stale-time": "300",
     "x-nextjs-prerender": "1",
-    "x-next-cache-tags": "_N_T_/layout,_N_T_/projects/layout,_N_T_/projects/artsage/layout,_N_T_/projects/artsage/page,_N_T_/projects/artsage"
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/projects/layout,_N_T_/projects/[slug]/layout,_N_T_/projects/[slug]/page,_N_T_/projects/artsage"
   }
 }

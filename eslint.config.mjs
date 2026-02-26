@@ -9,21 +9,21 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-// Import configurations
-const nextConfig = compat.extends("next/core-web-vitals");
-
-export default [
-  ...nextConfig,
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    rules: {
-      // Disable rules that are causing build failures
-      "react/no-unescaped-entities": "off",
-      "@next/next/no-img-element": "off" // Completely disable image warning
+    languageOptions: {
+      parserOptions: {
+        warnOnUnsupportedTypeScriptVersion: false,
+      },
     },
-    ignores: [
-      "**/node_modules/**",
-      ".next/**",
-      "out/**",
-    ]
-  }
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+      "react/no-unescaped-entities": "off",
+      "@next/next/no-img-element": "off",
+      "jsx-a11y/alt-text": "off",
+    },
+  },
 ];
+
+export default eslintConfig;

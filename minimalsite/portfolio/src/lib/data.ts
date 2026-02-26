@@ -49,6 +49,7 @@ export interface Project {
   year: number;
   tags: string[];
   featured?: boolean;
+  hidden?: boolean;
   externalUrl?: string;
   liveUrl?: string;
   githubUrl?: string;
@@ -742,9 +743,8 @@ __syncthreads();`,
       },
       {
         type: "link",
-        label: "Original article by Simon Boehm",
-        href: "https://siboehm.com/articles/22/CUDA-MMM",
-        description: "Reproduced with permission from the author.",
+        label: "Reimagined from article by Simon Boehm",
+        href: "https://siboehm.com/articles/22/CUDA-MMM"
       },
     ],
   },
@@ -1156,9 +1156,8 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "link",
-        label: "Original article by Simon Boehm",
-        href: "https://siboehm.com/articles/22/Fast-MMM-on-CPU",
-        description: "Reproduced with permission from the author.",
+        label: "Reimagined from article by Simon Boehm",
+        href: "https://siboehm.com/articles/22/Fast-MMM-on-CPU"
       },
     ],
   },
@@ -1498,9 +1497,8 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
       },
       {
         type: "link",
-        label: "Original article by Simon Boehm",
-        href: "https://siboehm.com/articles/22/pipeline-parallel-training",
-        description: "Reproduced with permission from the author.",
+        label: "Reimagined from article by Simon Boehm",
+        href: "https://siboehm.com/articles/22/pipeline-parallel-training"
       },
     ],
   },
@@ -1996,20 +1994,14 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
 export const projects: Project[] = [
   {
     slug: "tiny-gemm",
-    title: "Tiny-GEMM",
+    title: "Tiny-GEMM: Packed INT4 GEMM for Decode-Heavy LLM Inference",
     description:
-      "Optimized Triton GEMM + fused transformer kernels for small-batch inference.",
+      "A packed INT4 GEMM kernel in Triton for decode-heavy transformer inference, with a measurement-driven framework for understanding when and why INT4 quantization is beneficial.",
     longDescription:
-      "Tiny-GEMM is a collection of fused Triton kernels that make decode-time transformer inference fast on resource-constrained GPUs by minimizing memory traffic and fusing sublayers.",
+      "Tiny-GEMM is a packed INT4 GEMM kernel purpose-built for the decode-heavy shapes in production transformer inference, with hardware counter profiling to identify the arithmetic intensity threshold where INT4 wins.",
     date: "2025",
     year: 2025,
-    tags: [
-      "Triton",
-      "Kernel Fusion",
-      "INT4",
-      "Transformer Inference",
-      "Profiling",
-    ],
+    tags: ["Triton", "CUDA", "LLM Inference", "Quantization", "GPU Kernels"],
     featured: true,
     githubUrl: "https://github.com/zhan4808/gemmopt",
     hero: { type: "image", src: "/Qyyy.gif", alt: "Tiny-GEMM hero visual" },
@@ -2020,247 +2012,292 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text:
-              "modern transformer inference is often bottlenecked not by flops, but by memory traffic, kernel launch overhead, and poor cache utilization--especially in the small-batch, low-latency regime (batch = 1-8).",
+            text: "LLM decoding is fundamentally different from training. At batch sizes of 1–8, the bottleneck isn't peak compute — it's memory bandwidth and kernel launch overhead. Naive INT4 quantization often makes things worse in this regime because dequantization overhead can dominate over bandwidth savings, especially for narrow projection shapes.",
           },
           {
             type: "paragraph",
-            text:
-              "tiny-gemm targets the two most dominant transformer compute paths: multi-head attention and feed-forward networks (mlps / ffns). the goal is to make decode-time inference fast by fusing operations, maximizing reuse in sram/cache, and exploiting packed int4 weights.",
+            text: "Tiny-GEMM is a packed INT4 GEMM kernel written in Triton, purpose-built for the decode-heavy shapes that appear in production transformer inference. Rather than assume quantization helps universally, the project develops a measurement-driven framework for understanding exactly when and why INT4 is beneficial — and when it isn't.",
           },
         ],
       },
       {
-        id: "why-small-batch",
-        title: "Why small-batch inference is hard",
+        id: "kernel",
+        title: "Kernel Design",
         blocks: [
           {
             type: "paragraph",
-            text:
-              "most optimized gpu kernels are tuned for training-like throughput: large batch sizes, long steady-state compute, and high arithmetic intensity. real deployment looks different: batch size ~ 1, decode steps are sequential, memory dominates compute, and launch overhead matters.",
+            text: "The kernel unpacks INT4 weights from bit-packed tensors directly inside shared memory, accumulates in FP32, and uses static tile configurations tuned per shape family. Three baselines were evaluated across Llama-style decode shapes (Q/K/V projections, KV projections, FFN up/down layers with K, N ∈ {4096, 14336}):",
           },
           {
             type: "list",
             items: [
-              "fusing whole transformer sublayers",
-              "io-aware tiling",
-              "weight-only quantization",
-              "cache-aligned layouts",
-            ],
-          },
-          {
-            type: "visualization",
-            title: "Figure 1 — Transformer Inference Bottleneck Map",
-            prompt:
-              "Show an attention + MLP block with arrows labeled 'HBM traffic dominates'. Emphasize memory movement and launch overhead over compute.",
-            caption:
-              "Small-batch inference is constrained less by compute and more by memory movement and kernel launch overhead.",
-            media: {
-              type: "image",
-              src: "/visuals/tiny-gemm/fig-01.svg",
-              alt: "Transformer inference bottleneck map",
-            },
-          },
-        ],
-      },
-      {
-        id: "fused-attention",
-        title: "Fused multi-head attention kernel",
-        blocks: [
-          {
-            type: "paragraph",
-            text:
-              "transformer attention is conceptually: Attn(Q,K,V) = Softmax((QK^T) / sqrt(d_k)) V. naively, this pipeline allocates large intermediate matrices (QK^T, masked scores, softmax probabilities).",
-          },
-          {
-            type: "paragraph",
-            text:
-              "tiny-gemm computes attention in one fused triton kernel using a flashattention-style tiling approach. attention must be io-aware, minimizing reads/writes to hbm by keeping working tiles inside sram/registers.",
-          },
-          {
-            type: "list",
-            items: [
-              "block tiling for batch=1 decode workloads",
-              "fused causal masking (autoregressive safe)",
-              "locality-aware q/k/v access",
-              "optional dropout support",
-            ],
-          },
-          {
-            type: "visualization",
-            title: "Figure 2 — Naive vs Fused Attention Pipeline",
-            prompt:
-              "Left: QK^T -> mask -> softmax -> V with four kernel boxes. Right: single fused block. Use minimal arrows and labels.",
-            caption:
-              "Tiny-GEMM computes attention in one fused Triton kernel, avoiding intermediate writes.",
-            media: {
-              type: "image",
-              src: "/visuals/tiny-gemm/fig-02.svg",
-              alt: "Naive vs fused attention pipeline",
-            },
-          },
-          {
-            type: "visualization",
-            title: "Figure 3 — FlashAttention-Style Tiling in SRAM",
-            prompt:
-              "Block matrix tiles inside GPU SRAM with arrows showing on-chip reuse. Emphasize 'on-chip' vs 'HBM'.",
-            caption:
-              "IO-aware tiling keeps score computation and softmax normalization on-chip, reducing HBM reads/writes.",
-            media: {
-              type: "image",
-              src: "/visuals/tiny-gemm/fig-03.svg",
-              alt: "FlashAttention-style tiling in SRAM",
-            },
-          },
-        ],
-      },
-      {
-        id: "fused-ffn",
-        title: "Fused feed-forward network (ffn)",
-        blocks: [
-          {
-            type: "paragraph",
-            text:
-              "the transformer mlp block is typically: Y = sigma(XW1 + B1) W2 + B2. standard implementations launch gemm, bias add, activation, gemm, bias add. tiny-gemm fuses the full pipeline to reduce kernel boundaries, intermediate writes, and memory bandwidth.",
-          },
-          {
-            type: "visualization",
-            title: "Figure 4 — FFN Fusion: GEMM -> Act -> GEMM",
-            prompt:
-              "Show two GEMMs with activation between, crossed-out intermediate buffers, and a single fused box on the right.",
-            caption:
-              "FFN fusion eliminates bandwidth-heavy intermediate activations.",
-            media: {
-              type: "image",
-              src: "/visuals/tiny-gemm/fig-04.svg",
-              alt: "FFN fusion diagram",
-            },
-          },
-        ],
-      },
-      {
-        id: "int4",
-        title: "Packed INT4 quantization framework",
-        blocks: [
-          {
-            type: "paragraph",
-            text:
-              "for inference, weights dominate memory footprint. tiny-gemm implements per-channel int4 weight packing, custom dequantization in kernel, and packed int4 gemm primitives. int4 provides ~8x compression vs fp32 and boosts throughput in memory-bound regimes.",
-          },
-          {
-            type: "visualization",
-            title: "Figure 5 — Packed INT4 Weight Layout",
-            prompt:
-              "Diagram showing two INT4 packed into one byte. Use a simple 8-bit box split into two 4-bit halves.",
-            caption:
-              "Packed INT4 weights reduce memory footprint and improve cache residency, enabling faster weight-only inference.",
-            media: {
-              type: "image",
-              src: "/visuals/tiny-gemm/fig-05.svg",
-              alt: "Packed INT4 layout",
-            },
-          },
-        ],
-      },
-      {
-        id: "pytorch",
-        title: "PyTorch operator integration",
-        blocks: [
-          {
-            type: "paragraph",
-            text:
-              "tiny-gemm registers fused attention + ffn as first-class pytorch ops using torch.library. this enables integration into torch.compile graphs, transformer backends, and higher-level inference runtimes.",
-          },
-          {
-            type: "code",
-            code:
-              "import tiny_gemm.ops\n\nout = torch.ops.tiny_gemm.fused_attention(q, k, v, causal=True)",
-          },
-          {
-            type: "visualization",
-            title: "Figure 7 — PyTorch Op Registration Stack",
-            prompt:
-              "Stacked diagram: torch.compile -> torch.library -> Triton kernel. Show flow arrows.",
-            caption:
-              "Custom operator registration makes fused kernels composable inside modern PyTorch inference graphs.",
-            media: {
-              type: "image",
-              src: "/visuals/tiny-gemm/fig-07.svg",
-              alt: "PyTorch op registration stack",
-            },
-          },
-        ],
-      },
-      {
-        id: "profiling",
-        title: "Profiling + bottleneck discovery",
-        blocks: [
-          {
-            type: "paragraph",
-            text:
-              "optimization work is only meaningful when guided by measurement. tiny-gemm includes pytorch profiler integration, tensorboard traces, and kernel-level bottleneck surfacing.",
-          },
-          {
-            type: "list",
-            items: [
-              "profile -> identify io wall -> fuse -> retile -> benchmark -> repeat",
+              "Standard FP16 via torch.matmul",
+              "Dequantized FP16 (INT4 → dequant → FP16 GEMM)",
+              "Tiny-GEMM fused INT4 kernel",
             ],
           },
         ],
       },
       {
-        id: "benchmarks",
-        title: "Benchmark highlights",
+        id: "results",
+        title: "Results",
         blocks: [
           {
             type: "paragraph",
-            text:
-              "benchmarks compare baseline pytorch attention/ffn, fused triton kernels, and int4 quantized weights. gains are largest for batch=1-4, sequence length <= 2k, decode-style inference workloads.",
+            text: "The results reveal a clean regime structure. On wide FFN projections (M=1, K=4096, N=14336), Tiny-GEMM achieves 3.7× speedup over FP16. On narrow KV projections (N=1024), it underperforms FP16 at 0.62×. The transition boundary occurs near an arithmetic intensity of ~8 FLOPs/byte — below this, fixed dequantization overhead dominates; above it, memory bandwidth savings drive gains.",
           },
           {
-            type: "visualization",
-            title: "Figure 6 — Benchmark Plot",
-            prompt:
-              "Line chart: PyTorch FP16 baseline, Tiny-GEMM fused, Tiny-GEMM INT4. Emphasize batch=1 decode gains.",
-            caption:
-              "Fused kernels + INT4 quantization provide the largest speedups in batch=1 decode workloads.",
-            media: {
-              type: "image",
-              src: "/visuals/tiny-gemm/fig-06.svg",
-              alt: "Benchmark plot",
-            },
+            type: "paragraph",
+            text: "This can be formalized as a latency decomposition model: T_total = T_launch + T_mem(W) + T_dequant + T_compute. INT4 is beneficial when T_FP16_mem − T_INT4_mem > T_dequant — i.e., when the bandwidth savings from halving weight size exceed the fixed dequantization cost.",
+          },
+          {
+            type: "paragraph",
+            text: "Hardware counter profiling via Nsight Compute confirms the story: FP16 reaches ~76% peak DRAM throughput on the A10G while INT4 reaches ~27%, consistent with the workload shifting from purely bandwidth-bound to a mixed regime after dequantization absorbs some of the benefit.",
           },
         ],
       },
       {
-        id: "structure",
-        title: "Project structure",
+        id: "takeaway",
+        title: "Key Takeaway",
         blocks: [
           {
-            type: "list",
-            items: [
-              "triton_fused_transformer.py -- fused attention + ffn kernels",
-              "triton_gemm.py -- packed int4 gemm",
-              "quantize_utils.py -- quant/dequant utilities",
-              "benchmark_fused_transformer.py -- benchmarking harness",
-              "tiny_gemm/ops.py -- torch.library op registration",
-              "docker/ -- reproducible cuda runtime",
-            ],
+            type: "paragraph",
+            text: "Weight-only INT4 should not be applied uniformly across all decode layers. Kernel-aware deployment decisions — applying INT4 selectively to FFN layers while keeping narrow projections in FP16 — consistently outperform blanket quantization policies.",
           },
         ],
       },
       {
         id: "future",
-        title: "Future work",
+        title: "Future Work",
         blocks: [
           {
             type: "list",
             items: [
-              "flashattention-2 style scheduling improvements",
-              "additional fused blocks: layernorm + residual",
-              "broader int4 support across hidden dimension patterns",
-              "compiler-level integration into full transformer runtimes",
+              "Exploit INT4 tensor core MMA instructions (currently accumulates in FP32)",
+              "Split-K strategies for M=1 shapes",
+              "Extend evaluation to FP8 on newer hardware (H100/B200)",
             ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: "riscv-cpu",
+    title: "5-Stage Pipelined RISC-V CPU",
+    description:
+      "Fully pipelined 5-stage RISC-V processor in SystemVerilog with hazard detection, forwarding, and a 2-bit branch predictor. Verified in Cadence and synthesized to ~80 MHz.",
+    longDescription:
+      "Designed and verified a 5-stage RISC-V pipeline (IF→ID→EX→MEM→WB) in SystemVerilog with full forwarding, load-use stall detection, and a 2-bit saturating branch predictor. Synthesized in Cadence targeting 70 MHz, achieving ~80 MHz on the CPUCLK domain.",
+    date: "2025",
+    year: 2025,
+    tags: ["RTL", "SystemVerilog", "Computer Architecture", "ASIC Design"],
+    featured: true,
+    sections: [
+      {
+        id: "overview",
+        title: "Overview",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Designed and verified a fully pipelined 5-stage RISC-V processor in SystemVerilog, implementing the classic IF → ID → EX → MEM → WB pipeline with all the hardware mechanisms necessary to handle real program behavior correctly and efficiently.",
+          },
+          {
+            type: "paragraph",
+            text: "The baseline single-cycle design executes one instruction per clock cycle but at a low frequency, limited by the critical path through the longest instruction. Pipelining breaks this critical path across five stages, enabling a significantly higher clock frequency at the cost of introducing data and control hazards that must be resolved in hardware.",
+          },
+        ],
+      },
+      {
+        id: "hazards",
+        title: "Hazard Detection and Forwarding",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Data hazards arise when a later instruction needs a result that an earlier instruction hasn't yet written back. The forwarding unit resolves most data hazards by detecting RAW (read-after-write) conflicts and bypassing results directly from the EX/MEM or MEM/WB pipeline registers back to the EX stage inputs, eliminating the need for NOPs in most cases.",
+          },
+          {
+            type: "paragraph",
+            text: "The forwarding unit independently checks both source operands (rs1 and rs2), with EX-stage forwarding taking priority over MEM-stage forwarding when both are valid. Load-use hazards — where a load's result is needed by the immediately following instruction — cannot be forwarded (the data doesn't exist until after MEM), and are resolved by inserting a one-cycle stall via the hazard detection unit.",
+          },
+        ],
+      },
+      {
+        id: "branch-prediction",
+        title: "Branch Prediction",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Control hazards occur when branches redirect the PC. The baseline implementation uses an always-not-taken predictor: the pipeline speculatively fetches PC+4 and only flushes the IF/ID register (one-cycle penalty) when a branch resolves as taken in EX. This is zero-cost on not-taken branches and hardware-free to implement.",
+          },
+          {
+            type: "paragraph",
+            text: "The design was extended with a 2-bit saturating counter predictor, which maintains branch history to reduce misprediction penalties on loops and other repeating patterns.",
+          },
+        ],
+      },
+      {
+        id: "performance",
+        title: "Performance",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Running a mergesort benchmark across three configurations:",
+          },
+          {
+            type: "list",
+            items: [
+              "No branch prediction (LAT=0): 7,741 cycles @ 80.42 MHz",
+              "2-bit predictor (LAT=2): 15,640 cycles @ 80.37 MHz",
+              "2-bit predictor (LAT=6): 29,672 cycles @ ~80.37 MHz",
+            ],
+          },
+          {
+            type: "paragraph",
+            text: "The pipeline achieves ~80 MHz on the CPUCLK domain, with synthesis targeting 70 MHz. Pipeline CPI varies from ~1.7 to ~3.3 depending on branch behavior. The throughput gains from pipelining come from higher frequency, not lower CPI — the classic pipeline tradeoff.",
+          },
+        ],
+      },
+      {
+        id: "verification",
+        title: "Verification",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The design was fully verified with directed assembly tests covering R-type instructions, load/store, branches (both taken and not-taken), jumps, and forwarding paths including the double-forwarding case where both rs1 and rs2 require simultaneous bypass.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: "graph-scheduling",
+    title: "Memory-Constrained Graph Scheduling",
+    description:
+      "A scheduler for ML accelerator computation DAGs that minimizes latency while respecting tight fast-memory capacity constraints. Competing in Google MLSys 2026 Track A.",
+    longDescription:
+      "Given a computation DAG of MatMul and pointwise ops, produce an execution schedule that minimizes total latency while never exceeding fast-memory (SRAM) capacity. Implements fusion, granularity search, retention decisions, zig-zag tile ordering, and serialization.",
+    date: "2026",
+    year: 2026,
+    tags: ["Systems", "Compilers", "Graph Optimization", "ML Accelerators"],
+    featured: true,
+    sections: [
+      {
+        id: "overview",
+        title: "Overview",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Modern AI accelerators have a fundamental tension at their core: fast on-chip SRAM is tiny (tens of kilobytes), but the tensors in neural network computation graphs are orders of magnitude larger. This competition asks you to solve that tension as a scheduling problem — given a computation DAG of MatMul and pointwise ops, produce an optimal execution schedule that minimizes total latency while never exceeding fast memory capacity.",
+          },
+          {
+            type: "paragraph",
+            text: "The hardware model is a two-level memory hierarchy: fast memory (SRAM, fixed small capacity, zero-latency access) and slow memory (HBM, unlimited capacity, bandwidth-limited). Compute can only operate on tensors in fast memory. The scheduler's output determines how data flows between these two levels.",
+          },
+        ],
+      },
+      {
+        id: "levers",
+        title: "The Five Optimization Levers",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Schedule quality is determined by five interacting decisions:",
+          },
+          {
+            type: "list",
+            items: [
+              "Fusion — the highest-leverage optimization. Fused ops share an ephemeral intermediate that never touches slow memory, saving both capacity and bandwidth. All ops in a fused subgraph must share one tile size, creating a tradeoff against granularity optimization.",
+              "Granularity [w, h, k] — controls how the output tensor is spatially tiled and how the reduction dimension is partitioned. Larger tiles are compute-efficient but consume more fast memory; smaller tiles fit tighter memory budgets but incur padding penalties below native hardware granularity.",
+              "Retention — whether to evict a tensor to slow memory after computing it or keep it resident. Retained tensors consume capacity but save the bandwidth cost of a later reload.",
+              "Traversal order — the sequence in which spatial tiles are processed. Zig-zag ordering over a MatMul tile grid can reduce unique slow-memory loads by 50% vs raster order by maximizing A/B tile reuse.",
+              "Serialization — handles the case where even a single-op subgraph can't fit in fast memory, requiring sequential tile processing with explicit load/store of partial results.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "approach",
+        title: "Our Approach",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The scheduler is implemented in Python with a modular architecture splitting the problem into graph analysis, fusion candidate generation, granularity search, and tile ordering. For fusion, we use a greedy DAG traversal that aggressively groups consecutive ops while checking fast memory constraints. Granularity search uses a roofline-guided heuristic: for each subgraph, we select the largest tile that fits in fast memory, biasing toward compute-bound operation. For tile ordering, we implement a zig-zag traversal that exploits spatial locality.",
+          },
+          {
+            type: "paragraph",
+            text: "The hardest cases are deep dependency chains where fusion creates memory pressure, requiring backtracking to find feasible subgraph boundaries. The evaluation metric is total latency summed across 25 benchmark graphs ranging from 5 to 103 ops, scored as geometric mean speedup over a naive baseline.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: "sparse-attention",
+    title: "Sparse Attention Kernel for DeepSeek V3.2 on B200",
+    description:
+      "A fused CUDA kernel implementing DeepSeek Sparse Attention on NVIDIA B200 (Blackwell), exploiting Tensor Memory, tcgen05 MMA, and page-sorted gather for O(L·k) sparse attention.",
+    longDescription:
+      "Implements DeepSeek Sparse Attention (DSA) on B200 Blackwell, fusing FP8 indexer scoring, histogram-based top-K selection, and sparse BF16 attention into minimal kernel launches using TMEM, tcgen05.mma, and page-sorted gather.",
+    date: "2026",
+    year: 2026,
+    tags: ["CUDA", "Triton", "Sparse Attention", "GPU Kernels", "LLM Inference"],
+    featured: true,
+    sections: [
+      {
+        id: "overview",
+        title: "Overview",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Standard full attention scales as O(L²) in sequence length, making long-context inference prohibitively expensive. DeepSeek V3.2 introduces DeepSeek Sparse Attention (DSA), which reduces this to O(L·k) by identifying the k=2048 most relevant KV tokens for each query and computing full attention only over that sparse subset. The architecture uses a lightweight FP8 indexer — a compressed key cache of 132 bytes per token — to score all tokens cheaply, then selects the top-2048 by score for expensive BF16 attention.",
+          },
+        ],
+      },
+      {
+        id: "b200",
+        title: "B200 Architecture Changes",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The B200's key new primitive is Tensor Memory (TMEM) — 256 KB of dedicated per-SM accumulator storage, separate from registers and shared memory, operating at an estimated ~100 TB/s effective bandwidth. The new tcgen05.mma instruction has single-thread semantics (replacing Hopper's warp-group wgmma) and writes accumulators directly to TMEM, eliminating register pressure from accumulation and enabling clean separation between MMA warps and epilogue warps. The B200 delivers ~4.5 PFLOPS FP8 dense and 8 TB/s HBM3e bandwidth.",
+          },
+        ],
+      },
+      {
+        id: "design",
+        title: "End-to-End Kernel Design",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The kernel fuses four logical stages into minimal CUDA kernel launches:",
+          },
+          {
+            type: "list",
+            items: [
+              "Stage 1 — FP8 Indexer Scoring: tcgen05.mma.kind::f8f6f4 computes Q·K scores over the entire context using the 132-byte FP8 key cache. A histogram accumulation pass in the scoring epilogue maps FP8 scores to 256 discrete bins, enabling exact top-K selection without a sort.",
+              "Stage 2 — Top-K Selection: O(256) scan over the histogram in shared memory (not O(L) sort). Selected indices are sorted by page_id for coalesced memory access in stage 3.",
+              "Stage 3 — Sparse Gather + Attention: Loads 32 selected pages (2048 tokens, page_size=64) via cp.async with double-buffering. Runs FlashAttention online softmax across 64-token tiles using tcgen05.mma, accumulating in TMEM with FP32 precision.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "optimizations",
+        title: "Key Optimizations",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "Page-sorted gather — sorting 2048 selected indices by page_id transforms random HBM accesses into sequential page-level reads, improving gather efficiency by an estimated 40–60%.",
+              "Online softmax with exp2 — FlashAttention's online softmax avoids materializing the N×N attention weight matrix. Using exp2f() instead of expf() maps to the GPU's dedicated MUFU.EX2 hardware instruction.",
+              "L2 persistence — total gathered KV data (~512 KB per query) fits within B200's 65 MB L2. Marking hot KV pages as cudaAccessPropertyPersisting avoids repeated HBM round-trips across heads and layers.",
+              "Warp specialization — four warp roles: producer (cp.async loads), two MMA warps (Q·K and attn·V via tcgen05.mma), epilogue (softmax correction and output writeback). Overlaps data movement with compute.",
+            ],
+          },
+          {
+            type: "paragraph",
+            text: "The theoretical minimum latency for gathering 512 KB of KV data at 8 TB/s HBM bandwidth is ~64ns. A well-optimized kernel targeting this workload should achieve 5–15μs end-to-end per decode step for the sparse attention portion — roughly a 60× reduction compared to dense attention over 128K context.",
           },
         ],
       },
@@ -2326,6 +2363,7 @@ export const projects: Project[] = [
       "ArtSage turns museum visits into interactive learning with image recognition, RAG-powered Q&A, and future AR-driven exploration.",
     date: "2025",
     year: 2025,
+    hidden: true,
     tags: ["RAG", "Computer Vision", "AR", "AI"],
     featured: true,
     hero: { type: "image", src: "/QwQ1.gif", alt: "ArtSage demo" },
@@ -2548,6 +2586,7 @@ export function getVisibleJournalsByYear(): Map<number, JournalPost[]> {
 export function getProjectsByYear(): Map<number, Project[]> {
   const projectsByYear = new Map<number, Project[]>();
   for (const project of projects) {
+    if (project.hidden) continue;
     const yearProjects = projectsByYear.get(project.year) || [];
     yearProjects.push(project);
     projectsByYear.set(project.year, yearProjects);

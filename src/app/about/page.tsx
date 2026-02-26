@@ -3,9 +3,9 @@ import { Navigation } from "@/components/navigation";
 import { aboutLinks } from "@/lib/data";
 
 const aboutImages = [
-  { cover: "/robert1.svg", caption: "/Murmure2.svg" },
-  { cover: "/sf1.svg", caption: "/Murmure7.svg" },
-  { cover: "/tahoe1.svg", caption: "/Murmure5.svg" },
+  { src: "/robert1.svg", alt: "Robert" },
+  { src: "/sf1.svg", alt: "San Francisco" },
+  { src: "/tahoe1.svg", alt: "Lake Tahoe" },
 ];
 
 export default function AboutPage() {
@@ -19,15 +19,18 @@ export default function AboutPage() {
           <p className="text-muted-foreground">A glimpse into me.</p>
         </header>
 
-        <section className="grid gap-6 md:grid-cols-3">
+        {/* Top row — 3 photos only */}
+        <section className="grid gap-4 md:grid-cols-3">
           {aboutImages.map((image) => (
-            <div key={image.cover} className="flex flex-col gap-3">
-              <div className="rounded-lg border border-border bg-card p-4">
-                <img src={image.cover} alt="About cover" className="w-full" />
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4">
-                <img src={image.caption} alt="About caption" className="w-full" />
-              </div>
+            <div
+              key={image.src}
+              className="overflow-hidden rounded-xl border border-border bg-card"
+            >
+              <img
+                src={image.src}
+                alt={image.alt}
+                className="w-full transition-transform duration-500 ease-out hover:scale-[1.03]"
+              />
             </div>
           ))}
         </section>
@@ -57,13 +60,13 @@ export default function AboutPage() {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="group flex items-center justify-between rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-secondary hover:text-foreground"
               >
                 <span className="flex items-center gap-2">
-                  <img src={link.icon} alt="" className="h-4 w-4" />
+                  <img src={link.icon} alt="" className="h-4 w-4 opacity-70 group-hover:opacity-100 transition-opacity duration-200" />
                   {link.name}
                 </span>
-                <span className="text-xs">-&gt;</span>
+                <span className="text-xs opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200">→</span>
               </a>
             ))}
           </div>

@@ -2005,6 +2005,7 @@ export const projects: Project[] = [
     tags: ["Triton", "CUDA", "LLM Inference", "Quantization", "GPU Kernels"],
     featured: true,
     githubUrl: "https://github.com/zhan4808/gemmopt",
+    liveUrl: "/tiny-gemm/Tiny-GEMM.pdf",
     sections: [
       {
         id: "motivation",
@@ -2021,12 +2022,6 @@ export const projects: Project[] = [
           {
             type: "paragraph",
             text: "Tiny-GEMM is my attempt to pin this down precisely: build the fused kernel, run it against FP16 and dequantized-FP16 baselines across the actual decode shapes that matter, use Nsight Compute to see what's really happening in hardware, and derive a concrete rule for when INT4 is worth using.",
-          },
-          {
-            type: "image",
-            src: "/tiny-gemm/hero_figure.png",
-            alt: "Tiny-GEMM speedup overview across shapes",
-            caption: "Speedup over FP16 across representative Llama-style decode shapes. Wide FFN projections see up to 3.7×; narrow KV projections regress.",
           },
         ],
       },
@@ -2103,12 +2098,6 @@ export const projects: Project[] = [
             src: "/tiny-gemm/family_latency_m1.png",
             alt: "Latency by layer family at M=1",
             caption: "Latency by layer family at M=1. FFN layers improve substantially; projection layers are mixed; KV proj regresses.",
-          },
-          {
-            type: "image",
-            src: "/tiny-gemm/family_summary_table.png",
-            alt: "Summary table of speedups by shape family",
-            caption: "Full summary across shape families. The pattern is consistent: geometry drives the regime, not batch size.",
           },
         ],
       },

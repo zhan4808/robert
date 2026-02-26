@@ -66,7 +66,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                     rel="noopener noreferrer"
                     className="connect-link"
                   >
-                    Live Demo
+                    {project.liveUrl.endsWith(".pdf") ? "Paper" : "Live Demo"}
                   </a>
                 )}
                 {project.githubUrl && (

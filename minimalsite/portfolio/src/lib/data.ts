@@ -2310,7 +2310,7 @@ export const projects: Project[] = [
               ["Pipeline", "LAT=2",  "17,887", "91.12 MHz", "161.34 MHz"],
               ["Pipeline w/ Branch Prediction", "LAT=0",  "7,741",  "80.42 MHz", "142.41 MHz"],
               ["Pipeline w/ Branch Prediction", "LAT=2",  "15,640", "80.37 MHz", "149.21 MHz"],
-            ],
+            ], 
           },
           {
             type: "paragraph",

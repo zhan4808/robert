@@ -81,17 +81,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 )}
               </div>
             </div>
-            {/* Tags */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {project.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
           </header>
 
           {/* Hero Media */}

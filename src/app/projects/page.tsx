@@ -28,34 +28,12 @@ export default function ProjectsPage() {
               <article>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-medium group-hover:text-foreground transition-colors">
-                        {project.title}
-                      </h2>
-                      {project.featured && (
-                        <span className="text-xs text-[hsl(var(--link))] bg-[hsl(var(--link))]/10 px-2 py-0.5 rounded">
-                          Featured
-                        </span>
-                      )}
-                    </div>
+                    <h2 className="font-medium group-hover:text-foreground transition-colors">
+                      {project.title}
+                    </h2>
                     <p className="text-muted-foreground text-sm mt-1">
                       {project.description}
                     </p>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {project.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {project.tags.length > 3 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{project.tags.length - 3}
-                        </span>
-                      )}
-                    </div>
                   </div>
                   <svg
                     width="16"

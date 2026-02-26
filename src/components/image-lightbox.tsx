@@ -148,10 +148,7 @@ export function ImageLightbox({ src, alt, caption, className }: ImageLightboxPro
           ref={overlayRef}
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: "rgba(0,0,0,0.88)" }}
-          onClick={(e) => {
-            // Close if clicking the backdrop directly (not the image)
-            if (e.target === overlayRef.current) closeLightbox();
-          }}
+          onClick={closeLightbox}
         >
           {/* Close button */}
           <button
@@ -168,7 +165,7 @@ export function ImageLightbox({ src, alt, caption, className }: ImageLightboxPro
             scroll to zoom · drag to pan · double-click to reset
           </p>
 
-          {/* Image container */}
+          {/* Image container — stop propagation so clicks here don't close overlay */}
           <div
             className="relative w-full h-full flex items-center justify-center overflow-hidden"
             onWheel={handleWheel}
@@ -180,6 +177,7 @@ export function ImageLightbox({ src, alt, caption, className }: ImageLightboxPro
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onClick={(e) => e.stopPropagation()}
             style={{ cursor: dragging ? "grabbing" : "grab" }}
           >
             <img

@@ -1997,9 +1997,9 @@ export const projects: Project[] = [
     slug: "tiny-gemm",
     title: "Tiny-GEMM: Packed INT4 Triton GEMM for Decode-Heavy LLM Inference",
     description:
-      "Packed INT4 GEMM kernel in Triton for decode-heavy LLM inference with hardware counter attribution and regime model. Up to 3.7× speedup on A10G. Status: Complete.",
+      "Packed INT4 GEMM kernel in Triton for decode-heavy LLM inference with hardware counter attribution and a regime model for when quantization helps. Up to 3.7× speedup on A10G.",
     longDescription:
-      "Small-batch LLM decoding is dominated by narrow GEMMs that stress memory bandwidth and launch overhead rather than peak FLOPs. Tiny-GEMM is a packed INT4 GEMM kernel in Triton targeted at decode-heavy shapes, with a measurement-driven regime model — backed by hardware counters — that predicts when weight-only INT4 helps or hurts.",
+      "Small-batch LLM decoding is dominated by narrow GEMMs that stress memory bandwidth and launch overhead rather than peak FLOPs. Tiny-GEMM is a packed INT4 GEMM kernel in Triton for decode-heavy shapes, with measurement-driven analysis — backed by hardware counters — of when weight-only INT4 helps or hurts.",
     date: "2025",
     year: 2025,
     tags: ["Triton", "CUDA", "LLM Inference", "Quantization", "GPU Kernels"],
@@ -2007,194 +2007,144 @@ export const projects: Project[] = [
     githubUrl: "https://github.com/zhan4808/gemmopt",
     sections: [
       {
-        id: "abstract",
-        title: "Abstract",
+        id: "motivation",
+        title: "Motivation",
         blocks: [
           {
             type: "paragraph",
-            text: "Small-batch LLM decoding is dominated by narrow GEMMs that stress memory bandwidth and launch overhead rather than peak FLOPs. We present Tiny-GEMM, a packed INT4 GEMM kernel in Triton targeted at decode-heavy shapes, and a measurement-driven analysis of when quantization helps or hurts. We compare FP16, dequantized FP16, and INT4 fused kernels, attribute performance using hardware counters, and isolate dequantization overhead with microbenchmarks. Results on an A10G show up to 3.7× speedup for wide FFN decode shapes, while narrow projections regress when dequantization dominates. We provide a regime model and decision rule that predicts when INT4 helps, backed by hardware utilization and roofline evidence.",
+            text: "LLM inference and training are fundamentally different workloads. Training runs large, square-ish matrices that saturate tensor cores. Decoding runs one token at a time — batch size 1 to 8, skinny weight projections, tight latency budgets. In this regime the bottleneck shifts entirely: it's memory bandwidth and kernel launch overhead, not peak FLOPs.",
+          },
+          {
+            type: "paragraph",
+            text: "This creates a real problem for quantization. The naive story is \"INT4 halves your weight size so you get 2× bandwidth and 2× speed.\" But in the decode regime that math breaks down — you also have to unpack those 4-bit values back to float inside the kernel, and that dequantization cost is fixed per launch regardless of how much work you do. For narrow projections like KV, that overhead dominates and INT4 ends up slower than FP16.",
+          },
+          {
+            type: "paragraph",
+            text: "Tiny-GEMM is my attempt to pin this down precisely: build the fused kernel, run it against FP16 and dequantized-FP16 baselines across the actual decode shapes that matter, use Nsight Compute to see what's really happening in hardware, and derive a concrete rule for when INT4 is worth using.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/hero_figure.png",
+            alt: "Tiny-GEMM speedup overview across shapes",
+            caption: "Speedup over FP16 across representative Llama-style decode shapes. Wide FFN projections see up to 3.7×; narrow KV projections regress.",
           },
         ],
       },
       {
-        id: "introduction",
-        title: "Introduction",
+        id: "kernel",
+        title: "The Kernel",
         blocks: [
           {
             type: "paragraph",
-            text: "LLM inference workloads differ sharply from training: decoding operates at batch sizes of 1–8 with skinny matrices and tight latency budgets. These shapes are often memory-bound, and naive quantization can underperform if dequantization overhead is not amortized. This work explores packed INT4 GEMM in Triton and provides a systems-oriented evaluation emphasizing utilization, bottleneck regimes, and deployment-relevant shapes.",
-          },
-          {
-            type: "paragraph",
-            text: "We argue that decode inference occupies a distinct optimization regime: launch overhead and memory traffic dominate, so quantization benefits depend on amortizing dequantization cost rather than peak compute. Across representative decode shapes, Tiny-GEMM achieves up to 3.7× speedup over FP16 on wide FFN projections (M=1, K=4096, N=14336).",
-          },
-          {
-            type: "heading",
-            level: 3,
-            text: "Contributions",
-          },
-          {
-            type: "list",
-            items: [
-              "A decode-focused INT4 GEMM kernel with static configuration selection and measurement-driven tuning.",
-              "A regime analysis of INT4 decode GEMMs that identifies when quantization helps or hurts, supported by FP16 and dequantized FP16 baselines.",
-              "A causal attribution methodology combining hardware counters and microbenchmarks to explain performance transitions.",
-            ],
-          },
-        ],
-      },
-      {
-        id: "background",
-        title: "Background and Motivation",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "Decode GEMMs (e.g., Q/K/V projections and FFN layers) typically use M ∈ {1, 2, 4, 8} and hidden dimensions in the 4K–16K range. For these shapes, the dominant costs are memory movement and kernel launch overhead, not peak compute. This motivates INT4 weight packing and fused computation to reduce traffic and improve utilization, while requiring careful attention to dequantization and launch overheads in the small-batch regime.",
-          },
-          {
-            type: "paragraph",
-            text: "Weight-only INT4 quantization halves the bytes transferred from DRAM per weight element. In a strongly memory-bound regime, this directly translates to bandwidth savings. But the savings come with a cost: the kernel must unpack 4-bit values back to FP32 (or FP16) before accumulation, and this dequantization overhead is fixed per launch regardless of matrix size. The core question Tiny-GEMM answers: under what conditions does bandwidth savings exceed dequantization cost?",
-          },
-        ],
-      },
-      {
-        id: "method",
-        title: "Method",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "We implement packed INT4 GEMM in Triton with per-tensor quantization and bit-packed weight tensors. The kernel unpacks INT4 values into FP32 accumulators inside the kernel and uses static configurations keyed by shape family and batch bucket. We evaluate three deployment baselines:",
-          },
-          {
-            type: "table",
-            headers: ["Baseline", "Description"],
-            rows: [
-              ["FP16", "torch.matmul / cuBLAS (vendor-optimized, standard reference)"],
-              ["Dequantized FP16", "INT4 quantize → dequant → FP16 GEMM (two-step baseline)"],
-              ["INT4 fused (Tiny-GEMM)", "Packed INT4 kernel: in-kernel unpack + FP32 accumulation"],
-            ],
-          },
-          {
-            type: "paragraph",
-            text: "The current kernel performs dot products in FP32 and does not yet leverage INT4 tensor core MMA instructions; exploiting INT4 MMA is future work.",
+            text: "The kernel is written in Triton with per-tensor quantization and bit-packed weight tensors. INT4 values are stored two-per-byte and unpacked into FP32 accumulators inside the kernel. Tile configurations are static and keyed by shape family and batch bucket — decode shapes cluster tightly enough that a small lookup table beats dynamic autotuning at runtime.",
           },
           {
             type: "image",
             src: "/tiny-gemm/architecture_diagram.png",
-            alt: "Tiny-GEMM kernel architecture diagram",
-            caption: "Tiny-GEMM kernel flow: packed INT4 weights are unpacked in shared memory, accumulated in FP32, and written to output.",
+            alt: "Tiny-GEMM kernel architecture: INT4 unpack → SRAM → FP32 accumulate → output",
+            caption: "Kernel flow: packed INT4 weights are loaded from DRAM, unpacked in shared memory, accumulated in FP32, and written to output. The unpack step is what sets the regime — it's free when work is large, expensive when it's not.",
+          },
+          {
+            type: "paragraph",
+            text: "Three baselines are compared across every shape: FP16 (torch.matmul / cuBLAS, vendor-optimized), dequantized FP16 (INT4 quantize → dequant → FP16 GEMM as a two-step pipeline), and the fused INT4 kernel. The dequantized baseline is important — it isolates whether the problem is the quantization format or the fused computation, and it's what most deployed systems actually do before switching to a fused kernel.",
+          },
+          {
+            type: "paragraph",
+            text: "One important caveat: the kernel accumulates in FP32, not using INT4 tensor core MMA instructions. Exploiting Ampere/Hopper INT4 MMA is future work — the current bottleneck on decode shapes is memory, not compute, so the MMA throughput gap doesn't matter yet.",
           },
         ],
       },
       {
         id: "setup",
-        title: "Experimental Setup",
+        title: "Setup",
         blocks: [
           {
             type: "paragraph",
-            text: "All experiments run on an NVIDIA A10G GPU. We focus on decode shapes derived from Llama-style models: Q/FFN projections with K, N ∈ {4096, 14336} and KV projections with N=1024. Profiling uses Nsight Compute; wall-clock timings are reported from the benchmark harness (profilers replay kernels and inflate timings).",
-          },
-          {
-            type: "paragraph",
-            text: "Each reported latency is the median of 50 runs after 10 warmup iterations; coefficient of variation is below 9% across repetitions. All FP16 baselines use vendor-optimized libraries (torch.matmul/cuBLAS) under identical tensor shapes and launch conditions. Both FP16 and INT4 accumulate into FP32.",
+            text: "All experiments run on an NVIDIA A10G. Shapes are derived from Llama-style models — Q/K/V projections (K=N=4096), KV projections (K=4096, N=1024), FFN up-projections (K=4096, N=14336), and FFN down-projections (K=14336, N=4096). Batch sizes M ∈ {1…8} cover the decode regime. Each latency is the median of 50 runs after 10 warmup iterations; profiling uses Nsight Compute for hardware counters and Nsight Systems for kernel time breakdowns.",
           },
           {
             type: "table",
             headers: ["Layer", "M", "K", "N"],
             rows: [
               ["Q/K/V proj", "1–8", "4096", "4096"],
-              ["KV proj", "1–8", "4096", "1024"],
-              ["FFN up", "1–8", "4096", "14336"],
-              ["FFN down", "1–8", "14336", "4096"],
+              ["KV proj",    "1–8", "4096", "1024"],
+              ["FFN up",     "1–8", "4096", "14336"],
+              ["FFN down",   "1–8", "14336", "4096"],
             ],
           },
         ],
       },
       {
-        id: "results-shapes",
-        title: "Results: Representative Shapes",
+        id: "results",
+        title: "Results",
         blocks: [
           {
             type: "paragraph",
-            text: "Key results at M=1 (single-token decode). The regime split is stark: FFN up-projections achieve 3.58× speedup; KV projections regress to 0.62× — INT4 is slower than FP16 there.",
+            text: "The headline numbers at M=1. The split is immediate — FFN up gets 3.58×, KV proj gets 0.62× (it's slower with INT4). This isn't a subtle effect or a tuning artifact; it's a structural consequence of shape geometry.",
           },
           {
             type: "table",
-            headers: ["Shape", "FP16 (ms)", "INT4 (ms)", "Speedup", "Bound"],
+            headers: ["Shape", "FP16 (ms)", "INT4 (ms)", "Speedup", "Bottleneck"],
             rows: [
-              ["KV proj   (K=4096, N=1024)", "0.027", "0.043", "0.62×", "Dequant"],
-              ["Q proj    (K=4096, N=4096)", "0.075", "0.047", "1.58×", "Mixed"],
-              ["FFN up    (K=4096, N=14336)", "0.239", "0.067", "3.58×", "Memory"],
-              ["FFN down  (K=14336, N=4096)", "0.258", "0.152", "1.69×", "Memory"],
+              ["KV proj   (K=4096, N=1024)",  "0.027", "0.043", "0.62×", "Dequant overhead"],
+              ["Q proj    (K=4096, N=4096)",  "0.075", "0.047", "1.58×", "Mixed"],
+              ["FFN up    (K=4096, N=14336)", "0.239", "0.067", "3.58×", "Memory bandwidth"],
+              ["FFN down  (K=14336, N=4096)", "0.258", "0.152", "1.69×", "Memory bandwidth"],
             ],
           },
           {
             type: "image",
             src: "/tiny-gemm/speedup_vs_n_k4096.png",
-            alt: "Speedup vs output width N at K=4096",
-            caption: "Speedup vs output width N at fixed K=4096. INT4 underperforms for narrow projections (small N), but reaches up to 3.7× for wide FFN layers.",
+            alt: "Speedup vs output width N at fixed K=4096",
+            caption: "Speedup vs N at fixed K=4096. Sub-1× for narrow N, climbing to 3.7× at N=14336. The transition happens around N=2–4K.",
           },
           {
             type: "image",
-            src: "/tiny-gemm/int4_speedup_by_family.png",
+            src: "/tiny-gemm/family_latency_m1.png",
             alt: "Latency by layer family at M=1",
-            caption: "Latency by layer family at M=1. Projection layers show limited or negative benefit; FFN layers consistently improve.",
+            caption: "Latency by layer family at M=1. FFN layers improve substantially; projection layers are mixed; KV proj regresses.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/family_summary_table.png",
+            alt: "Summary table of speedups by shape family",
+            caption: "Full summary across shape families. The pattern is consistent: geometry drives the regime, not batch size.",
           },
         ],
       },
       {
-        id: "results-prefill-decode",
-        title: "Results: Prefill vs. Decode",
+        id: "prefill-vs-decode",
+        title: "Prefill vs. Decode",
         blocks: [
           {
             type: "paragraph",
-            text: "Prefill (M ≫ 1) and decode (M ≤ 8) occupy different optimization regimes. Prefill increases effective arithmetic intensity by amortizing quantization overhead across more work, yielding consistent INT4 speedups across shapes.",
+            text: "The same kernel, same weights, different batch size — the story changes completely. In prefill you're running M in the hundreds or thousands, so dequantization overhead gets amortized across a huge amount of output work. INT4 helps across nearly all shapes. In decode, M is 1–8 and the fixed overhead per launch is a much larger fraction of total runtime.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/prefill_vs_decode_speedup.png",
+            alt: "Prefill vs decode speedup by layer family",
+            caption: "Prefill vs decode speedup by family. KV proj goes from 0.62× in decode to ~2.3× in prefill — same kernel, same weights, just more work to amortize the overhead.",
           },
           {
             type: "paragraph",
-            text: "Decode operates in a latency-dominated regime where small batch sizes expose fixed overheads — dequantization and launch cost — making INT4 benefits shape-dependent. For example, FFN-up improves by roughly 3.5× in decode while KV projection remains below 1×; in prefill, FFN-up is about 3.0× and KV improves to roughly 2.3×.",
+            text: "This means a blanket quantization policy that's tuned for prefill throughput can actively hurt decode latency on the same model. Deployment decisions need to be mode-aware, not just shape-aware.",
           },
           {
             type: "image",
             src: "/tiny-gemm/int4_speedup_heatmap_m1.png",
             alt: "INT4 speedup heatmap across (K, N) at M=1",
-            caption: "Decode regime map (M=1) across K and N. Consistent gains appear only in the high-N region; small-N shapes (KV-like) remain dequant-dominated.",
+            caption: "Speedup heatmap at M=1 across (K, N). The geometry is clear: large-N shapes in the top-right consistently win; small-N shapes lose.",
           },
         ],
       },
       {
-        id: "results-why",
-        title: "Results: Why Does INT4 Help (or Hurt)?",
+        id: "regime",
+        title: "The Regime Model",
         blocks: [
           {
             type: "paragraph",
-            text: "We attribute performance regimes using hardware counters and a targeted dequantization microbenchmark. On the A10G, FP16 decode GEMMs operate close to the bandwidth limit: memory throughput reaches approximately 75–77% of peak DRAM bandwidth while achieved compute throughput remains relatively low — a strongly memory-bound regime where performance is limited by weight movement rather than arithmetic capability.",
-          },
-          {
-            type: "image",
-            src: "/tiny-gemm/ncu_utilization_comparison.png",
-            alt: "Hardware utilization comparison: FP16 vs INT4",
-            caption: "Hardware utilization comparison (FP16 vs INT4). FP16 decode GEMMs saturate DRAM bandwidth; INT4 weight packing reduces memory traffic and shifts the execution regime.",
-          },
-          {
-            type: "paragraph",
-            text: "However, reduced memory traffic alone does not guarantee speedup. For narrow projection layers (e.g., KV projections), total work per launch is small, and the fixed dequantization overhead constitutes a significant fraction of runtime. As a result, INT4 kernels can underperform FP16 despite lower memory traffic. In contrast, wide FFN projections provide sufficient arithmetic work to amortize dequantization cost.",
-          },
-          {
-            type: "image",
-            src: "/tiny-gemm/dequant_breakdown.png",
-            alt: "Dequantization overhead breakdown by shape",
-            caption: "Dequantization breakdown for representative decode shapes. For narrow projections, fixed dequant overhead is a large fraction of total runtime.",
-          },
-        ],
-      },
-      {
-        id: "results-regime",
-        title: "Results: Regime Model",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "We summarize the observed performance behavior using a simple latency decomposition:",
+            text: "To make the pattern precise, I decompose kernel runtime into four additive costs:",
           },
           {
             type: "math",
@@ -2203,7 +2153,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "INT4 weight packing reduces T_mem, shifting execution toward a mixed compute–memory regime. The INT4 decision rule — when does INT4 win?",
+            text: "INT4 reduces T_mem by roughly 2× (half the bits to move). INT4 also adds T_dequant. The kernel wins when the bandwidth savings exceed the unpack cost:",
           },
           {
             type: "math",
@@ -2212,131 +2162,135 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "INT4 achieves ~23% peak SM throughput vs ~32% for FP16 (~28% lower), reflecting reduced compute pressure. The roofline view illustrates the shift away from bandwidth saturation. In our sweep, the regime boundary occurs near arithmetic intensity α ≈ 8 FLOPs/byte.",
-          },
-          {
-            type: "image",
-            src: "/tiny-gemm/peak_compute_utilization.png",
-            alt: "Peak compute utilization (SM throughput)",
-            caption: "Peak compute utilization (SM throughput). INT4 runs at lower SM throughput than FP16 — bandwidth relief doesn't translate to more compute when dequant dominates.",
-          },
-          {
-            type: "image",
-            src: "/tiny-gemm/roofline_scatter.png",
-            alt: "Roofline view: arithmetic intensity vs TFLOPs",
-            caption: "Roofline view (arithmetic intensity vs TFLOPs). INT4 shifts execution away from bandwidth saturation and toward a mixed compute–memory regime.",
+            text: "This inequality is equivalent to an arithmetic intensity threshold. Below a certain α (FLOPs/byte), dequantization dominates and INT4 loses. Above it, bandwidth savings dominate and INT4 wins. In the sweep that boundary falls at roughly α ≈ 8 FLOPs/byte.",
           },
           {
             type: "image",
             src: "/tiny-gemm/regime_boundary.png",
             alt: "Regime boundary: speedup vs arithmetic intensity",
-            caption: "Regime boundary: speedup vs arithmetic intensity. Shapes below α ≈ 8 FLOPs/byte remain overhead-limited; shapes above achieve consistent speedups.",
+            caption: "Each point is one (M, K, N) shape. The transition at α ≈ 8 FLOPs/byte cleanly separates regressions from wins.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/roofline_scatter.png",
+            alt: "Roofline view: arithmetic intensity vs achieved TFLOPs",
+            caption: "Roofline view. INT4 shifts points rightward (higher arithmetic intensity) and off the memory bandwidth ceiling — but narrow shapes land in the dequant-overhead region instead.",
           },
         ],
       },
       {
-        id: "results-systems",
-        title: "Results: Systems-Level View",
+        id: "hardware",
+        title: "Hardware Counter Attribution",
         blocks: [
           {
             type: "paragraph",
-            text: "Because autoregressive decoding executes one token at a time, we connect kernel-level behavior to end-to-end decode constraints through batch scaling and throughput analysis. These latency–throughput tradeoffs directly determine user-visible response time in interactive LLM serving.",
+            text: "The regime model is clean but abstract — Nsight Compute lets me check it against actual hardware behavior. FP16 decode GEMMs on the A10G reach ~75–77% of peak DRAM bandwidth while compute utilization stays low. This is the textbook memory-bound regime: the GPU is waiting on DRAM, not doing arithmetic.",
           },
           {
             type: "image",
-            src: "/tiny-gemm/batch_scaling_k4096_n4096.png",
-            alt: "Latency vs batch size at K=N=4096",
-            caption: "Latency vs batch (K=N=4096). Latency grows sublinearly with batch size while throughput increases substantially, reflecting improved hardware utilization as launch overhead is amortized.",
+            src: "/tiny-gemm/ncu_utilization_comparison.png",
+            alt: "Hardware utilization: FP16 vs INT4 from Nsight Compute",
+            caption: "FP16 vs INT4 hardware utilization from NCU. FP16 saturates DRAM. INT4 frees up bandwidth but the compute utilization reading tells you where that headroom goes.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/dequant_breakdown.png",
+            alt: "Dequantization overhead breakdown by shape",
+            caption: "Microbenchmark isolating dequantization cost per shape. For KV proj, dequant is a large fraction of total runtime — explaining why INT4 loses there despite lower memory traffic.",
           },
           {
             type: "paragraph",
-            text: "For small batches (M=1–4), decode latency is dominated by fixed kernel overheads, limiting the benefit of additional compute efficiency. As batch size increases, INT4 benefits become more consistent because memory traffic and compute utilization — rather than launch overhead — determine performance.",
+            text: "INT4 ends up at ~23% peak SM throughput vs ~32% for FP16. That's 28% less compute pressure — not because INT4 is more efficient, but because it's doing less useful work per cycle (more of the SM time goes to the unpack path). The memory traffic numbers confirm it: INT4 halves weight reads, consistently, across all shapes. The variable is whether you can convert that into latency savings.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/peak_compute_utilization.png",
+            alt: "Peak SM compute utilization: FP16 vs INT4",
+            caption: "Peak SM utilization. INT4 is lower — bandwidth relief doesn't help when dequant eats the freed capacity.",
           },
           {
             type: "image",
             src: "/tiny-gemm/ncu_utilization_int4.png",
-            alt: "INT4 kernel hardware utilization detail",
-            caption: "INT4 kernel: SM utilization, memory throughput, and warp efficiency across representative shapes.",
+            alt: "INT4 kernel NCU breakdown across shapes",
+            caption: "INT4 kernel NCU breakdown across representative decode shapes — SM efficiency, memory throughput, warp stalls.",
           },
           {
             type: "image",
             src: "/tiny-gemm/memory_traffic_scatter.png",
             alt: "Memory traffic: INT4 vs FP16",
-            caption: "Memory traffic comparison. INT4 halves DRAM reads for weights. The variable is whether bandwidth savings exceed dequant cost.",
+            caption: "Memory traffic scatter. INT4 consistently halves DRAM reads for weights. The bandwidth savings are real; the question is always whether they exceed dequant cost.",
+          },
+        ],
+      },
+      {
+        id: "systems",
+        title: "Systems View",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Decode latency and serving throughput are different objectives that sometimes point in opposite directions. Interactive serving wants minimum single-token latency (M=1). Batch serving wants maximum tokens/second (larger M). INT4 behaves differently in each.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/batch_scaling_k4096_n4096.png",
+            alt: "Latency vs batch size at K=N=4096",
+            caption: "Latency vs M at K=N=4096. Both scale sublinearly — launch overhead amortizes — but the INT4/FP16 ratio stays roughly constant.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/tokens_per_sec_k4096_n4096.png",
+            alt: "Tokens per second vs batch size",
+            caption: "Throughput (tokens/sec) vs batch. INT4 throughput advantage grows with batch size as memory becomes the sustained bottleneck.",
           },
           {
             type: "paragraph",
-            text: "A small set of wide FFN GEMMs dominates total CUDA execution time during decode. Runtime is heavily concentrated in high-dimensional FFN computations — optimizing these shapes yields disproportionate end-to-end latency improvements, motivating decode-focused specialization rather than uniform optimization across all layers.",
+            text: "The batch-size stability of the speedup profile is actually good news for deployment: it means the INT4/FP16 decision is static per layer, not dynamic per request. You don't need to re-evaluate at runtime — just apply the α > 8 FLOPs/byte rule at model load time.",
           },
           {
             type: "image",
             src: "/tiny-gemm/int4_speedup_by_m.png",
-            alt: "Speedup vs batch size M by shape family",
-            caption: "Speedup vs M=1–8 by shape family. The profile is remarkably flat — the regime boundary is shape-driven (K, N), not batch-driven. INT4 deployment decisions are static per layer.",
+            alt: "Speedup vs batch size M=1–8 by family",
+            caption: "Speedup profile across M=1–8. Remarkably flat per family — the regime boundary is geometry-driven, not batch-driven.",
           },
           {
             type: "image",
             src: "/tiny-gemm/decode_latency_m1.png",
             alt: "Absolute decode latency at M=1",
-            caption: "Absolute decode latency at M=1. Wide FFN shapes dominate transformer FLOP count and have the largest absolute latency — INT4 saves the most wall-clock time here.",
+            caption: "Absolute latency at M=1. Wide FFN shapes dominate total transformer runtime — and these are exactly the shapes where INT4 wins the most.",
+          },
+          {
+            type: "image",
+            src: "/tiny-gemm/kernel_time_top_shapes.png",
+            alt: "Top shapes by CUDA execution time",
+            caption: "Top decode shapes by CUDA time from Nsight Systems. A small set of wide FFN GEMMs accounts for most of decode runtime — optimizing them has outsized impact.",
           },
         ],
       },
       {
-        id: "discussion",
-        title: "Discussion",
+        id: "takeaways",
+        title: "Takeaways",
         blocks: [
           {
             type: "paragraph",
-            text: "The results support a clear regime interpretation: INT4 helps when arithmetic intensity is sufficient to amortize dequantization and when memory traffic is a dominant bottleneck. For narrow projections (e.g., KV), fixed overheads and limited parallelism can outweigh the bandwidth savings. These findings align with practical inference constraints in decode-heavy serving.",
+            text: "The practical upshot: don't apply INT4 uniformly. The arithmetic intensity threshold (α ≈ 8 FLOPs/byte) is a reliable decision boundary. Above it — wide FFN projections — INT4 wins by 1.5–3.7× in decode. Below it — narrow KV projections — keep FP16. The layers you most want to quantize (FFN, because they're the largest) are also the ones where INT4 actually helps.",
           },
           {
             type: "paragraph",
-            text: "Weight-only INT4 should not be applied universally in decode pipelines; kernel-aware deployment decisions are necessary to avoid regressions on narrow projections and to target the shapes that dominate runtime. The deployment rule is measurable: apply INT4 where α > 8 FLOPs/byte, keep FP16 elsewhere.",
-          },
-        ],
-      },
-      {
-        id: "related",
-        title: "Related Work",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "Quantization for inference has been explored extensively in SmoothQuant, GPTQ, and AWQ, among others, focusing on accuracy-preserving weight-only and activation-aware techniques. Systems efforts such as FlashAttention-2 and TensorRT-LLM emphasize kernel specialization and end-to-end inference throughput. CUTLASS and cuBLASLt provide highly optimized GEMM kernels that serve as deployment baselines.",
+            text: "There's a broader systems lesson here too: reducing bandwidth pressure doesn't automatically improve latency if the freed capacity gets consumed by something else. Quantization is only effective when arithmetic intensity is high enough to amortize the dequantization overhead — and that threshold is measurable. The model isn't hard to derive; you just have to actually measure it instead of assuming.",
           },
           {
-            type: "paragraph",
-            text: "Tiny-GEMM complements these lines of work by focusing on the decode regime and providing a measurement-based model of when weight-only INT4 improves latency. In this sense, Tiny-GEMM bridges quantization research (accuracy and compression) with kernel-level inference optimization by isolating regime transitions under decode-specific constraints.",
-          },
-        ],
-      },
-      {
-        id: "limitations",
-        title: "Limitations",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "This study targets a single GPU (A10G) and a fixed set of decode shapes. The kernel is not yet optimized for all regimes (e.g., split-K for M=1), and the INT4 kernel does not currently exploit tensor core INT4 MMA pipelines. Future work should extend to additional hardware (L4/A100), incorporate split-K or persistent kernel strategies, and explore INT8/FP8 comparisons. We also do not evaluate end-to-end model accuracy under quantization, which is orthogonal to the kernel performance focus.",
+            type: "heading",
+            level: 3,
+            text: "What's next",
           },
           {
             type: "list",
             items: [
-              "Single GPU (A10G) — regime boundary may shift on L4, A100, H100 with different memory/compute ratios",
-              "FP32 accumulation without INT4 tensor core MMA — exploiting MMA pipelines is the next efficiency lever",
-              "No split-K for M=1 shapes — would improve parallelism on narrow projections",
-              "No end-to-end model accuracy evaluation under quantization",
-              "FP8 on Blackwell (tcgen05.mma.kind::f8f6f4) may shift the regime boundary significantly",
+              "INT4 tensor core MMA — the kernel currently accumulates in FP32, skipping Ampere/Hopper INT4 MMA instructions. On compute-bound shapes this matters.",
+              "Split-K for M=1 — improves SM occupancy on the narrowest projections by splitting the K dimension across thread blocks.",
+              "FP8 on Blackwell — tcgen05.mma.kind::f8f6f4 changes the roofline substantially; re-evaluating the regime boundary on B200 is the obvious next step.",
+              "Multi-GPU and serving stack integration — connecting kernel-level gains to end-to-end serving latency under concurrent requests.",
             ],
-          },
-        ],
-      },
-      {
-        id: "conclusion",
-        title: "Conclusion",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "Tiny-GEMM demonstrates that packed INT4 kernels can significantly improve decode performance for wide FFN shapes while exposing the boundaries where dequant overhead dominates. By pairing multi-baseline benchmarks with hardware counters and targeted microbenchmarks, we provide a systems-level narrative of when and why INT4 helps in real inference settings.",
           },
         ],
       },
@@ -2346,7 +2300,7 @@ export const projects: Project[] = [
     slug: "riscv-cpu",
     title: "5-Stage Pipelined RISC-V CPU",
     description:
-      "Fully pipelined 5-stage RISC-V processor in SystemVerilog with hazard detection, data forwarding, and a 2-bit branch predictor. Tools: Cadence, ModelSim. Status: Complete.",
+      "Fully pipelined 5-stage RISC-V processor in SystemVerilog with hazard detection, data forwarding, and a 2-bit branch predictor. Synthesized in Cadence targeting 70 MHz.",
     longDescription:
       "Designed and verified a 5-stage RISC-V pipeline (IF→ID→EX→MEM→WB) in SystemVerilog with full forwarding, load-use stall detection, and a 2-bit saturating branch predictor. Synthesized in Cadence targeting 70 MHz, achieving ~80 MHz Fmax on the CPUCLK domain.",
     date: "2025",
@@ -2472,7 +2426,7 @@ export const projects: Project[] = [
     slug: "graph-scheduling",
     title: "Memory-Constrained Graph Scheduling",
     description:
-      "A scheduler for ML accelerator computation DAGs that minimizes latency while respecting tight on-chip SRAM capacity constraints. Google MLSys 2026, Track A. Status: In Progress.",
+      "A scheduler for ML accelerator computation DAGs that minimizes latency while respecting tight on-chip SRAM capacity constraints. Google MLSys 2026, Track A.",
     longDescription:
       "Given a computation DAG of MatMul and pointwise ops, produce an execution schedule that minimizes total latency while never exceeding fast-memory (SRAM) capacity. Implements fusion, granularity search, retention decisions, zig-zag tile ordering, and serialization.",
     date: "2026",
@@ -2588,7 +2542,7 @@ export const projects: Project[] = [
     slug: "sparse-attention",
     title: "Sparse Attention Kernel for DeepSeek V3.2 on B200",
     description:
-      "A fused CUDA kernel implementing DeepSeek Sparse Attention on NVIDIA B200 (Blackwell). FlashInfer AI Kernel Generation Contest, MLSys 2026. Status: In Progress.",
+      "A fused CUDA kernel implementing DeepSeek Sparse Attention on NVIDIA B200 (Blackwell). FlashInfer AI Kernel Generation Contest, MLSys 2026.",
     longDescription:
       "Implements DeepSeek Sparse Attention (DSA) on B200 Blackwell, fusing FP8 indexer scoring, histogram-based top-K selection, and sparse BF16 attention into minimal kernel launches using TMEM, tcgen05.mma, and page-sorted gather.",
     date: "2026",

@@ -1583,22 +1583,22 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
           {
             src: "/IMG_1493.JPG",
             alt: "Horseback riding on the beach",
-            caption: "first time on horseback in years, feeling the ocean breeze",
+            caption: "horseback riding on the beach",
           },
           {
             src: "/IMG_1760.JPG",
             alt: "Coastal landscape at sunset",
-            caption: "sea ranch views that remind me to slow down",
+            caption: "views at sea ranch, ca",
           },
           {
             src: "/IMG_1887.JPG",
             alt: "Rocky shoreline at golden hour",
-            caption: "finding beauty in the rugged coastline",
+            caption: "beautiful rugged coastline",
           },
           {
             src: "/IMG_2767.JPG",
             alt: "Mountain camping at dawn",
-            caption: "backpacking for the first time in years",
+            caption: "backpacking with friends in hoover wilderness",
           },
           {
             src: "/IMG_2847.jpg",

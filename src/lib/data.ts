@@ -2027,6 +2027,12 @@ export const projects: Project[] = [
             type: "paragraph",
             text: "I wanted to know how much time it actually takes. The answer turned out to be more than I expected, and the follow-up — trying to fix it with INT4 quantization — led to a hardware-level finding I haven't seen documented anywhere.",
           },
+          {
+            type: "image",
+            src: "/mla-profiling/e2e.png",
+            alt: "Share of decode step by operation category",
+            caption: "Decode step time breakdown on DeepSeek-V3 shapes. Linear projections dominate at 70.6%, with attention at 19.6% — reconstruction lives inside that attention slice.",
+          },
         ],
       },
       {

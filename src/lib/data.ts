@@ -2001,9 +2001,9 @@ export const projects: Project[] = [
     slug: "mla-profiling",
     title: "The Hidden Bottleneck in MLA Serving: Reconstruction GEMMs and the L2 Cache Barrier",
     description:
-      "Profiling MLA attention on H100 reveals reconstruction GEMMs consume 61% of attention-layer time. INT4 quantization should help but doesn't — because the weights fit in L2 cache.",
+      "Profiling MLA attention on H100 reveals reconstruction GEMMs consume 61% of attention-layer time. INT4 quantization should help but doesn't, because the weights fit in L2 cache.",
     longDescription:
-      "Multi-head Latent Attention compresses KV cache 7× via low-rank projections, but the reconstruction step that recovers full K/V from latents has never been profiled. On DeepSeek-V3-scale architectures, reconstruction GEMMs dominate attention-layer time at small batch sizes. INT4 quantization preserves quality but is 2× slower than FP16 — traced to L2 cache residency invalidating the roofline assumption.",
+      "Multi-head Latent Attention compresses KV cache 7× via low-rank projections, but the reconstruction step that recovers full K/V from latents has never been profiled. On DeepSeek-V3-scale architectures, reconstruction GEMMs dominate attention-layer time at small batch sizes. INT4 quantization preserves quality but is 2× slower than FP16, traced to L2 cache residency invalidating the roofline assumption.",
     date: "2026",
     year: 2026,
     tags: ["MLA", "FlashInfer", "Triton", "NCU", "H100", "LLM Inference", "Quantization"],
@@ -2025,7 +2025,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "I wanted to know how much time it actually takes. The answer turned out to be more than I expected, and the follow-up — trying to fix it with INT4 quantization — led to a hardware-level finding I haven't seen documented anywhere.",
+            text: "I wanted to know how much time it actually takes. The answer turned out to be more than I expected, and trying to fix it with INT4 quantization led to a hardware-level finding about L2 cache residency that I haven't seen written up before.",
           },
           {
             type: "image",
@@ -2055,7 +2055,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "The pattern is clear: MLA's 7× KV compression made the attention kernel faster, but exposed a cost that was previously negligible. Reconstruction is now the bottleneck. And because these are batched GEMMs with fixed weight matrices, they're a natural target for optimization.",
+            text: "MLA's 7× KV compression made the attention kernel faster, but exposed a cost that was previously negligible. Reconstruction is the bottleneck now. And because these are batched GEMMs with fixed weight matrices, they're a natural target for optimization.",
           },
           {
             type: "paragraph",
@@ -2079,7 +2079,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "First question: does INT4 break model quality? I evaluated on DeepSeek-V2-Lite (15.7B) using wikitext-2 perplexity. Three configs: FP16 baseline (5.727 PPL), selective INT4 of just the reconstruction weights (5.777 PPL, +0.051), and naive INT4 of all linear weights (11.784 PPL, +6.057). Selective INT4 is fine — an order of magnitude below the 0.5 PPL threshold. The reconstruction weights are projection matrices mapping between a compressed 512-dim latent and 128-dim head spaces; they have smooth spectral properties and errors average across 128 heads. They're well-suited for quantization.",
+            text: "First question: does INT4 break model quality? I evaluated on DeepSeek-V2-Lite (15.7B) using wikitext-2 perplexity. Three configs: FP16 baseline (5.727 PPL), selective INT4 of just the reconstruction weights (5.777 PPL, +0.051), and naive INT4 of all linear weights (11.784 PPL, +6.057). Selective INT4 is fine, an order of magnitude below the 0.5 PPL threshold. The reconstruction weights are projection matrices mapping between a compressed 512-dim latent and 128-dim head spaces; they have smooth spectral properties and errors average across 128 heads.",
           },
           {
             type: "image",
@@ -2093,7 +2093,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "The result: the INT4 kernel is 2× slower than cuBLAS FP16, not 3.9× faster. At bs=1, FP16 torch.bmm takes 0.036 ms; INT4 Triton takes 0.073 ms. The kernel is 30× faster than a naive per-head FP16 loop (2.19 ms), so the batched approach works — it's competing with cuBLAS that's the problem.",
+            text: "The result: the INT4 kernel is 2× slower than cuBLAS FP16, not 3.9× faster. At bs=1, FP16 torch.bmm takes 0.036 ms; INT4 Triton takes 0.073 ms. The kernel is 30× faster than a naive per-head FP16 loop (2.19 ms), so the batched approach works. The problem is competing with cuBLAS.",
           },
           {
             type: "table",
@@ -2109,7 +2109,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "The roofline predicted 3.9×. We measured 0.49×. That's an 8× gap. Something is fundamentally wrong with the assumption.",
+            text: "The roofline predicted 3.9×. We measured 0.49×. That's an 8× gap, which means the roofline assumption itself is wrong.",
           },
         ],
       },
@@ -2119,7 +2119,7 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The roofline model assumes data is served from HBM at 3.35 TB/s. But the total reconstruction weight per BMM is 128 × 128 × 512 × 2 = 16 MB. The H100's L2 cache is 50 MB. After the first access, torch.bmm serves these weights from L2 at roughly 12 TB/s, not HBM. INT4 reduces weight size from 16 MB to 4 MB — saving HBM bandwidth that was never being used in the first place.",
+            text: "The roofline model assumes data is served from HBM at 3.35 TB/s. But the total reconstruction weight per BMM is 128 × 128 × 512 × 2 = 16 MB. The H100's L2 cache is 50 MB. After the first access, torch.bmm serves these weights from L2 at roughly 12 TB/s, not HBM. INT4 reduces weight size from 16 MB to 4 MB, saving HBM bandwidth that was never being used in the first place.",
           },
           {
             type: "image",
@@ -2129,15 +2129,15 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "This is the paradox specific to MLA: the same low-rank compression that makes reconstruction weights small enough to be a latency concern also makes them small enough to be L2-resident, defeating the primary motivation for weight quantization. Standard LLM linear layers have weights in the hundreds of megabytes — they blow past L2 capacity and stream from HBM, which is exactly where INT4 helps. Reconstruction weights at 16 MB don't.",
+            text: "This is the paradox specific to MLA: the same low-rank compression that makes reconstruction weights small enough to be a latency concern also makes them small enough to be L2-resident, which removes the motivation for weight quantization entirely. Standard LLM linear layers have weights in the hundreds of megabytes — they blow past L2 capacity and stream from HBM, where INT4 actually helps. Reconstruction weights at 16 MB don't.",
           },
           {
             type: "paragraph",
-            text: "Two secondary factors contribute. First, INT4 dequantization overhead: bit masking, shifting, signed extension, and type conversion on every packed byte, plus stride-2 activation loads for even/odd packing. The roofline doesn't account for this. Second, cuBLAS has hardware-optimized batched GEMM scheduling that a Triton kernel can't match — fused warp-level batching versus one thread block per head-tile.",
+            text: "Two secondary factors. First, INT4 dequantization overhead: bit masking, shifting, signed extension, and type conversion on every packed byte, plus stride-2 activation loads for even/odd packing. The roofline doesn't account for this. Second, cuBLAS has hardware-optimized batched GEMM scheduling that a Triton kernel can't match (fused warp-level batching versus one thread block per head-tile).",
           },
           {
             type: "paragraph",
-            text: "The barrier isn't absolute. In production serving, concurrent FFN GEMMs, multi-layer attention, and request batching all contend for L2 capacity. Under enough L2 pressure, reconstruction weights get evicted back to HBM and INT4 should start helping. The gains are deployment-dependent: negligible in isolated benchmarks, potentially real in high-throughput serving. Alternatively, fusing reconstruction across multiple layers to exceed L2 capacity could restore the roofline prediction.",
+            text: "This barrier isn't absolute. In production serving, concurrent FFN GEMMs, multi-layer attention, and request batching all contend for L2 capacity. Under enough L2 pressure, reconstruction weights get evicted back to HBM and INT4 should start helping. The gains are deployment-dependent: negligible in isolated benchmarks, potentially real in high-throughput serving. Alternatively, fusing reconstruction across multiple layers to exceed L2 capacity could restore the roofline prediction.",
           },
           {
             type: "heading",
@@ -2166,7 +2166,7 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Before running the MLA analysis I needed to trust the profiling setup. I benchmarked FlashInfer against Triton attention kernels on Llama-3-8B GQA — a well-studied configuration where the performance gap is known. If my numbers match the literature, the methodology is sound.",
+            text: "Before running the MLA analysis I needed to trust the profiling setup. I benchmarked FlashInfer against Triton attention kernels on Llama-3-8B GQA, a well-studied configuration where the performance gap is known. If my numbers match the literature, the methodology is sound.",
           },
           {
             type: "paragraph",
@@ -2195,15 +2195,15 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "The interesting part is why. NCU profiling reveals three root causes, none of which are obvious from timing alone.",
+            text: "NCU profiling reveals three root causes, none obvious from timing alone.",
           },
           {
             type: "paragraph",
-            text: "First: TMA vs global loads. A naive reading of NCU's L1 sector counters gives FlashInfer a 97% L1 hit rate and Triton 0.1%. This is misleading. FlashInfer's Hopper kernel uses TMA (Tensor Memory Accelerator), a dedicated hardware unit that copies data directly from HBM/L2 into shared memory, bypassing L1 entirely. The 108K L1 sectors in FlashInfer are residual metadata accesses, not QKV data. TMA is not \"better caching\" — it's a different hardware data path that Triton's compiler cannot generate.",
+            text: "First: TMA vs global loads. A naive reading of NCU's L1 sector counters gives FlashInfer a 97% L1 hit rate and Triton 0.1%. This is misleading. FlashInfer's Hopper kernel uses TMA (Tensor Memory Accelerator), a dedicated hardware unit that copies data directly from HBM/L2 into shared memory, bypassing L1 entirely. The 108K L1 sectors in FlashInfer are residual metadata accesses, not QKV data. TMA is not \"better caching\"; it's a different hardware data path that Triton's compiler cannot generate.",
           },
           {
             type: "paragraph",
-            text: "Second: the occupancy paradox. FlashInfer uses 183 registers per thread (2.4× Triton's 76), yielding only 12.2% active warps versus 35.4%. Yet FlashInfer achieves 84% DRAM throughput versus 76%. Fewer warps, more bandwidth. Memory access pattern quality dominates occupancy for bandwidth-bound kernels — FlashInfer's fused design with coalesced, pipelined accesses extracts more bandwidth per warp than Triton's higher-occupancy two-phase approach.",
+            text: "Second: the occupancy paradox. FlashInfer uses 183 registers per thread (2.4× Triton's 76), yielding only 12.2% active warps versus 35.4%. Yet FlashInfer achieves 84% DRAM throughput versus 76%. Fewer warps, more bandwidth. For bandwidth-bound kernels, memory access pattern quality matters more than occupancy. FlashInfer's fused design with coalesced, pipelined accesses extracts more bandwidth per warp than Triton's higher-occupancy two-phase approach.",
           },
           {
             type: "paragraph",
@@ -2217,15 +2217,15 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "MLA's KV compression works. It cuts attention memory traffic 7× and makes the attention kernel substantially faster. But optimizing one component reveals a previously hidden cost: reconstruction GEMMs that were negligible under standard MHA become the dominant bottleneck under MLA. At bs=1, reconstruction is 61% of attention-layer time. This is a fixed per-token cost that doesn't show up in attention-only benchmarks.",
+            text: "MLA's KV compression cuts attention memory traffic 7× and makes the attention kernel faster. But optimizing one component reveals a hidden cost: reconstruction GEMMs that were negligible under standard MHA become the dominant bottleneck under MLA. At bs=1, reconstruction is 61% of attention-layer time. This is a fixed per-token cost that doesn't show up in attention-only benchmarks.",
           },
           {
             type: "paragraph",
-            text: "INT4 quantization is the obvious fix and the quality story is good — reconstruction weights tolerate INT4 with minimal degradation (+0.051 PPL). But the performance story is inverted: INT4 is slower, not faster, because the weights are small enough to live in L2 cache. The roofline model breaks when working sets fit in L2. Quantization targets HBM bandwidth, and if you're not reading from HBM, there's nothing to target.",
+            text: "INT4 quantization is the obvious fix, and the quality story is good: reconstruction weights tolerate INT4 with minimal degradation (+0.051 PPL). But the performance story is inverted: INT4 is slower, not faster, because the weights are small enough to live in L2 cache. The roofline model breaks when working sets fit in L2. Quantization targets HBM bandwidth, and if you're not reading from HBM, there's nothing to target.",
           },
           {
             type: "paragraph",
-            text: "The broader lesson: optimizations that reduce data movement can shift workloads into regimes where cache hierarchy, rather than raw bandwidth, determines performance. This is a general systems principle, but it manifests in a specific and measurable way for MLA reconstruction on H100.",
+            text: "More generally, optimizations that reduce data movement can shift workloads into regimes where cache hierarchy, not raw bandwidth, determines performance. MLA reconstruction on H100 is a concrete instance of this.",
           },
           {
             type: "heading",
@@ -2250,7 +2250,7 @@ export const projects: Project[] = [
     description:
       "Packed INT4 GEMM kernel in Triton for decode-heavy LLM inference with hardware counter attribution and a regime model for when quantization helps. Up to 3.7× speedup on A10G.",
     longDescription:
-      "Small-batch LLM decoding is dominated by narrow GEMMs that stress memory bandwidth and launch overhead rather than peak FLOPs. Tiny-GEMM is a packed INT4 GEMM kernel in Triton for decode-heavy shapes, with measurement-driven analysis — backed by hardware counters — of when weight-only INT4 helps or hurts.",
+      "Small-batch LLM decoding is dominated by narrow GEMMs that stress memory bandwidth and launch overhead rather than peak FLOPs. Tiny-GEMM is a packed INT4 GEMM kernel in Triton for decode-heavy shapes, with measurement-driven analysis backed by hardware counters of when weight-only INT4 helps or hurts.",
     date: "2025",
     year: 2025,
     tags: ["Triton", "CUDA", "LLM Inference", "Quantization", "GPU Kernels"],
@@ -2526,10 +2526,10 @@ export const projects: Project[] = [
           {
             type: "list",
             items: [
-              "INT4 tensor core MMA — the kernel currently accumulates in FP32, skipping Ampere/Hopper INT4 MMA instructions. On compute-bound shapes this matters.",
-              "Split-K for M=1 — improves SM occupancy on the narrowest projections by splitting the K dimension across thread blocks.",
-              "FP8 on Blackwell — tcgen05.mma.kind::f8f6f4 changes the roofline substantially; re-evaluating the regime boundary on B200 is the obvious next step.",
-              "Multi-GPU and serving stack integration — connecting kernel-level gains to end-to-end serving latency under concurrent requests.",
+              "INT4 tensor core MMA: the kernel currently accumulates in FP32, skipping Ampere/Hopper INT4 MMA instructions. On compute-bound shapes this matters.",
+              "Split-K for M=1 to improve SM occupancy on the narrowest projections by splitting the K dimension across thread blocks.",
+              "FP8 on Blackwell. tcgen05.mma.kind::f8f6f4 changes the roofline substantially; re-evaluating the regime boundary on B200 is the next step.",
+              "Multi-GPU and serving stack integration, connecting kernel-level gains to end-to-end serving latency under concurrent requests.",
             ],
           },
         ],
@@ -2542,7 +2542,7 @@ export const projects: Project[] = [
     description:
       "Kernel development and HW/SW co-design for Atalla, a student-built weight-stationary systolic array AI accelerator. FlashAttention mapping, im2col convolution, tiled GEMM, and PyTorch backend integration.",
     longDescription:
-      "Atalla is a research-grade AI accelerator built end-to-end at Purdue's SoCET lab — a weight-stationary 32×32 BF16 systolic array with programmer-managed scratchpad SRAM, VLIW scheduling, and no hardware cache. I own the systems software workstream: FlashAttention kernel mapping, implicit im2col convolution, tiled GEMM, and PyTorch frontend integration.",
+      "Atalla is a research-grade AI accelerator built end-to-end at Purdue's SoCET lab: a weight-stationary 32×32 BF16 systolic array with programmer-managed scratchpad SRAM, VLIW scheduling, and no hardware cache. I own the systems software workstream: FlashAttention kernel mapping, implicit im2col convolution, tiled GEMM, and PyTorch frontend integration.",
     date: "2025",
     year: 2025,
     tags: ["GPU Kernels", "Computer Architecture", "HW/SW Co-Design", "VLIW", "Systolic Array", "PyTorch"],
@@ -2555,11 +2555,11 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Atalla is a student-led effort within Purdue's SoCET lab to design a research-grade AI accelerator stack from scratch — RTL through kernel software through FPGA emulation. The core is a parameterizable 32×32 BF16 systolic array with three dataflow implementations (naïve, MEISSA-inspired, TPU-inspired), a 1MB dual-partition scratchpad SRAM, and a VLIW scheduler.",
+            text: "Atalla is a student-led effort within Purdue's SoCET lab to design a research-grade AI accelerator stack from scratch: RTL, kernel software, FPGA emulation. The core is a parameterizable 32×32 BF16 systolic array with three dataflow implementations (naïve, MEISSA-inspired, TPU-inspired), a 1MB dual-partition scratchpad SRAM, and a VLIW scheduler.",
           },
           {
             type: "paragraph",
-            text: "I work on the Systems Software team, owning the kernel and PyTorch integration layer. The design philosophy is closer to a TPU than a GPU: there's no hardware cache, no SIMT abstraction, and no hardware scoreboard. All data movement between DRAM and on-chip SRAM is explicit via SDMA instructions. All dependency tracking is the programmer's responsibility. This makes the programming model hard — and the optimization opportunities interesting.",
+            text: "I work on the Systems Software team, owning the kernel and PyTorch integration layer. The design philosophy is closer to a TPU than a GPU: there's no hardware cache, no SIMT abstraction, and no hardware scoreboard. All data movement between DRAM and on-chip SRAM is explicit via SDMA instructions. All dependency tracking is the programmer's responsibility. This makes the programming model hard, but the optimization surface is wide open.",
           },
           {
             type: "image",
@@ -2612,7 +2612,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "The ISA has 7-bit opcodes across instruction types: scalar integer and BF16 arithmetic, vector-vector and vector-scalar masked operations, SDMA bulk DMA, VM vector-register loads and stores, and the GEMMV and CONV compute intrinsics. Notably, expi.vi (element-wise exp) costs 15 cycles — a significant consideration for softmax implementations. The vector reduction tree (rmax.vi, rsum.vi) costs 13 cycles. These latencies make the case for polynomial exp emulation in attention kernels.",
+            text: "The ISA has 7-bit opcodes across instruction types: scalar integer and BF16 arithmetic, vector-vector and vector-scalar masked operations, SDMA bulk DMA, VM vector-register loads and stores, and the GEMMV and CONV compute intrinsics. expi.vi (element-wise exp) costs 15 cycles, which matters a lot for softmax. The vector reduction tree (rmax.vi, rsum.vi) costs 13 cycles. These latencies make the case for polynomial exp emulation in attention kernels.",
           },
         ],
       },
@@ -2622,11 +2622,11 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "I own the FlashAttention kernel workstream. The central challenge: attention has a split personality. The Q·Kᵀ and attn·V matmuls map cleanly onto GEMMV — tiles of Q, K, V are loaded into SCPAD, the systolic array handles the matmul, and partial sums accumulate in the hardware accumulation buffers before transfer to VEGGIE. But softmax is inherently scalar and sequential — it runs on the scalar unit using rmax.vi (13 cycles), expi.vi (15 cycles), and rsum.vi (13 cycles) per tile.",
+            text: "I own the FlashAttention kernel workstream. The Q·Kᵀ and attn·V matmuls map cleanly onto GEMMV: tiles of Q, K, V load into SCPAD, the systolic array handles the matmul, and partial sums accumulate in the hardware accumulation buffers before transfer to VEGGIE. But softmax is inherently scalar and sequential. It runs on the scalar unit using rmax.vi (13 cycles), expi.vi (15 cycles), and rsum.vi (13 cycles) per tile.",
           },
           {
             type: "paragraph",
-            text: "This split creates an interesting co-design question: can the scalar unit begin softmax rescaling computations on the previous tile's output while the systolic array's PSUM writeback to VEGGIE is happening for the current tile? The two operations use distinct hardware units — the scalar unit and the accumulation buffer writeback path. If they can be pipelined across tiles using the dual-SCPAD architecture, that's free latency hiding. Verifying this is an open question being explored in the emulator.",
+            text: "The co-design question this raises: can the scalar unit begin softmax rescaling on the previous tile's output while the systolic array's PSUM writeback to VEGGIE is happening for the current tile? The two operations use distinct hardware units (scalar unit vs. accumulation buffer writeback path). If they can be pipelined across tiles using the dual-SCPAD architecture, that's free latency hiding. Still being validated in the emulator.",
           },
           {
             type: "heading",
@@ -2639,7 +2639,7 @@ export const projects: Project[] = [
               "Polynomial exp emulation: degree-3 Horner's method replaces the 15-cycle expi.vi with a ~4–5 cycle sequence of mul.vv + add.vv at acceptable accuracy for inference.",
               "Conditional softmax rescaling: skip the rescale step when the running tile max doesn't change, reducing scalar unit pressure on locally stable attention distributions.",
               "Tiling strategy: explicit SDMA prefetch of Q/K/V tiles into alternating SCPAD partitions, targeting overlap between SCPAD loads and systolic array compute.",
-              "Online softmax (FlashAttention-style): maintain running (max, denominator, output) accumulators across tiles — never materialize the full N×N attention weight matrix in SRAM.",
+              "Online softmax (FlashAttention-style): maintain running (max, denominator, output) accumulators across tiles — never materialize the full N×N attention matrix in SRAM.",
             ],
           },
         ],
@@ -2698,15 +2698,15 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Working at the HW/SW boundary of a research chip surfaces questions that only arise when you own both layers. Some of the open co-design directions the team is exploring:",
+            text: "Some open co-design directions the team is exploring:",
           },
           {
             type: "list",
             items: [
               "PSUM overlap: can PSUM writeback to VEGGIE be pipelined with scalar unit softmax computation? This requires careful timing analysis in the emulator.",
-              "Sparsity support: structured sparsity in specific model families could give 2× weight compression with hardware support — what ISA changes would enable this?",
+              "Sparsity support: structured sparsity in specific model families could give 2× weight compression with hardware support. What ISA changes would enable this?",
               "Multi-datatype: extending beyond BF16 to INT8 or FP8 would open up quantized inference; the scalar core already has type conversion instructions (stbf.s, bfts.s).",
-              "Transpose units: attention requires Kᵀ — currently handled in software via SDMA swizzle; dedicated transpose hardware would eliminate that overhead.",
+              "Transpose units: attention requires Kᵀ, currently handled in software via SDMA swizzle. Dedicated transpose hardware would eliminate that overhead.",
               "Compiler packetization: the VLIW scheduler leaves performance on the table; better packetization heuristics could meaningfully improve utilization.",
             ],
           },

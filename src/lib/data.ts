@@ -2142,11 +2142,21 @@ export const projects: Project[] = [
           {
             type: "heading",
             level: 3,
-            text: "Proving it (in progress)",
+            text: "Causal Validation: L2 Boundary Sweep",
           },
           {
             type: "paragraph",
-            text: "The L2 explanation is consistent with all the numbers, but a reviewer would correctly point out it's not causally isolated. I'm running one more experiment: scaling the weight matrix size from 8 MB to 128 MB, crossing the 50 MB L2 boundary. If the INT4/FP16 ratio improves right around 50 MB — when FP16 weights can no longer fit in L2 but INT4 weights (4× smaller) still can — that's the smoking gun. Results pending.",
+            text: "To causally isolate the L2 effect, I swept weight matrix size from 8 MB to 128 MB by scaling d_lora from 256 to 4096 while holding H=128 and d_nope=128 fixed. The result: the INT4/FP16 time ratio drops from 1.91× at 8 MB to 1.08× at 128 MB, with a sharp knee at 40–48 MB as weights begin to exceed L2 capacity. At MLA's operating point (16 MB), INT4 is 1.86× slower; at 128 MB (well past L2), the gap nearly closes.",
+          },
+          {
+            type: "image",
+            src: "/mla-profiling/l2sweep.png",
+            alt: "INT4/FP16 time ratio vs FP16 weight size, showing sharp transition at the 50 MB L2 boundary",
+            caption: "Weight-size scaling across the L2 boundary. Below 50 MB (green, L2-resident), INT4 is ~1.9× slower. Above 50 MB, the ratio drops sharply toward parity as FP16 falls back to HBM. MLA's 16 MB operating point sits firmly in the L2-resident regime.",
+          },
+          {
+            type: "paragraph",
+            text: "NCU profiling across the sweep confirms the mechanism. The FP16 cuBLAS kernel is DRAM-bound: DRAM utilization scales from 35% at 8 MB to 83% at 128 MB while SM utilization stays below 15%. The INT4 Triton kernel is the opposite: SM utilization scales from 33% to 79% (dequantization dominates) while DRAM utilization stays below 23%. INT4 reads exactly 4× fewer DRAM bytes as expected, but the kernel is compute-bound from dequantization overhead, so it can't convert bandwidth savings into latency reduction.",
           },
         ],
       },
@@ -2225,7 +2235,6 @@ export const projects: Project[] = [
           {
             type: "list",
             items: [
-              "L2 barrier causal experiment: scaling weight size across the 50 MB L2 boundary to confirm INT4 starts winning when weights no longer fit. Currently running on H100.",
               "CUDA-native INT8 tensor core kernel for reconstruction: bypasses the FP16 dequant path entirely and uses native low-precision MMA.",
               "Cross-layer weight fusion: fusing reconstruction across multiple layers so the combined weight set exceeds L2 capacity, restoring the roofline prediction.",
               "Production serving measurement: profiling reconstruction under real L2 pressure from concurrent FFN GEMMs and multi-tenant batching, where the cache barrier may weaken.",

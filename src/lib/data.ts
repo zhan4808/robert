@@ -2003,7 +2003,7 @@ export const projects: Project[] = [
     description:
       "Profiling MLA attention on H100 reveals reconstruction GEMMs consume 61% of attention-layer time. INT4 quantization should help but doesn't, because the weights fit in L2 cache.",
     longDescription:
-      "Multi-head Latent Attention compresses KV cache 7× via low-rank projections, but the reconstruction step that recovers full K/V from latents has never been profiled. On DeepSeek-V3-scale architectures, reconstruction GEMMs dominate attention-layer time at small batch sizes. INT4 quantization preserves quality but is 2× slower than FP16, traced to L2 cache residency invalidating the roofline assumption.",
+      "Multi-head Latent Attention compresses KV cache 7× via low-rank projections, but the reconstruction step that recovers full K/V from latents has never been profiled. On DeepSeek-V3-scale architectures, reconstruction GEMMs dominate attention-layer time at small batch sizes. INT4 quantization preserves quality but is 2× slower than FP16, traced to L2 cache residency and dequantization-induced compute saturation doubly invalidating the roofline assumption.",
     date: "2026",
     year: 2026,
     tags: ["MLA", "FlashInfer", "Triton", "NCU", "H100", "LLM Inference", "Quantization"],
@@ -2119,13 +2119,13 @@ export const projects: Project[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The roofline model assumes data is served from HBM at 3.35 TB/s. But the total reconstruction weight per BMM is 128 × 128 × 512 × 2 = 16 MB. The H100's L2 cache is 50 MB. After the first access, torch.bmm serves these weights from L2 at roughly 12 TB/s, not HBM. INT4 reduces weight size from 16 MB to 4 MB, saving HBM bandwidth that was never being used in the first place.",
+            text: "The roofline fails twice. It assumes data is served from HBM (it's not), and it assumes the INT4 kernel stays memory-bound (it doesn't). The reconstruction weight per BMM is 128 × 128 × 512 × 2 = 16 MB, which fits in H100's 50 MB L2. After first access, torch.bmm serves weights from L2 at ~5-12 TB/s effective bandwidth, far exceeding HBM's 3.35 TB/s. INT4 reduces weight size from 16 MB to 4 MB, saving HBM bandwidth that was never the bottleneck. Meanwhile, dequantization (bit masking, shifting, signed extension, type conversion on every packed byte) shifts the INT4 kernel from memory-bound to compute-bound, consuming the freed bandwidth headroom.",
           },
           {
             type: "image",
             src: "/mla-profiling/l2barrier.png",
             alt: "L2 cache barrier: roofline predicted vs measured INT4/FP16 speedup",
-            caption: "Roofline predicts 2-3.9× INT4 speedup (green). Measured performance is 0.2-0.5× (red) — INT4 is slower than FP16. The 8× gap at bs=1 is explained by L2 cache residency.",
+            caption: "Roofline predicts 2-3.9× INT4 speedup (green). Measured performance is 0.2-0.5× (red). The 16 MB weight fits in H100's 50 MB L2, and INT4 dequantization shifts the kernel to compute-bound, doubly invalidating the roofline prediction.",
           },
           {
             type: "paragraph",
@@ -2133,7 +2133,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "Two secondary factors. First, INT4 dequantization overhead: bit masking, shifting, signed extension, and type conversion on every packed byte, plus stride-2 activation loads for even/odd packing. The roofline doesn't account for this. Second, cuBLAS has hardware-optimized batched GEMM scheduling that a Triton kernel can't match (fused warp-level batching versus one thread block per head-tile).",
+            text: "A third factor amplifies this: cuBLAS dispatches via the nvjet kernel family with TMA hardware loads, while our Triton kernel uses standard ld.global. Under concurrent L2 contention, INT4 degrades 3.7× vs. only 1.7× for FP16, indicating that dequantization and irregular packed-byte access patterns make the INT4 kernel more sensitive to cache pressure.",
           },
           {
             type: "paragraph",
@@ -2221,7 +2221,7 @@ export const projects: Project[] = [
           },
           {
             type: "paragraph",
-            text: "INT4 quantization is the obvious fix, and the quality story is good: reconstruction weights tolerate INT4 with minimal degradation (+0.051 PPL). But the performance story is inverted: INT4 is slower, not faster, because the weights are small enough to live in L2 cache. The roofline model breaks when working sets fit in L2. Quantization targets HBM bandwidth, and if you're not reading from HBM, there's nothing to target.",
+            text: "INT4 quantization is the obvious fix, and the quality story is good: reconstruction weights tolerate INT4 with minimal degradation (+0.051 PPL). But the performance story is inverted: INT4 is slower, not faster, for two reasons: the weights are small enough to live in L2 cache (so HBM savings are irrelevant), and dequantization shifts the INT4 kernel from memory-bound to compute-bound (so the freed bandwidth headroom gets consumed). The roofline fails on both assumptions simultaneously.",
           },
           {
             type: "paragraph",

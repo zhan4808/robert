@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { AudioPlayer } from "@/components/audio-player";
 import { ContentBlocks } from "@/components/content-blocks";
-import { Navigation } from "@/components/navigation";
 import { journalPosts } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -25,60 +23,33 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   }
 
   return (
-    <div className="mx-auto mt-8 mb-16 flex max-w-[652px] flex-col gap-8 px-6 md:mt-16">
-      <Navigation />
-
+    <div className="mx-auto mt-10 mb-24 flex max-w-[680px] flex-col gap-8 px-6 md:mt-16">
       <article className="flex flex-col gap-8">
-        {/* Header */}
-        <header className="flex flex-col gap-4">
+        <header className="flex flex-col gap-2">
           <Link
-            href="/blog"
-            className="text-muted-foreground hover:text-foreground transition-colors text-sm w-fit flex items-center gap-2"
+            href="/"
+            className="inline-link text-[hsl(var(--muted-foreground))] text-sm w-fit"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-            back to journal
+            Robert Zhang
           </Link>
 
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-medium lowercase">{post.month}</h1>
-            <p className="text-muted-foreground">{post.subtitle}</p>
-            <time className="text-muted-foreground text-sm">{post.date}</time>
-          </div>
+          <h1 className="text-sm font-bold mt-2">{post.month}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            {post.subtitle}
+          </p>
+          <time className="text-xs text-[hsl(var(--muted-foreground))]">
+            {post.date}
+          </time>
         </header>
 
-        {/* Audio Player */}
-        {post.tracks.length > 0 && <AudioPlayer tracks={post.tracks} />}
-
-        {/* Cover Image */}
-        {post.coverImage && (
-          <img
-            src={post.coverImage}
-            alt={`${post.month} cover`}
-            className="w-full rounded-lg"
-          />
-        )}
-
-        {/* Content */}
         <ContentBlocks blocks={post.blocks} />
 
-        {/* Footer */}
-        <footer className="mt-8 pt-8 border-t border-border">
+        <footer className="mt-8 pt-6 border-t border-[hsl(var(--border))]">
           <Link
-            href="/blog"
-            className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+            href="/"
+            className="inline-link text-sm text-[hsl(var(--muted-foreground))]"
           >
-            Back to journal
+            ← Back
           </Link>
         </footer>
       </article>

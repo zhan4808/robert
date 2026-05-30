@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ContentBlocks } from "@/components/content-blocks";
-import { Navigation } from "@/components/navigation";
 import { projects } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -26,115 +25,92 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   }
 
   return (
-    <div className="mx-auto mt-8 mb-16 flex max-w-[900px] flex-col gap-12 px-6 md:mt-16 md:gap-16">
-      <Navigation />
+    <div className="mx-auto mt-10 mb-24 flex max-w-[680px] flex-col gap-8 px-6 md:mt-16">
+      <article className="flex flex-col gap-8">
+        <header className="flex flex-col gap-2">
+          <Link
+            href="/"
+            className="inline-link text-[hsl(var(--muted-foreground))] text-sm w-fit"
+          >
+            Robert Zhang
+          </Link>
 
-      <div className="flex gap-12">
-        {/* Table of Contents - Desktop Sidebar */}
-        {project.sections.length > 0 && (
-          <aside className="hidden lg:block w-44 shrink-0">
-            <nav className="sticky top-8">
-              <ul className="flex flex-col gap-3">
-                {project.sections.map((section) => (
-                  <li key={section.id}>
-                    <a
-                      href={`#${section.id}`}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {section.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </aside>
+          <h1 className="text-sm font-bold mt-2">{project.title}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            {project.longDescription}
+          </p>
+          <div className="flex items-center gap-4 text-xs text-[hsl(var(--muted-foreground))]">
+            <time>{project.date}</time>
+            {project.paperUrl && (
+              <a
+                href={project.paperUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-link"
+              >
+                Paper
+              </a>
+            )}
+            {project.liveUrl && (
+              <a
+                href={project.liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-link"
+              >
+                Live Demo
+              </a>
+            )}
+            {project.githubUrl && (
+              <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-link"
+              >
+                GitHub
+              </a>
+            )}
+          </div>
+        </header>
+
+        {project.hero && (
+          <div>
+            {project.hero.type === "video" ? (
+              <video
+                src={project.hero.src}
+                controls
+                playsInline
+                className="w-full"
+              />
+            ) : (
+              <img
+                src={project.hero.src}
+                alt={project.hero.alt}
+                className="w-full"
+              />
+            )}
+          </div>
         )}
 
-        {/* Main Content */}
-        <article className="flex-1 max-w-[652px]">
-          {/* Header */}
-          <header className="mb-12">
-            <h1 className="text-xl font-medium mb-2">{project.title}</h1>
-            <p className="text-muted-foreground mb-4">{project.longDescription}</p>
-            <div className="flex items-center gap-4 text-sm">
-              <time className="text-muted-foreground">{project.date}</time>
-              <div className="flex gap-2">
-                {project.paperUrl && (
-                  <a
-                    href={project.paperUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="connect-link"
-                  >
-                    Paper
-                  </a>
-                )}
-                {project.liveUrl && (
-                  <a
-                    href={project.liveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="connect-link"
-                  >
-                    Live Demo
-                  </a>
-                )}
-                {project.githubUrl && (
-                  <a
-                    href={project.githubUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="connect-link"
-                  >
-                    GitHub
-                  </a>
-                )}
-              </div>
-            </div>
-          </header>
+        <div className="flex flex-col gap-10">
+          {project.sections.map((section) => (
+            <section key={section.id} id={section.id} className="scroll-mt-8">
+              <h2 className="text-sm font-bold mb-4">{section.title}</h2>
+              <ContentBlocks blocks={section.blocks} />
+            </section>
+          ))}
+        </div>
 
-          {/* Hero Media */}
-          {project.hero && (
-            <div className="mb-12">
-              {project.hero.type === "video" ? (
-                <video
-                  src={project.hero.src}
-                  controls
-                  playsInline
-                  className="w-full rounded-lg"
-                />
-              ) : (
-                <img
-                  src={project.hero.src}
-                  alt={project.hero.alt}
-                  className="w-full rounded-lg"
-                />
-              )}
-            </div>
-          )}
-
-          {/* Sections */}
-          <div className="flex flex-col gap-12">
-            {project.sections.map((section) => (
-              <section key={section.id} id={section.id} className="scroll-mt-8">
-                <h2 className="font-medium mb-4">{section.title}</h2>
-
-                <ContentBlocks blocks={section.blocks} />
-              </section>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div className="mt-16 pt-8 border-t border-border">
-            <Link
-              href="/projects"
-              className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-            >
-              Back to all projects
-            </Link>
-          </div>
-        </article>
-      </div>
+        <footer className="mt-8 pt-6 border-t border-[hsl(var(--border))]">
+          <Link
+            href="/"
+            className="inline-link text-sm text-[hsl(var(--muted-foreground))]"
+          >
+            ← Back
+          </Link>
+        </footer>
+      </article>
     </div>
   );
 }

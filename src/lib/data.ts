@@ -70,71 +70,57 @@ export interface Experience {
 
 export const experiences: Experience[] = [
   {
+    id: "astera-2026",
+    title: "Intern, Applied AI",
+    company: "Astera Labs",
+    period: "May 2026 - Present",
+  },
+  {
     id: "sandisk-2025",
     title: "Advanced Memory Intern",
     company: "SanDisk",
     logo: "/sandisk.svg",
     period: "Feb 2025 - Aug 2025",
-    highlights: [
-      "Built ML trim optimization platform to predict read-window outcomes using XGBoost, configurable DNNs, and clustering to guide trim selection across process corners.",
-      "Scaled ingestion and feature pipelines to 48TB+ with NumPy, Pandas, and SQL, using parallelism and batching to cut manual optimization time by 7x.",
-      "Automated experiments with an LLM-backed reporting stack and Dockerized workflows for reproducible execution across test sites.",
-    ],
   },
   {
     id: "socet-2024",
-    title: "ASIC Design Flow Researcher",
-    company: "Purdue SoC Extension Technologies",
+    title: "Lab Researcher",
+    company: "Purdue SoCET",
     logo: "/socetlogo.svg",
-    period: "2023 - ",
-    highlights: [
-      "Built a Cadence Genus/Innovus physical flow for MITLL 20nm with automated congestion and IR-drop checks.",
-      "Developed C operator kernels (GEMM, Softmax, ReLU) and integrated PyTorch with an in-house systolic-array accelerator.",
-      "Optimized a GPU compiler to reduce divergence and improve scheduling for higher throughput.",
-    ],
+    period: "Jan 2024 - Present",
   },
   {
     id: "endian-2025",
     title: "Engineer",
     company: "Endian",
     period: "Mar 2025 - May 2025",
-    highlights: [
-      "Built an automation platform with Node.js and FastAPI, Dockerized and backed by Supabase, orchestrating a 20-agent browser-use fleet.",
-      "Designed a security-first credential flow with incremental capture, client-side encryption, and secrets management.",
-    ],
   },
   {
     id: "comma-2025",
-    title: "Comma Capital Fellow",
+    title: "Fellow",
     company: "Comma Capital",
-    period: "2025",
-    highlights: [
-      "Selected fellow focused on frontier systems and AI infrastructure; collaborated on product and investment research.",
-    ],
+    period: "2025 - Present",
   },
   {
     id: "stars-2024",
     title: "Chip Design Intern",
     company: "STARS @Purdue",
     logo: "/purduelogo.svg",
-    period: "Summer 2024",
-    highlights: [
-      "Designed and taped out a wireless messaging ASIC in SKY130 with GPIO, Wishbone bus control, and maskable interrupts.",
-    ],
+    period: "May 2024 - Jul 2024",
   },
   {
     id: "stanford-2022",
     title: "Student Researcher",
     company: "Stanford Cornfield Lab",
     logo: "/stanfordlogo.svg",
-    period: "2022 - 2022",
+    period: "2022",
   },
   {
     id: "ibm-2021",
     title: "Research Intern",
     company: "IBM Almaden",
     logo: "/ibmlogo.svg",
-    period: "2021 - 2021",
+    period: "2021",
   },
 ];
 

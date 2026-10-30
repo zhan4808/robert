@@ -1,13 +1,11 @@
-[images]
-  remote_images = ["https://source.unsplash.com/.*", "https://images.unsplash.com/.*", "https://ext.same-assets.com/.*", "https://ugc.same-assets.com/.*"]
-
 [build]
   command = "npm run build"
-  publish = ".next"
 
 [build.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+  # Next 16 needs Node 20.9+; Netlify's default image still ships 18.
+  NODE_VERSION = "22"
 
+# The runtime sets the publish directory and wires up SSR and image optimization itself.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 

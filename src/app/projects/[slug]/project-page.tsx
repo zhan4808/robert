@@ -181,7 +181,7 @@ export default function ProjectPage({
  */
 function PagerLink({ project, direction }: { project: Project; direction: "back" | "forward" }) {
     const router = useRouter();
-    const card = useHoverCard();
+    const { cardRef, onPointerEnter, onPointerMove, onFocus } = useHoverCard();
     const href = `/projects/${project.slug}`;
     const back = direction === "back";
     const name = nameOf(project);
@@ -194,16 +194,16 @@ function PagerLink({ project, direction }: { project: Project; direction: "back"
                 e.preventDefault();
                 pushWithTransition(router, href, direction);
             }}
-            onPointerEnter={card.onPointerEnter}
-            onPointerMove={card.onPointerMove}
-            onFocus={card.onFocus}
+            onPointerEnter={onPointerEnter}
+            onPointerMove={onPointerMove}
+            onFocus={onFocus}
             className={`group relative flex flex-col gap-1 focus-ring ${back ? "items-start" : "items-end text-right"}`}
         >
             <span className={`font-geistMono text-caption ${MUTED}`}>{back ? "previous" : "next"}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
                 {back ? `← ${name}` : `${name} →`}
             </span>
-            <span ref={card.cardRef} aria-hidden className={HOVER_CARD}>
+            <span ref={cardRef} aria-hidden className={HOVER_CARD}>
                 <Thumb
                     project={project}
                     sizes="17rem"

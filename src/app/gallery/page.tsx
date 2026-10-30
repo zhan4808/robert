@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image, { type StaticImageData } from "next/image";
+import Cursor from "../components/cursor";
 import MobileNav from "../components/mobile-nav";
 import TopNav from "../components/top-nav";
 import horseback from "../../../public/IMG_1493.webp";
@@ -70,10 +71,7 @@ export default function Gallery() {
                         <h1 className="sr-only">Gallery</h1>
                         <p className="text-small lowercase leading-relaxed tracking-tagline opacity-60">
                             the spaces between.
-                            <span
-                                aria-hidden="true"
-                                className="ml-1 inline-block h-[1em] w-[0.55em] translate-y-[0.15em] animate-blink bg-foreground motion-reduce:animate-none"
-                            />
+                            <Cursor />
                         </p>
                         <p className="max-w-[32rem] font-geistSans text-body leading-compact opacity-80 [text-wrap:pretty]">
                             Photos from outside the lab.

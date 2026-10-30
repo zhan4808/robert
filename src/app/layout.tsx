@@ -1,35 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
-import localFont from "next/font/local";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { ThemeProvider } from "next-themes";
 import { AUTHOR, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_TEMPLATE, SITE_URL } from "../lib/site";
 import JsonLd from "./components/json-ld";
-
-const inter = Inter({
-    subsets: ["latin"],
-    variable: "--font-inter",
-});
-
-const fontPlayfairDisplay = Playfair_Display({
-    subsets: ["latin"],
-    variable: "--font-playfair-display",
-    weight: "400",
-});
-
-const fontGeistSans = localFont({
-    src: [
-        { path: "./fonts/geist-sans-latin-400-normal.woff2", weight: "400" },
-        { path: "./fonts/geist-sans-latin-500-normal.woff2", weight: "500" },
-    ],
-    variable: "--font-geist-sans",
-});
-
-const fontGeistMono = localFont({
-    src: "./fonts/geist-mono-latin-400-normal.woff2",
-    variable: "--font-geist-mono",
-});
+import { typefaceClassNames } from "./typefaces";
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
@@ -75,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         // next-themes sets the theme class on <html> before React hydrates, which React would otherwise flag.
         <html lang="en" suppressHydrationWarning>
             <body
-                className={`${inter.variable} ${fontPlayfairDisplay.variable} ${fontGeistMono.variable} ${fontGeistSans.variable} scroll-smooth motion-reduce:scroll-auto overflow-x-clip bg-background text-foreground`}
+                className={`${typefaceClassNames} scroll-smooth motion-reduce:scroll-auto overflow-x-clip bg-background text-foreground`}
             >
                 {/* Hidden until it is tabbed to; every page's <main> carries id="main". */}
                 <a href="#main" className="skip-link focus-ring">

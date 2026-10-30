@@ -1,6 +1,7 @@
 "use client";
 import { motion } from "motion/react";
 import Cited from "./citation";
+import Cursor from "./cursor";
 import Container from "./container";
 import type { PondStats } from "./koi-pond/koi-pond";
 import { SOURCES } from "../data/sources";
@@ -19,10 +20,7 @@ const QuoteLines = () => (
         let the work
         <br />
         speak for itself
-        <span
-            aria-hidden="true"
-            className="ml-1 inline-block h-[1em] w-[0.55em] translate-y-[0.15em] animate-blink bg-foreground motion-reduce:animate-none"
-        />
+        <Cursor />
     </>
 );
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Cursor from "../components/cursor";
 import MobileNav from "../components/mobile-nav";
 import TopNav from "../components/top-nav";
 import { getVisiblePostsByYear } from "../../lib/content";
@@ -22,10 +23,7 @@ export default function Blog() {
                     <h1 className="sr-only">Blog</h1>
                     <p className="text-small lowercase leading-relaxed tracking-tagline opacity-60">
                         notes on kernels, chips, and everything else.
-                        <span
-                            aria-hidden="true"
-                            className="ml-1 inline-block h-[1em] w-[0.55em] translate-y-[0.15em] animate-blink bg-foreground motion-reduce:animate-none"
-                        />
+                        <Cursor />
                     </p>
                 </header>
 

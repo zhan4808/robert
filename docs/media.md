@@ -47,6 +47,14 @@ An image without a manifest entry (an SVG, or a file added without running the s
 `<img>` or with fallback dimensions, so a missed run is a performance regression rather than a broken page. The
 manifest is looked up in server components only, so it never enters a client bundle.
 
+## Project thumbnails
+
+The 3:2 covers on the projects strip (`public/thumbs/<slug>.svg`) are drawn by `scripts/thumbs/thumbs.mjs`, one
+function per project from a shared kit (grey cells on a pixel grid, the koi orange as the accent, a cool blue for
+the odd pointer, no background). Edit the function and run `npm run thumbs` to regenerate; `node
+scripts/thumbs/preview.mjs <dir>` renders each one over the dark and light tiles at strip and hover-card size so
+a change can be checked by eye. The SVGs are served as they are, so they have no manifest entry.
+
 ## Where images render
 
 - Write-up content (`image`, `gallery`, `visualization` blocks): `src/app/components/content-blocks.tsx` and the

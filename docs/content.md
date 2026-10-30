@@ -18,6 +18,7 @@ shortTitle: Tiny-GEMM # tiles, pagers, hover cards; the full title heads the pag
 description: One or two sentences under the title and on the tile.
 longDescription: The paragraph under the description on the page.
 date: "2025" # written for people: "2026", "October 2025", "January 21, 2026"
+updated: "2026-03-04" # ISO date of the last revision; shown as "updated March 4, 2026" beside the date
 year: 2025
 order: 2 # where it sits among the projects; lower first
 tags: [Triton, CUDA]
@@ -34,7 +35,8 @@ githubUrl: https://github.com/zhan4808/gemmopt
 ```
 
 `title`, `description`, `longDescription`, `date`, `year`, and `order` are required; the rest are optional. The
-link under the intro is the paper, then the code, then the live site.
+link under the intro is the paper, then the code, then the live site. The reading time next to the date is worked
+out from the body (about 230 words a minute, code left out), so there is nothing to write for it.
 
 Projects are listed in `order`; the strip groups them by `year`, newest first, and keeps `order` within a year.
 
@@ -45,6 +47,7 @@ Projects are listed in `order`; the strip groups them by `year`, newest first, a
 title: july
 subtitle: finding excitement in the everyday
 date: July 31, 2025
+updated: "2026-03-04" # ISO date of the last revision; shown as "updated March 4, 2026" beside the date
 year: 2025
 order: 5 # where it sits among the posts; lower first
 hidden: false # true: still builds at its URL with noindex, but out of the list, the feed, and the sitemap
@@ -64,10 +67,14 @@ first, and keeps `order` within a year; previous and next step through visible p
 
 ## The body
 
-Markdown, with GitHub tables, `$$` math, and fenced code. Every element is styled: paragraphs, `##` and `###`
-headings (which get ids), `-` lists, `1.` lists, links, `>` quotes, tables, code, `---` rules.
+Markdown, with GitHub tables, footnotes, `$$` math, and fenced code. Every element is styled: paragraphs, `##` and
+`###` headings (which get ids), `-` lists, `1.` lists, links, `>` quotes, tables, code, `---` rules.
 
 A project body is a sequence of sections; a post body is just the blocks.
+
+A page with three or more headings (`<Section>`s, `##`, `###`) gets a table of contents: a rail in the left margin
+on wide screens that follows the reader, and a collapsible "contents" list above the body on narrow ones. Hovering a
+heading shows a `#` that links to it.
 
 ````mdx
 <Section id="results" title="Results">
@@ -105,6 +112,32 @@ content inside a component can be indented or not; both parse the same.
 
 Markdown reads `*`, `_`, backticks, `<`, `{`, and `$` as syntax. To show one literally, escape it: `\*`, `\{`, `\$`.
 
+### Code blocks
+
+Every code block has a copy button. After the language, a fence can name a file, ask for line numbers, and point
+at lines to highlight, in any order:
+
+````mdx
+```cpp title="kernel.cu" showLineNumbers {3-5,8}
+// ...
+```
+````
+
+`title` draws a header bar with the name; `showLineNumbers` counts the lines in the gutter (the numbers are not
+copied); `{3-5,8}` tints those lines. A fence without a language takes `title` (` ```title="notes.txt" `) and
+the copy button, nothing else.
+
+### Footnotes
+
+GitHub's syntax: `[^1]` in the text, and the note anywhere on its own line. The notes collect at the end of the page
+under a hairline, numbered, each with an arrow back to its place in the text.
+
+```md
+The roofline predicted 3.9×.[^1]
+
+[^1]: Assuming the weights stream from HBM, which they do not; see the L2 section.
+```
+
 ## Components
 
 Each is written by name in the body. `src/app/components/mdx/index.ts` is the full list.
@@ -118,9 +151,13 @@ An image with an optional caption; clicking opens the lightbox. `src` is a site 
 <Figure src="/cuda-mmm/split_k.webp" alt="Split-K partitions the K dimension across blocks" caption="Split-K." invert />
 ```
 
+Figures are numbered in the order they appear, at build time: the caption reads "Figure 3. Split-K." There is
+nothing to write for the number, and nothing to renumber when one is added.
+
 ### Gallery
 
-A grid of figures: two across on phones, three from `md` up.
+A grid of figures: two across on phones, three from `md` up. The grid counts as one figure ("Figure 4" under it);
+the captions on the pictures stay as they are.
 
 ```mdx
 <Gallery>
@@ -152,6 +189,17 @@ same way without an author.
 <Quote author="Rick Rubin">
     there's a tremendous power in using the least amount of information to get a point across.
 </Quote>
+```
+
+### Note
+
+A callout: a hairline panel with a marker down its left edge. The label is "note" unless `title` says otherwise;
+keep it to a word ("warning", "tip").
+
+```mdx
+<Note title="warning">
+    Vectorized SMEM loads need BM × BK divisible by 4 × NUM_THREADS, or the kernel reads past the tile.
+</Note>
 ```
 
 ### LinkCard

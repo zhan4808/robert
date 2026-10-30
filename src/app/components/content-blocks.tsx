@@ -1,4 +1,7 @@
+import Image from "next/image";
 import type { ContentBlock } from "../../lib/data";
+import { CONTENT_IMAGE_QUALITY, CONTENT_IMAGE_SIZES } from "../../lib/image-sizes";
+import { imageMeta } from "../../lib/images";
 import { codeToHtml } from "shiki";
 import katex from "katex";
 import { ImageLightbox } from "./image-lightbox";
@@ -50,6 +53,7 @@ export async function ContentBlocks({ blocks }: ContentBlocksProps) {
                         alt={block.alt}
                         caption={block.caption}
                         className={block.invert ? "invert" : undefined}
+                        meta={imageMeta(block.src)}
                     />
                 );
             }
@@ -58,7 +62,15 @@ export async function ContentBlocks({ blocks }: ContentBlocksProps) {
                 return (
                     <div key={index} className="grid grid-cols-2 gap-3 md:grid-cols-3">
                         {block.images.map((image, imageIndex) => (
-                            <ImageLightbox key={imageIndex} src={image.src} alt={image.alt} caption={image.caption} />
+                            <ImageLightbox
+                                key={imageIndex}
+                                src={image.src}
+                                alt={image.alt}
+                                caption={image.caption}
+                                meta={imageMeta(image.src)}
+                                // A third of the frame from md up (three columns), half the viewport below it.
+                                sizes="(min-width: 1024px) 18rem, (min-width: 768px) 33vw, 50vw"
+                            />
                         ))}
                     </div>
                 );
@@ -170,13 +182,7 @@ export async function ContentBlocks({ blocks }: ContentBlocksProps) {
                             <h3 className="text-[15px] font-medium">{block.title}</h3>
                             <p className={`text-[14px] ${MUTED}`}>{block.caption}</p>
                         </div>
-                        {block.media &&
-                            (block.media.type === "video" ? (
-                                <video src={block.media.src} controls playsInline className="w-full rounded-[4px]" />
-                            ) : (
-                                // eslint-disable-next-line @next/next/no-img-element -- sizes vary per figure
-                                <img src={block.media.src} alt={block.media.alt} className="w-full rounded-[4px]" />
-                            ))}
+                        {block.media && <VisualizationMedia media={block.media} />}
                     </section>
                 );
             }
@@ -218,4 +224,32 @@ export async function ContentBlocks({ blocks }: ContentBlocksProps) {
     );
 
     return <div className="flex flex-col gap-5">{rendered}</div>;
+}
+
+type VisualizationMediaProps = { media: NonNullable<Extract<ContentBlock, { type: "visualization" }>["media"]> };
+
+/** A visualization's figure: a video as-is, or an image sized and blurred in from the manifest. */
+function VisualizationMedia({ media }: VisualizationMediaProps) {
+    if (media.type === "video") {
+        return <video src={media.src} controls playsInline className="w-full rounded-[4px]" />;
+    }
+    const meta = imageMeta(media.src);
+    if (!meta) {
+        // eslint-disable-next-line @next/next/no-img-element -- no manifest entry (an SVG, or not yet optimized)
+        return <img src={media.src} alt={media.alt} className="w-full rounded-[4px]" />;
+    }
+    return (
+        <Image
+            src={media.src}
+            alt={media.alt}
+            width={meta.width}
+            height={meta.height}
+            placeholder="blur"
+            blurDataURL={meta.blurDataURL}
+            sizes={CONTENT_IMAGE_SIZES}
+            quality={CONTENT_IMAGE_QUALITY}
+            unoptimized={media.src.endsWith(".gif")}
+            className="h-auto w-full rounded-[4px]"
+        />
+    );
 }

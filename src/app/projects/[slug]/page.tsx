@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { pageMetadata } from "../../../lib/metadata";
 import { parseContentDate } from "../../../lib/site";
 import { ContentBlocks } from "../../components/content-blocks";
+import { imageMeta } from "../../../lib/images";
 import { hasPage, nameOf, projects } from "../../data/projects";
 import ProjectPage from "./project-page";
 
@@ -35,8 +36,10 @@ export default async function Page({ params }: Props) {
     const { slug } = await params;
     const project = projects.find((p) => p.slug === slug && hasPage(p));
     if (!project) notFound();
+    // Looked up here so the manifest stays out of the client bundle.
+    const heroMeta = project.hero?.type === "image" ? imageMeta(project.hero.src) : undefined;
     return (
-        <ProjectPage slug={project.slug}>
+        <ProjectPage slug={project.slug} heroMeta={heroMeta}>
             {project.sections.map((section) => (
                 <section key={section.id} id={section.id} className="[&:not(:first-child)]:mt-16">
                     <h2 className="mb-5 text-[16px] font-medium leading-[1.6]">{section.title}</h2>

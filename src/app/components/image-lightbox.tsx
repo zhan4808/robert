@@ -1,15 +1,22 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { CONTENT_IMAGE_QUALITY, CONTENT_IMAGE_SIZES } from "../../lib/image-sizes";
+import type { ImageMeta } from "../../lib/images";
 
 interface ImageLightboxProps {
     src: string;
     alt: string;
     caption?: string;
     className?: string;
+    /** Size and blur placeholder from the manifest; without it the thumbnail is a plain <img>. */
+    meta?: ImageMeta;
+    /** How wide the thumbnail renders, for the srcset; defaults to the full write-up frame. */
+    sizes?: string;
 }
 
-export function ImageLightbox({ src, alt, caption, className }: ImageLightboxProps) {
+export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONTENT_IMAGE_SIZES }: ImageLightboxProps) {
     const [open, setOpen] = useState(false);
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -127,6 +134,8 @@ export function ImageLightbox({ src, alt, caption, className }: ImageLightboxPro
         setOffset({ x: 0, y: 0 });
     }, []);
 
+    const thumbClassName = `h-auto w-full rounded-[6px] border border-[color-mix(in_srgb,var(--foreground-color)_10%,transparent)] transition-opacity group-hover:opacity-90${className ? ` ${className}` : ""}`;
+
     return (
         <>
             {/* Thumbnail */}
@@ -137,11 +146,25 @@ export function ImageLightbox({ src, alt, caption, className }: ImageLightboxPro
                     className="cursor-zoom-in focus:outline-none rounded-[6px] overflow-hidden"
                     aria-label="Expand image"
                 >
-                    <img
-                        src={src}
-                        alt={alt}
-                        className={`w-full rounded-[6px] border border-[color-mix(in_srgb,var(--foreground-color)_10%,transparent)] transition-opacity group-hover:opacity-90${className ? ` ${className}` : ""}`}
-                    />
+                    {meta ? (
+                        // Sized from the manifest so the page doesn't shift, served resized by the optimizer, and
+                        // blurred in from a 10px placeholder.
+                        <Image
+                            src={src}
+                            alt={alt}
+                            width={meta.width}
+                            height={meta.height}
+                            placeholder="blur"
+                            blurDataURL={meta.blurDataURL}
+                            sizes={sizes}
+                            quality={CONTENT_IMAGE_QUALITY}
+                            unoptimized={src.endsWith(".gif")}
+                            className={thumbClassName}
+                        />
+                    ) : (
+                        // eslint-disable-next-line @next/next/no-img-element -- no manifest entry (an SVG, or not yet optimized)
+                        <img src={src} alt={alt} className={thumbClassName} />
+                    )}
                 </button>
                 {caption && (
                     <figcaption className="font-geistMono text-[12px] text-[var(--muted-color)]">{caption}</figcaption>
@@ -186,6 +209,8 @@ export function ImageLightbox({ src, alt, caption, className }: ImageLightboxPro
                         onClick={(e) => e.stopPropagation()}
                         style={{ cursor: dragging ? "grabbing" : "grab" }}
                     >
+                        {/* The full optimized file, loaded only once the viewer asks for it. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element -- zoom and pan need the file at its full size */}
                         <img
                             src={src}
                             alt={alt}

@@ -6,6 +6,8 @@ import { ContentBlocks } from "../../components/content-blocks";
 import MobileNav from "../../components/mobile-nav";
 import TopNav from "../../components/top-nav";
 import { getVisibleJournals, journalPosts, type JournalTrack } from "../../../lib/data";
+import { CONTENT_IMAGE_QUALITY, CONTENT_IMAGE_SIZES } from "../../../lib/image-sizes";
+import { imageMeta } from "../../../lib/images";
 import { pageMetadata } from "../../../lib/metadata";
 import { parseContentDate } from "../../../lib/site";
 
@@ -65,18 +67,7 @@ export default async function PostPage({ params }: Props) {
                     <p className={`mt-4 font-geistMono text-[12px] ${MUTED}`}>{post.date}</p>
                 </header>
 
-                {post.coverImage && (
-                    <Image
-                        src={post.coverImage}
-                        alt=""
-                        width={1920}
-                        height={1080}
-                        preload
-                        sizes="(min-width: 1024px) 56rem, 100vw"
-                        quality={90}
-                        className="mt-12 block aspect-[2/1] h-auto w-full rounded-[6px] object-cover"
-                    />
-                )}
+                {post.coverImage && <Cover src={post.coverImage} />}
 
                 {post.tracks.length > 0 && <Tracks tracks={post.tracks} />}
 
@@ -98,6 +89,42 @@ export default async function PostPage({ params }: Props) {
     );
 }
 
+/** The post's cover, sized from the manifest and blurred in; the aspect ratio is fixed so the page never shifts. */
+function Cover({ src }: { src: string }) {
+    const meta = imageMeta(src);
+    return (
+        <Image
+            src={src}
+            alt=""
+            width={meta?.width ?? 1920}
+            height={meta?.height ?? 1080}
+            placeholder={meta ? "blur" : "empty"}
+            blurDataURL={meta?.blurDataURL}
+            preload
+            sizes={CONTENT_IMAGE_SIZES}
+            quality={CONTENT_IMAGE_QUALITY}
+            className="mt-12 block aspect-[2/1] h-auto w-full rounded-[6px] object-cover"
+        />
+    );
+}
+
+/** Album art at 48px; the manifest gives the real size, and `sizes` keeps the srcset small. */
+function AlbumArt({ src }: { src: string }) {
+    const meta = imageMeta(src);
+    return (
+        <Image
+            src={src}
+            alt=""
+            width={meta?.width ?? 48}
+            height={meta?.height ?? 48}
+            placeholder={meta ? "blur" : "empty"}
+            blurDataURL={meta?.blurDataURL}
+            sizes="48px"
+            className="size-12 shrink-0 rounded-[4px] object-cover"
+        />
+    );
+}
+
 /** What was playing while the post was written, with the audio right there when there is a file for it. */
 function Tracks({ tracks }: { tracks: JournalTrack[] }) {
     return (
@@ -106,15 +133,7 @@ function Tracks({ tracks }: { tracks: JournalTrack[] }) {
             <ul className="flex flex-col gap-3">
                 {tracks.map((track) => (
                     <li key={track.title} className="flex items-center gap-4">
-                        {track.albumArt && (
-                            <Image
-                                src={track.albumArt}
-                                alt=""
-                                width={48}
-                                height={48}
-                                className="size-12 shrink-0 rounded-[4px] object-cover"
-                            />
-                        )}
+                        {track.albumArt && <AlbumArt src={track.albumArt} />}
                         <span className="flex min-w-0 flex-1 flex-col">
                             <span className="truncate text-[15px]">{track.title}</span>
                             <span className={`truncate text-[13px] ${MUTED}`}>{track.artist}</span>

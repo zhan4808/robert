@@ -17,6 +17,7 @@ import {
     projectsByDate,
     type Project,
 } from "../../data/projects";
+import type { ImageMeta } from "../../../lib/images";
 import { finishTransition, isTransitioning, pushWithTransition } from "../../../lib/view-transition";
 
 /** One centred frame holds everything, so text and media share both edges. */
@@ -35,7 +36,16 @@ const linkLabel = (href: string) => {
     return href.endsWith(".pdf") ? "paper (pdf)" : href;
 };
 
-export default function ProjectPage({ slug, children }: { slug: string; children: ReactNode }) {
+export default function ProjectPage({
+    slug,
+    heroMeta,
+    children,
+}: {
+    slug: string;
+    /** Size and blur placeholder for an image hero, from the manifest; the page looks it up on the server. */
+    heroMeta?: ImageMeta;
+    children: ReactNode;
+}) {
     const router = useRouter();
     const project = projects.find((p) => p.slug === slug);
     const still = useReducedMotion() ?? false;
@@ -153,11 +163,14 @@ export default function ProjectPage({ slug, children }: { slug: string; children
                                 className={MEDIA}
                             />
                         ) : (
+                            // Sized from the manifest when there is an entry (SVG heroes have none) and blurred in.
                             <Image
                                 src={hero.src}
                                 alt={hero.alt}
-                                width={1920}
-                                height={1080}
+                                width={heroMeta?.width ?? 1920}
+                                height={heroMeta?.height ?? 1080}
+                                placeholder={heroMeta ? "blur" : "empty"}
+                                blurDataURL={heroMeta?.blurDataURL}
                                 preload
                                 sizes="(min-width: 1024px) 56rem, 100vw"
                                 quality={IMAGE_QUALITY}

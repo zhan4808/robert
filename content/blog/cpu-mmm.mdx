@@ -8,7 +8,7 @@ order: 2
 
 NumPy can multiply two 1024×1024 float32 matrices on a quad-core Intel CPU in roughly 8ms. That translates to \~250 GFLOP/s — about 18 FLOPs per core per clock cycle at 3.4 GHz. For a CPU released in 2015, that's absurd. And it's not magic: it's the result of decades of highly specific, hand-tuned assembly in libraries like Intel MKL and OpenBLAS.
 
-The question I kept coming back to: how far can you get starting from a simple nested for-loop in C++? Not to beat BLAS — OpenBLAS's SGEMM is \~7,000 lines of hand-written x86 assembly — but to understand \*why\* the gap exists, and what techniques close it. This is the CPU companion to my CUDA SGEMM post. Same algorithm, same hierarchical optimization story, different hardware.
+The question I kept coming back to: how far can you get starting from a simple nested for-loop in C++? Not to beat BLAS — OpenBLAS's SGEMM is \~7,000 lines of hand-written x86 assembly — but to understand *why* the gap exists, and what techniques close it. This is the CPU companion to my CUDA SGEMM post. Same algorithm, same hierarchical optimization story, different hardware.
 
 Spoiler: we end up at \~9 FLOPs/core/cycle (half of peak) using cache-aware loop ordering, tiling, and OpenMP multithreading. The final kernel works only for fixed matrix sizes and makes no attempt to generalize. The goal isn't a production library — it's a working mental model of how CPU memory hierarchies interact with compute.
 
@@ -105,7 +105,7 @@ inline void matmulImplNaiveRegisterAcc(const float *left, const float *right,
 }
 ```
 
-Down to 1.5s. Modest, but real. The reason: without the explicit accumulator, the compiler has to prove it's safe to keep partial sums in a register rather than writing them to \`result\[]\` on every iteration (pointer aliasing can prevent this). Being explicit removes the ambiguity. We're still nowhere near BLAS — the next bottleneck is the memory access pattern.
+Down to 1.5s. Modest, but real. The reason: without the explicit accumulator, the compiler has to prove it's safe to keep partial sums in a register rather than writing them to `result[]` on every iteration (pointer aliasing can prevent this). Being explicit removes the ambiguity. We're still nowhere near BLAS — the next bottleneck is the memory access pattern.
 
 ## Cache-Aware Loop Ordering
 
@@ -118,7 +118,7 @@ C and most systems languages use row-major storage: matrix elements are laid out
   invert
 />
 
-In the naive row-col-inner loop order, the innermost loop walks across a row of A (sequential — good, cache-line friendly) but walks down a \*column\* of B (stride-N — terrible). For N=1024 with float32, each step down a column of B jumps 4KB. A full column traversal touches 1024 × 4KB = 4MB, and our L1d is only 32KB. Every access to B in the inner loop is a cache miss. This is why the naive implementation is so slow — it's memory-bound despite the problem being arithmetically intensive.
+In the naive row-col-inner loop order, the innermost loop walks across a row of A (sequential — good, cache-line friendly) but walks down a *column* of B (stride-N — terrible). For N=1024 with float32, each step down a column of B jumps 4KB. A full column traversal touches 1024 × 4KB = 4MB, and our L1d is only 32KB. Every access to B in the inner loop is a cache miss. This is why the naive implementation is so slow — it's memory-bound despite the problem being arithmetically intensive.
 
 <Figure
   src="/cpu-mmm/cache-unaware-dot-product.webp"
@@ -176,7 +176,7 @@ vmovups ymmword ptr [rcx + 4*rbp], ymm4
 
 ## Tiling: Making the Cache Work Harder
 
-Loop reordering solved one cache problem but introduced another. In the reordered implementation, the middle loop (over \`inner\`) scans through full rows of B. For a 1024×1024 matrix, a full row is 4KB. By the time the outer \`row\` loop increments and we start the \`inner\` loop again, the B rows we just processed have been evicted from L1 (32KB). We reload them for every row of A — same data, cold cache every time.
+Loop reordering solved one cache problem but introduced another. In the reordered implementation, the middle loop (over `inner`) scans through full rows of B. For a 1024×1024 matrix, a full row is 4KB. By the time the outer `row` loop increments and we start the `inner` loop again, the B rows we just processed have been evicted from L1 (32KB). We reload them for every row of A — same data, cold cache every time.
 
 <Figure
   src="/cpu-mmm/Basic_tiling_inner.webp"
@@ -185,7 +185,7 @@ Loop reordering solved one cache problem but introduced another. In the reordere
   invert
 />
 
-Tiling (also called cache blocking) fixes this by splitting the middle loop into an outer tile loop and an inner tile loop. The tile loop processes a chunk of the \`inner\` dimension that fits in L1, then moves to the next chunk. Crucially, multiple rows of A are processed within each tile before moving on — so the tile of B stays hot in cache across those rows:
+Tiling (also called cache blocking) fixes this by splitting the middle loop into an outer tile loop and an inner tile loop. The tile loop processes a chunk of the `inner` dimension that fits in L1, then moves to the next chunk. Crucially, multiple rows of A are processed within each tile before moving on — so the tile of B stays hot in cache across those rows:
 
 ```python
 def matmulImplTiling(left, right, result):
@@ -231,7 +231,7 @@ At tile size = 16, runtime drops to 70ms — another 21% improvement over the lo
 
 ## Multi-Dimensional Tiling
 
-We tiled the \`inner\` dimension — but we can also tile \`rows\` and \`columns\`. Each new tiled dimension creates a smaller inner working set that fits more comfortably in a shallower cache level, at the cost of extra loop overhead. For our 1024×1024 matrices, tiling all three dimensions gives diminishing returns; the dataset is small enough that L3 handles most of the traffic anyway. For larger matrices (say 8192×8192), multi-level tiling is essential — otherwise the B tile you worked so hard to keep in L1 gets evicted to L3 before the next row of A even starts.
+We tiled the `inner` dimension — but we can also tile `rows` and `columns`. Each new tiled dimension creates a smaller inner working set that fits more comfortably in a shallower cache level, at the cost of extra loop overhead. For our 1024×1024 matrices, tiling all three dimensions gives diminishing returns; the dataset is small enough that L3 handles most of the traffic anyway. For larger matrices (say 8192×8192), multi-level tiling is essential — otherwise the B tile you worked so hard to keep in L1 gets evicted to L3 before the next row of A even starts.
 
 <Figure
   src="/cpu-mmm/full_tiling.webp"
@@ -244,7 +244,7 @@ The connection to CUDA SGEMM is direct: blocktiling is L3-equivalent (GMEM → S
 
 ## Multithreading with OpenMP
 
-The i7-6700 has 4 physical cores with hyperthreading — 8 logical cores. We've been using one. OpenMP makes adding parallelism trivial syntactically, but you have to think carefully about data dependencies before slapping a \`#pragma omp parallel for\` on the outermost loop.
+The i7-6700 has 4 physical cores with hyperthreading — 8 logical cores. We've been using one. OpenMP makes adding parallelism trivial syntactically, but you have to think carefully about data dependencies before slapping a `#pragma omp parallel for` on the outermost loop.
 
 <Figure
   src="/cpu-mmm/tiled_MMM_dependecies.webp"
@@ -294,7 +294,7 @@ With 8 threads (collapse(2) across rowTile and columnTile loops), runtime drops 
 
 CPU SGEMM and GPU SGEMM are the same algorithm in different hardware costumes. Both are fundamentally about managing a three-level memory hierarchy to keep compute units fed. The CPU's hierarchy is L1/L2/L3 caches; the GPU's is registers/SMEM/GMEM. The tiling patterns are identical — the GPU just makes you spell them out explicitly in CUDA rather than letting a compiler figure them out.
 
-What surprised me most: a single loop-order swap (naive → cache-aware) produced a 17× speedup with zero algorithmic change. The naive implementation wasn't compute-bound or even particularly memory-bandwidth-bound in an absolute sense — it was \*cache-thrashing\* at an absurd rate, stalling the execution units waiting for DRAM. Performance optimization is often less about raw compute and more about reducing the latency of waiting for data. The patterns that matter: sequential access, reuse, prefetching, and not fighting the hardware prefetcher.
+What surprised me most: a single loop-order swap (naive → cache-aware) produced a 17× speedup with zero algorithmic change. The naive implementation wasn't compute-bound or even particularly memory-bandwidth-bound in an absolute sense — it was *cache-thrashing* at an absurd rate, stalling the execution units waiting for DRAM. Performance optimization is often less about raw compute and more about reducing the latency of waiting for data. The patterns that matter: sequential access, reuse, prefetching, and not fighting the hardware prefetcher.
 
 The gap to production BLAS (\~5× in our case) comes from three things we didn't implement: register-level tiling (maintaining multiple independent FMA accumulators to exploit ILP), hand-tuned SIMD intrinsics for the inner kernel, and full multi-level tiling calibrated for each cache level. OpenBLAS's SGEMM kernel is 7,000 lines of x86 assembly for a reason. We got about 50% of theoretical peak; BLAS gets \~56%. That remaining margin is years of engineering.
 

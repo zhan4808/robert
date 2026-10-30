@@ -85,7 +85,7 @@ $$
   invert
 />
 
-The 33% compute overhead from recomputation is usually worth it for large models — it's often the only way to fit a model in GPU memory at all. PyTorch's \`torch.utils.checkpoint.checkpoint()\` and Megatron-LM's activation recomputation are both GPipe-style gradient checkpointing. If you've used either, you've used this idea.
+The 33% compute overhead from recomputation is usually worth it for large models — it's often the only way to fit a model in GPU memory at all. PyTorch's `torch.utils.checkpoint.checkpoint()` and Megatron-LM's activation recomputation are both GPipe-style gradient checkpointing. If you've used either, you've used this idea.
 
 ## PipeDream: 1F1B and Earlier Backward Passes
 
@@ -119,7 +119,7 @@ For a model with dense layers of hidden dimension N, each pipeline stage boundar
 
 ## Combining Pipeline and Data Parallelism
 
-Pipeline and data parallelism are orthogonal — you can use both simultaneously. In a combined setup, you run multiple pipeline \*replicas\* (data parallelism across replicas) where each replica is itself a pipeline (pipeline parallelism across stages). The constraint: your effective batch size is (microbatch_size × n_microbatches × n_data_parallel_replicas), so you need a large enough batch to keep both dimensions busy without gradient noise from tiny microbatches.
+Pipeline and data parallelism are orthogonal — you can use both simultaneously. In a combined setup, you run multiple pipeline *replicas* (data parallelism across replicas) where each replica is itself a pipeline (pipeline parallelism across stages). The constraint: your effective batch size is (microbatch_size × n_microbatches × n_data_parallel_replicas), so you need a large enough batch to keep both dimensions busy without gradient noise from tiny microbatches.
 
 <Figure
   src="/pipeline-parallel/DP_and_PP.webp"
@@ -172,7 +172,7 @@ def steps_FWD_microbatch(self, microbatch_id):
     return cmds
 ```
 
-Load input (or receive activations), run the forward pass, send activations to the next stage. Clean and self-contained. The backward pass is symmetric but runs in reverse — the last stage has the loss, so it loads targets instead of receiving gradients. A notable detail: the \`BackwardGradAllReduce\` on the first microbatch (processed last in backward order) overlaps the gradient AllReduce with the actual backward computation, hiding some of the data-parallel communication cost:
+Load input (or receive activations), run the forward pass, send activations to the next stage. Clean and self-contained. The backward pass is symmetric but runs in reverse — the last stage has the loss, so it loads targets instead of receiving gradients. A notable detail: the `BackwardGradAllReduce` on the first microbatch (processed last in backward order) overlaps the gradient AllReduce with the actual backward computation, hiding some of the data-parallel communication cost:
 
 ```python
 def steps_BWD_microbatch(self, microbatch_id):
@@ -196,7 +196,7 @@ def steps_BWD_microbatch(self, microbatch_id):
     yield cmds
 ```
 
-The \`BackwardGradAcc\` vs \`BackwardGradAllReduce\` distinction is subtle but important. For all but the last microbatch (in backward order), we accumulate gradients locally without synchronizing with other data-parallel replicas. Only on the last backward do we AllReduce — and by launching it as a background NCCL operation overlapping with the final backprop, we hide part of the network round-trip latency.
+The `BackwardGradAcc` vs `BackwardGradAllReduce` distinction is subtle but important. For all but the last microbatch (in backward order), we accumulate gradients locally without synchronizing with other data-parallel replicas. Only on the last backward do we AllReduce — and by launching it as a background NCCL operation overlapping with the final backprop, we hide part of the network round-trip latency.
 
 ## Hardware Context: Interconnects and Scaling
 

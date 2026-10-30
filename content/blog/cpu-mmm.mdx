@@ -4,6 +4,7 @@ subtitle: loop reordering, tiling, and multithreading
 date: January 2026
 year: 2026
 order: 2
+kind: technical
 ---
 
 NumPy can multiply two 1024×1024 float32 matrices on a quad-core Intel CPU in roughly 8ms. That translates to \~250 GFLOP/s — about 18 FLOPs per core per clock cycle at 3.4 GHz. For a CPU released in 2015, that's absurd. And it's not magic: it's the result of decades of highly specific, hand-tuned assembly in libraries like Intel MKL and OpenBLAS.

@@ -51,6 +51,7 @@ updated: "2026-03-04" # ISO date of the last revision; shown as "updated March 4
 year: 2025
 order: 5 # where it sits among the posts; lower first
 hidden: false # true: still builds at its URL with noindex, but out of the list, the feed, and the sitemap
+kind: journal # or technical; a small label beside the date in the list and on the page
 coverImage: /oai2.webp
 coverGradient: from-orange-300 via-pink-300 to-blue-300 # Tailwind gradient stops
 tracks: # what was playing

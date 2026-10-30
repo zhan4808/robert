@@ -4,7 +4,8 @@ import plugin from "tailwindcss/plugin";
 export default {
     // next-themes puts `dark` or `light` on <html>.
     darkMode: "selector",
-    content: ["./src/**/*.{js,jsx,ts,tsx}"],
+    // Content files name gradient stops (<Gradient className="from-orange-300 ...">), so they are scanned too.
+    content: ["./src/**/*.{js,jsx,ts,tsx}", "./content/**/*.mdx"],
     theme: {
         extend: {
             colors: {

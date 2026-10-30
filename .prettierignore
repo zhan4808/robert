@@ -1,5 +1,7 @@
 # Media and data files, not source.
 public
+# MDX write-ups: Prettier's MDX support predates MDX 3 and reflows table cells and escapes.
+content
 # Generated
 .next
 node_modules

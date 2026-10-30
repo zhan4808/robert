@@ -1,0 +1,74 @@
+---
+title: 5-Stage Pipelined RISC-V CPU
+shortTitle: RISC-V CPU
+description: Fully pipelined 5-stage RISC-V processor in SystemVerilog with hazard detection, data forwarding, and a 2-bit branch predictor. Synthesized in Cadence targeting 70 MHz.
+longDescription: Designed and verified a 5-stage RISC-V pipeline (IF→ID→EX→MEM→WB) in SystemVerilog with full forwarding, load-use stall detection, and a 2-bit saturating branch predictor. Synthesized in Cadence targeting 70 MHz, achieving ~80 MHz Fmax on the CPUCLK domain.
+date: "2025"
+year: 2025
+order: 4
+tags:
+  - RTL
+  - SystemVerilog
+  - Computer Architecture
+  - ASIC Design
+featured: true
+thumb: /pipeline-cpu/onyx-branch-predictor.svg
+---
+
+<Section id="overview" title="Overview">
+  Designed and verified a fully pipelined 5-stage RISC-V processor in SystemVerilog, implementing the classic IF → ID → EX → MEM → WB pipeline with all the hardware mechanisms necessary to handle real program behavior correctly — hazard detection, data forwarding, and branch prediction.
+
+  A single-cycle processor has CPI=1 by construction, but its clock frequency is limited by the longest combinational path (typically load-use through the memory stage). Pipelining breaks that critical path across five registers, lifting clock frequency at the cost of introducing data and control hazards that must be resolved in hardware.
+
+  <Figure
+    src="/pipeline-cpu/onyx-branch-predictor.svg"
+    alt="Full RTL diagram of the 5-stage RISC-V pipeline with branch predictor"
+    caption="Full RTL schematic: 5-stage pipeline (IF/ID/EX/MEM/WB), forwarding paths, hazard detection unit, and 2-bit branch predictor. Designed in draw.io / Cadence."
+  />
+</Section>
+
+<Section id="hazards" title="Hazard Detection and Data Forwarding">
+  Data hazards occur when an instruction reads a register that a preceding instruction hasn't yet written back. Without intervention, this would require inserting NOPs (stall bubbles) after every instruction that produces a result. The forwarding unit eliminates most of this penalty by detecting RAW (read-after-write) conflicts and bypassing results directly from pipeline registers back to the EX stage inputs.
+
+  Two forwarding paths are implemented: EX/MEM → EX (one-cycle-old result) and MEM/WB → EX (two-cycle-old result). Both rs1 and rs2 are checked independently; EX-stage forwarding takes priority when both paths are valid. The one case that can't be forwarded: a load followed immediately by an instruction that uses the loaded value. The data doesn't exist until after MEM, so the hazard detection unit inserts a one-cycle stall by freezing IF/ID and injecting a NOP into the EX stage.
+</Section>
+
+<Section id="branch-prediction" title="Branch Prediction">
+  Control hazards arise when a branch is taken: the instruction fetched speculatively at PC+4 is wrong and must be flushed. The baseline implementation uses always-not-taken prediction — the pipeline fetches PC+4 and flushes the IF/ID register (one-cycle penalty) only when a branch resolves as taken in EX. Zero hardware overhead; zero penalty on not-taken branches.
+
+  The design was extended with a 2-bit saturating counter predictor (states: strongly-not-taken, weakly-not-taken, weakly-taken, strongly-taken). A branch history table indexed by PC maintains per-branch state. This dramatically reduces misprediction penalty on loops (where branches are taken repeatedly) and other repeating patterns. The predictor is evaluated at LAT=2 (2-cycle misprediction penalty) and LAT=6.
+</Section>
+
+<Section id="performance" title="Performance: Mergesort Sweep">
+  Benchmark: mergesort on a fixed array. Run across three design snapshots (Feb 5, Feb 22, Feb 26) with four predictor configurations each. The Feb 26 build is the final design. Performance is measured in simulation cycles and wall-clock latency derived from synthesis Fmax.
+
+  ### Final design (Feb 26, 2026)
+
+  | Configuration            | Cycles | CPUCLK Fmax | Wall-clock latency | CPI (est.) |
+  | ------------------------ | ------ | ----------- | ------------------ | ---------- |
+  | No predictor (LAT=0)     | 7,741  | 80.42 MHz   | 96.3 µs            | \~1.20     |
+  | 2-bit predictor (LAT=2)  | 15,640 | 80.37 MHz   | 194.6 µs           | \~2.43     |
+  | 2-bit predictor (LAT=6)  | 29,672 | 80.37 MHz   | 369.2 µs           | \~4.60     |
+  | 2-bit predictor (LAT=10) | 43,704 | 80.37 MHz   | 543.8 µs           | \~6.78     |
+
+  CPI estimated assuming \~6,450 effective instructions (derived from LAT=0 cycles ÷ \~1.2 ideal pipeline CPI with forwarding overhead). Note: the predictor increases cycle count because this mergesort workload has many taken branches — the 2-bit predictor's prediction latency costs more than it saves here, indicating branch prediction is only beneficial when misprediction rate \< penalty overhead / branch frequency.
+
+  ### Design progression across builds
+
+  | Processor Type                | Config | Cycles | CPUCLK Fmax | MAIN Fmax  |
+  | ----------------------------- | ------ | ------ | ----------- | ---------- |
+  | Singlecycle                   | LAT=0  | 6,907  | 51.62 MHz   | 105.46 MHz |
+  | Singlecycle                   | LAT=2  | 13,814 | 51.99 MHz   | 101.53 MHz |
+  | Pipeline                      | LAT=0  | 9,239  | 81.50 MHz   | 157.33 MHz |
+  | Pipeline                      | LAT=2  | 17,887 | 91.12 MHz   | 161.34 MHz |
+  | Pipeline w/ Branch Prediction | LAT=0  | 7,741  | 80.42 MHz   | 142.41 MHz |
+  | Pipeline w/ Branch Prediction | LAT=2  | 15,640 | 80.37 MHz   | 149.21 MHz |
+
+  The LAT = 2 Pipeline build shows the highest Fmax (91.12 MHz at LAT=2) but more cycles than Pipeline w/ Branch Prediction, indicating a different microarchitectural tradeoff. The final Pipeline w/ Branch Prediction design converges at \~80 MHz, exceeding the 70 MHz synthesis target.
+</Section>
+
+<Section id="verification" title="Verification">
+  Verified in QuestaSim with directed assembly tests covering: all R-type instructions (ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU), load/store (LW, SW), branches (BEQ, BNE, BLT, BGE taken and not-taken), jumps (JAL, JALR), and all forwarding paths including the double-forwarding case where both rs1 and rs2 require simultaneous bypass from different pipeline stages.
+
+  Synthesis was run in AMD Xilinx Vivado targeting the CPUCLK domain at 70 MHz. Timing reports confirmed no setup violations at 70 MHz; Fmax was determined by iterative tightening of the constraint until the first failing path.
+</Section>

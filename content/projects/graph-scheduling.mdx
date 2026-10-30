@@ -1,0 +1,103 @@
+---
+title: Memory-Constrained Graph Scheduling
+shortTitle: Graph Scheduling
+description: A scheduler for ML accelerator computation DAGs that minimizes latency while respecting tight on-chip SRAM capacity constraints. Google MLSys 2026, Track A.
+longDescription: Given a computation DAG of MatMul and pointwise ops, produce an execution schedule that minimizes total latency while never exceeding fast-memory (SRAM) capacity. The solver is written in C++ and implements fusion with cycle detection, granularity search, zig-zag tile ordering, retention decisions, and recomputation.
+date: "2026"
+year: 2026
+order: 5
+tags:
+  - Systems
+  - Compilers
+  - Graph Optimization
+  - ML Accelerators
+featured: true
+thumb: /graph-scheduling/4_roofline.webp
+thumbStyle: figure
+---
+
+<Section id="problem" title="The Problem">
+  Modern AI accelerators live with a hard constraint: fast on-chip SRAM is tiny, neural network tensors are not. Compute can only happen on data currently in fast memory — everything else sits in slow HBM, bandwidth-limited and expensive to move. A scheduler's job is to decide how data flows between those levels to minimize total execution latency.
+
+  The competition hands you a computation DAG — MatMul and pointwise ops (ReLU, addition, etc.) — and asks: produce an execution schedule that minimizes total latency without ever exceeding fast-memory capacity. You control how ops are grouped, how tiles are sized, which direction tiles are traversed, and which tensors stay resident in fast memory.
+
+  Benchmarks: 5 graphs (5–103 ops each, numbered 1, 5, 9, 13, 17). Scored as geometric mean speedup over a naive unfused baseline. Deadline: April 2026.
+
+  <Figure
+    src="/graph-scheduling/1_memory_hierarchy.webp"
+    alt="Three-tier memory hierarchy: slow HBM, fast SRAM, ephemeral within-subgraph"
+    caption="Three-tier memory model. Ephemeral intermediates — tensors produced and consumed within a fused subgraph — cost zero capacity and zero bandwidth. That's what makes fusion the highest-leverage optimization."
+  />
+</Section>
+
+<Section id="latency-model" title="The Latency Model">
+  Each tile's execution time is determined by whichever of compute or memory is the bottleneck:
+
+  $$
+  T_{\text{tile}} = \max\left(T_{\text{compute}},\; T_{\text{mem\_in}} + T_{\text{mem\_out}}\right)
+  $$
+
+  Total schedule latency is the sum over all tiles across all subgraphs. The optimizer's goal is to push each tile toward the compute-bound side of the roofline — large enough to amortize memory transfer, small enough to fit in SRAM.
+
+  <Figure
+    src="/graph-scheduling/4_roofline.webp"
+    alt="Roofline model: compute-bound vs memory-bound regimes"
+    caption="Roofline plot. Each granularity choice places a tile at a specific arithmetic intensity. The goal is to operate at or above the ridge point where compute and memory are balanced."
+  />
+</Section>
+
+<Section id="levers" title="The Four Optimization Levers">
+  ### 1. Fusion
+
+  When consecutive ops are fused into one subgraph, their shared intermediate tensor becomes ephemeral — computed and consumed entirely in fast memory, never touching HBM. This eliminates both the capacity cost of holding the tensor and the bandwidth cost of a round-trip through HBM. The constraint: all ops in a fused subgraph share a single tile granularity, so aggressive fusion can force a suboptimal granularity compromise.
+
+  <Figure
+    src="/graph-scheduling/2_fusion_before_after.webp"
+    alt="Fusion before and after: intermediate tensor goes from HBM round-trip to ephemeral"
+    caption="Unfused (left): intermediate tensor written to HBM then reloaded. Fused (right): intermediate is ephemeral — lives entirely in SRAM, bandwidth cost eliminated."
+  />
+
+  ### 2. Granularity \[w, h, k]
+
+  Controls spatial tiling of the output tensor and the k-dimension partitioning of MatMuls. Larger tiles have better arithmetic intensity (fewer tiles, less overhead) but need more SRAM. Split-K — small k — is particularly useful for chained MatMuls: streaming thin slices of B and C keeps the accumulator resident in fast memory, enabling fusion of chains that would OOM at larger k.
+
+  ### 3. Traversal Order
+
+  For MatMul C = A × B tiled into a grid, traversal order determines which tiles share SRAM-resident data. Raster order (left-to-right, top-to-bottom) reuses A strips but reloads B columns on each row. Zig-zag alternates direction on each row, reusing B strips across adjacent rows — cutting unique HBM loads by up to 50% for typical shapes.
+
+  <Figure
+    src="/graph-scheduling/3_traversal_order.webp"
+    alt="Raster vs zig-zag tile traversal order"
+    caption="Raster order (left) reloads the B strip on every row change. Zig-zag (right) reuses the B strip across adjacent rows by reversing direction, halving the unique HBM loads in many cases."
+  />
+
+  ### 4. Recomputation
+
+  In diamond/skip-connection patterns (ubiquitous in transformers), a tensor produced by one op is consumed by two downstream ops in different subgraphs. The options: spill it to HBM (pay bandwidth to store + reload), retain it in SRAM (pay capacity to hold it), or recompute it in each consuming subgraph (pay compute to avoid the HBM trip). For cheap pointwise producers, recomputation is often the right call — same idea as FlashAttention's recomputation of attention weights in the backward pass.
+
+  <Figure
+    src="/graph-scheduling/5_diamond_strategies.webp"
+    alt="Diamond graph: spill vs recompute vs retain strategies"
+    caption="Three strategies for a skip-connection pattern. Spill: 3 subgraphs, highest latency. Recompute: 2 subgraphs with the producer duplicated, avoids HBM round-trip. Retain: 2 subgraphs with the tensor kept resident, lowest latency if SRAM budget allows."
+  />
+</Section>
+
+<Section id="solver" title="The Solver">
+  The solver is implemented in C++. Fusion is a greedy hill-climber: evaluate all adjacent subgraph pairs, score each candidate merge by estimated latency reduction, commit the highest-scoring merge that passes the capacity check, and repeat until no beneficial merge remains. Before committing any merge, the solver runs a BFS cycle check — merging two subgraphs can create a cycle in the subgraph DAG, which is a correctness violation.
+
+  <Figure
+    src="/graph-scheduling/6_split_k.webp"
+    alt="Split-K accumulation for chained MatMuls"
+    caption="Split-K for a chained MatMul (A×B)×C. Small k streams thin slices of B and C while keeping the accumulator resident in SRAM — enabling fusion of chains that would OOM at larger k values."
+  />
+
+  After fusion, each subgraph gets an independent granularity search: iterate tile sizes from large to small, pick the largest \[w, h, k] that fits within SRAM budget, using the roofline model to bias toward compute-bound configurations. Tile order defaults to zig-zag for all MatMul subgraphs; retention decisions are made greedily based on next-use distance and current capacity pressure.
+</Section>
+
+<Section id="results" title="Results">
+  <Figure
+    src="/graph-scheduling/7_benchmark_results.webp"
+    alt="Benchmark results: speedup over unfused baseline per graph"
+    caption="Speedup over the unfused naive baseline across the 5 benchmark graphs. Larger graphs with more fusion opportunities (e.g., graph 17, 103 ops) see the largest gains."
+  />
+</Section>

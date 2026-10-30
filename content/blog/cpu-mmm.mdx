@@ -1,0 +1,301 @@
+---
+title: Fast Multidimensional Matrix Multiplication on CPU from Scratch
+subtitle: loop reordering, tiling, and multithreading
+date: January 2026
+year: 2026
+order: 2
+---
+
+NumPy can multiply two 1024×1024 float32 matrices on a quad-core Intel CPU in roughly 8ms. That translates to \~250 GFLOP/s — about 18 FLOPs per core per clock cycle at 3.4 GHz. For a CPU released in 2015, that's absurd. And it's not magic: it's the result of decades of highly specific, hand-tuned assembly in libraries like Intel MKL and OpenBLAS.
+
+The question I kept coming back to: how far can you get starting from a simple nested for-loop in C++? Not to beat BLAS — OpenBLAS's SGEMM is \~7,000 lines of hand-written x86 assembly — but to understand \*why\* the gap exists, and what techniques close it. This is the CPU companion to my CUDA SGEMM post. Same algorithm, same hierarchical optimization story, different hardware.
+
+Spoiler: we end up at \~9 FLOPs/core/cycle (half of peak) using cache-aware loop ordering, tiling, and OpenMP multithreading. The final kernel works only for fixed matrix sizes and makes no attempt to generalize. The goal isn't a production library — it's a working mental model of how CPU memory hierarchies interact with compute.
+
+## FLOPs and Arithmetic Intensity
+
+For square matrices of size N×N, computing C = A×B requires one dot product per output element. Each dot product is N multiply-accumulate operations. Total: N² output entries × N inner multiplications × 2 FLOPs (mul + add) = 2N³ FLOPs.
+
+<Figure
+  src="/cpu-mmm/Basic_MMM.webp"
+  alt="Basic matrix multiplication diagram"
+  caption="Matrix multiplication: each output entry requires a dot product of a row and a column."
+  invert
+/>
+
+For N=1024: 2 × 1024³ ≈ 2.1 billion FLOPs. Memory footprint for three 1024×1024 float32 matrices: 3 × 4MB = 12MB. Arithmetic intensity = 2N³ / (3 × 4 × N²) ≈ N/6 ≈ 170 FLOP/byte for N=1024. At L3 bandwidth of \~40 GB/s and peak compute of \~250 GFLOP/s, the compute-to-bandwidth ratio for this size is already squarely in the compute-bound regime. Once you get the data into cache and stop thrashing it, the bottleneck is FP throughput, not memory.
+
+```python
+def MMM(A, B):
+    C = np.zeros((A.n_rows, B.n_columns))
+    for row in range(A.n_rows):
+        for col in range(B.n_columns):
+            for inner in range(A.n_inner):
+                C[row, col] = C[row, col] + A[row, inner] * B[inner, col]
+    return C
+```
+
+## Benchmarking the Baseline: NumPy on Haswell
+
+```python
+x = np.random.randn(1024, 1024).astype(np.float32)
+y = np.random.randn(1024, 1024).astype(np.float32)
+start = time.time_ns()
+z = np.dot(x, y)
+end = time.time_ns() - start
+```
+
+On an Intel i7-6700 Haswell (quad-core, 3.4 GHz), this takes \~8ms. 2.1B FLOPs in 8ms = 263 GFLOP/s = 18.5 FLOPs/core/cycle. On silicon from 2015. NumPy dispatches to Intel MKL's SGEMM kernel here — the BLAS routine for single-precision general matrix multiply: C = α·A·B + β·C.
+
+Where does 18.5 FLOPs/core/cycle come from? The theoretical peak for Haswell with AVX2 and FMA is 2 × (256/32) = 16 FLOPs per VFMADD instruction, at 2 instructions/cycle = 32 FLOPs/cycle. MKL achieves 18.5/32 ≈ 58% of peak — excellent for a general-purpose BLAS on arbitrary matrices. We'll aim to hit half that.
+
+## SIMD and FMA: The Secret to 18 FLOPs/Cycle
+
+A scalar float multiply takes one execution unit one clock. But a 256-bit AVX2 YMM register holds 8 floats, so a VMULPS (vectorized multiply) executes 8 multiplications in the same slot. That's 8× instruction-level throughput for free — the silicon is already there, you just have to tell the compiler to use it.
+
+<Figure
+  src="/cpu-mmm/Scalar_vs_Vectorized.webp"
+  alt="Scalar vs vectorized operations comparison"
+  caption="SIMD: one instruction, multiple data. AVX2 processes 8 floats per operation."
+  invert
+/>
+
+FMA (Fused Multiply-Add) fuses a multiply and add into a single instruction: A += B \* C. On Haswell, VFMADD213PS operates on three 256-bit YMM registers, performing 8 fused multiply-adds — 16 FLOPs — in one instruction. According to Agner Fog's tables, VFMADD has a throughput of 0.5 cycles on Haswell (two execution ports can handle it). So theoretical peak is 2 VFMADD/cycle × 16 FLOP/VFMADD = 32 FLOP/cycle per core.
+
+But VFMADD has a latency of 5 cycles — meaning you have to wait 5 cycles for the result before using it as an input to the next FMA. To sustain 2 FMAs/cycle despite that 5-cycle latency, you need at least 5 × 2 = 10 independent FMA operations in flight simultaneously — 160 FLOPs of in-flight work. That's where instruction-level parallelism (ILP) comes in: structure your inner loop so that the compiler can issue multiple independent FMA instructions without waiting on data dependencies. This is why the MKL SGEMM kernel uses multiple accumulator registers — each register holds an independent partial sum, eliminating the dependency chain.
+
+## Starting from Scratch: Naive C++
+
+Target hardware: Intel i7-6700, quad-core Haswell @ 3.4GHz. Cache layout: 32KiB L1d per core, 256KiB L2 per core, 8MB shared L3. Compiler: clang 14.0 with -O3 -march=native -ffast-math. Benchmarking via Google Benchmark; every variant validated against PyTorch's output for numerical correctness.
+
+The target is \~9 FLOPs/core/cycle — roughly half of the theoretical peak. Not competitive with BLAS (which is 18), but above the noise floor of a naive implementation. The constraint: our kernel only works for fixed matrix sizes known at compile time (template parameters). We sacrifice generality for speed, and that tradeoff is entirely intentional.
+
+Starting point — the most straightforward thing you'd write:
+
+```cpp
+template <int rows, int columns, int inners>
+inline void matmulImplNaive(const float *left, const float *right,
+                            float *result) {
+  for (int row = 0; row < rows; row++) {
+    for (int col = 0; col < columns; col++) {
+      for (int inner = 0; inner < inners; inner++) {
+        result[row * columns + col] +=
+            left[row * columns + inner] * right[inner * columns + col];
+      }
+    }
+  }
+}
+```
+
+Without optimization flags: 4.4s. With -O3 -march=native -ffast-math: 1.6s — a 2.75× speedup from the compiler alone. That's already a reminder that the compiler is doing real work. But 1.6s is still \~20× slower than NumPy. A small improvement: accumulate the inner dot product in a local register and write it to C once at the end:
+
+```cpp
+template <int rows, int columns, int inners>
+inline void matmulImplNaiveRegisterAcc(const float *left, const float *right,
+                                       float *result) {
+  for (int row = 0; row < rows; row++) {
+    for (int col = 0; col < columns; col++) {
+      float acc = 0.0;
+      for (int inner = 0; inner < inners; inner++) {
+        acc += left[row * columns + inner] * right[inner * columns + col];
+      }
+      result[row * columns + col] = acc;
+    }
+  }
+}
+```
+
+Down to 1.5s. Modest, but real. The reason: without the explicit accumulator, the compiler has to prove it's safe to keep partial sums in a register rather than writing them to \`result\[]\` on every iteration (pointer aliasing can prevent this). Being explicit removes the ambiguity. We're still nowhere near BLAS — the next bottleneck is the memory access pattern.
+
+## Cache-Aware Loop Ordering
+
+C and most systems languages use row-major storage: matrix elements are laid out row by row in memory. A\[i]\[j] and A\[i]\[j+1] are adjacent. A\[i]\[j] and A\[i+1]\[j] are N floats apart.
+
+<Figure
+  src="/cpu-mmm/stride_matrix_representation.webp"
+  alt="Strided matrix memory layout"
+  caption="Row-major memory layout: rows are contiguous, columns are strided by N×4 bytes."
+  invert
+/>
+
+In the naive row-col-inner loop order, the innermost loop walks across a row of A (sequential — good, cache-line friendly) but walks down a \*column\* of B (stride-N — terrible). For N=1024 with float32, each step down a column of B jumps 4KB. A full column traversal touches 1024 × 4KB = 4MB, and our L1d is only 32KB. Every access to B in the inner loop is a cache miss. This is why the naive implementation is so slow — it's memory-bound despite the problem being arithmetically intensive.
+
+<Figure
+  src="/cpu-mmm/cache-unaware-dot-product.webp"
+  alt="Cache-unfriendly access pattern for matrix B"
+  caption="The naive loop order walks B column-by-column — every inner step is a cache miss."
+  invert
+/>
+
+The fix: swap the col and inner loop order. Instead of iterating over all columns before advancing the inner index, iterate over the inner index first:
+
+```cpp
+template <int rows, int columns, int inners>
+inline void matmulImplLoopOrder(const float *left, const float *right,
+                                float *result) {
+  for (int row = 0; row < rows; row++) {
+    for (int inner = 0; inner < inners; inner++) {
+      for (int col = 0; col < columns; col++) {
+        result[row * columns + col] +=
+            left[row * columns + inner] * right[inner * columns + col];
+      }
+    }
+  }
+}
+```
+
+<Figure
+  src="/cpu-mmm/cache-aware-dot-prod-reorder-loops.webp"
+  alt="Optimized cache-aware access pattern after loop reordering"
+  caption="After loop reordering: the inner loop traverses B and C sequentially — cache-line friendly, vectorizable."
+  invert
+/>
+
+Runtime: 89ms. That's a 17× speedup from a one-line loop swap — the most dramatic win in the whole optimization journey. The inner loop now walks rows of B and C sequentially, so every cache miss fetches 16 useful floats. And because the memory pattern is predictable, the hardware prefetcher kicks in. More importantly, the compiler can now auto-vectorize: the sequential access pattern is exactly what allows it to emit VFMADD instructions:
+
+```asm
+; Broadcast a single fp32 from row of A to all 8 entries of ymm0
+; vbroadcastss ymm0, dword ptr [rsi + 4*r8]
+
+; Load 8 entries from current row of B into ymm registers
+vmovups ymm1, ymmword ptr [rbx + 4*rbp - 96]
+vmovups ymm2, ymmword ptr [rbx + 4*rbp - 64]
+vmovups ymm3, ymmword ptr [rbx + 4*rbp - 32]
+vmovups ymm4, ymmword ptr [rbx + 4*rbp]
+; Multiply current entry of A (ymm0) times B (ymm1-4), add partial results from C
+vfmadd213ps ymm1, ymm0, ymmword ptr [rcx + 4*rbp - 96]
+vfmadd213ps ymm2, ymm0, ymmword ptr [rcx + 4*rbp - 64]
+vfmadd213ps ymm3, ymm0, ymmword ptr [rcx + 4*rbp - 32]
+vfmadd213ps ymm4, ymm0, ymmword ptr [rcx + 4*rbp]
+; Store partial results back to C
+vmovups ymmword ptr [rcx + 4*rbp - 96], ymm1
+vmovups ymmword ptr [rcx + 4*rbp - 64], ymm2
+vmovups ymmword ptr [rcx + 4*rbp - 32], ymm3
+vmovups ymmword ptr [rcx + 4*rbp], ymm4
+```
+
+## Tiling: Making the Cache Work Harder
+
+Loop reordering solved one cache problem but introduced another. In the reordered implementation, the middle loop (over \`inner\`) scans through full rows of B. For a 1024×1024 matrix, a full row is 4KB. By the time the outer \`row\` loop increments and we start the \`inner\` loop again, the B rows we just processed have been evicted from L1 (32KB). We reload them for every row of A — same data, cold cache every time.
+
+<Figure
+  src="/cpu-mmm/Basic_tiling_inner.webp"
+  alt="Cache tiling concept visualization"
+  caption="Without tiling: by the time we revisit a tile of B for the next row of A, it's been evicted from cache."
+  invert
+/>
+
+Tiling (also called cache blocking) fixes this by splitting the middle loop into an outer tile loop and an inner tile loop. The tile loop processes a chunk of the \`inner\` dimension that fits in L1, then moves to the next chunk. Crucially, multiple rows of A are processed within each tile before moving on — so the tile of B stays hot in cache across those rows:
+
+```python
+def matmulImplTiling(left, right, result):
+    # iteration 1
+    for row in range(6):
+        for inner in range(3):
+            for column in range(6):
+                result[row, column] += left[row, inner] * right[inner, column]
+
+    # iteration 2
+    for row in range(6):
+        for inner in range(3, 6):
+            for column in range(6):
+                result[row, column] += left[row, inner] * right[inner, column]
+```
+
+<Figure
+  src="/cpu-mmm/Tiling_on_inner.webp"
+  alt="Tiling visualization with block boxes and colored arrows"
+  caption="Tiling: the colored arrows show that the same tile of B is reused across multiple rows of A before eviction."
+  invert
+/>
+
+```cpp
+template <int rows, int columns, int inners, int tileSize>
+inline void matmulImplTiling(const float *left, const float *right,
+                             float *result) {
+  for (int innerTile = 0; innerTile < inners; innerTile += tileSize) {
+    for (int row = 0; row < rows; row++) {
+      int innerTileEnd = std::min(inners, innerTile + tileSize);
+      for (int inner = innerTile; inner < innerTileEnd; inner++) {
+        for (int column = 0; column < columns; column++) {
+          result[row * columns + column] +=
+              left[row * inners + inner] * right[inner * columns + column];
+        }
+      }
+    }
+  }
+}
+```
+
+At tile size = 16, runtime drops to 70ms — another 21% improvement over the loop-reordering baseline. The analytically 'optimal' tile size based purely on L1 capacity comes out to \~3.5 (just enough rows of B to fit in 32KB), but grid searching finds 16 to be better empirically. The discrepancy comes from loop overhead, the hardware prefetcher's preference for larger strides, and L2 reuse: tiles that are too small are evicted from L1 into L2 but may still be warm when re-accessed.
+
+## Multi-Dimensional Tiling
+
+We tiled the \`inner\` dimension — but we can also tile \`rows\` and \`columns\`. Each new tiled dimension creates a smaller inner working set that fits more comfortably in a shallower cache level, at the cost of extra loop overhead. For our 1024×1024 matrices, tiling all three dimensions gives diminishing returns; the dataset is small enough that L3 handles most of the traffic anyway. For larger matrices (say 8192×8192), multi-level tiling is essential — otherwise the B tile you worked so hard to keep in L1 gets evicted to L3 before the next row of A even starts.
+
+<Figure
+  src="/cpu-mmm/full_tiling.webp"
+  alt="Multi-dimensional tiling visualization"
+  caption="Tiling all three dimensions: outer tiles target L3, inner tiles target L2, innermost tiles target L1."
+  invert
+/>
+
+The connection to CUDA SGEMM is direct: blocktiling is L3-equivalent (GMEM → SMEM), and threadtiling is L1-equivalent (SMEM → registers). The CPU just lets you say 'tileSize=16' in a loop; CUDA forces you to manage the shared memory buffer explicitly. Same idea, more control.
+
+## Multithreading with OpenMP
+
+The i7-6700 has 4 physical cores with hyperthreading — 8 logical cores. We've been using one. OpenMP makes adding parallelism trivial syntactically, but you have to think carefully about data dependencies before slapping a \`#pragma omp parallel for\` on the outermost loop.
+
+<Figure
+  src="/cpu-mmm/tiled_MMM_dependecies.webp"
+  alt="Thread dependency partitioning for matrix multiplication"
+  caption="Dependency structure: C[i][j] depends only on row i of A and column j of B — no cross-output dependencies."
+  invert
+/>
+
+The key insight: different output tiles C\[rowTile]\[colTile] have no write dependencies between them — each thread writes to a disjoint region of C. Partition C into (rows/256) × (cols/256) chunks and assign each chunk to a thread. Threads read from A and B (shared, read-only) and write to non-overlapping regions of C. Zero synchronization needed.
+
+<Figure
+  src="/cpu-mmm/Thread_partitioning.webp"
+  alt="Work distribution across threads"
+  caption="Partitioning C into 16 chunks (4×4 blocks) assigned to 8 hyperthreads — roughly 2 chunks per thread."
+  invert
+/>
+
+```cpp
+template <int rows, int columns, int inners,
+          int tileSize = ROW_COL_PARALLEL_INNER_TILING_TILE_SIZE>
+inline void matmulImplRowColParallelInnerTiling(const float *left,
+                                                const float *right,
+                                                float *result) {
+#pragma omp parallel for shared(result, left, right) default(none) \
+  collapse(2) num_threads(8)
+  for (int rowTile = 0; rowTile < rows; rowTile += 256) {
+    for (int columnTile = 0; columnTile < columns; columnTile += 256) {
+      for (int innerTile = 0; innerTile < inners; innerTile += tileSize) {
+        for (int row = rowTile; row < rowTile + 256; row++) {
+          int innerTileEnd = std::min(inners, innerTile + tileSize);
+          for (int inner = innerTile; inner < innerTileEnd; inner++) {
+            for (int col = columnTile; col < columnTile + 256; col++) {
+              result[row * columns + col] +=
+                  left[row * inners + inner] * right[inner * columns + col];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+With 8 threads (collapse(2) across rowTile and columnTile loops), runtime drops to \~16ms. That's a 5.5× speedup from 8 threads — reasonable given hyperthreading sharing physical execution units. Total path from naive to final: 4400ms → 89ms → 70ms → 16ms. About 5× slower than NumPy/MKL, which achieves 8ms. The gap is register tiling (MKL manually manages accumulator registers across multiple output rows simultaneously), better loop unrolling, and handwritten SIMD that the compiler misses.
+
+## Conclusion
+
+CPU SGEMM and GPU SGEMM are the same algorithm in different hardware costumes. Both are fundamentally about managing a three-level memory hierarchy to keep compute units fed. The CPU's hierarchy is L1/L2/L3 caches; the GPU's is registers/SMEM/GMEM. The tiling patterns are identical — the GPU just makes you spell them out explicitly in CUDA rather than letting a compiler figure them out.
+
+What surprised me most: a single loop-order swap (naive → cache-aware) produced a 17× speedup with zero algorithmic change. The naive implementation wasn't compute-bound or even particularly memory-bandwidth-bound in an absolute sense — it was \*cache-thrashing\* at an absurd rate, stalling the execution units waiting for DRAM. Performance optimization is often less about raw compute and more about reducing the latency of waiting for data. The patterns that matter: sequential access, reuse, prefetching, and not fighting the hardware prefetcher.
+
+The gap to production BLAS (\~5× in our case) comes from three things we didn't implement: register-level tiling (maintaining multiple independent FMA accumulators to exploit ILP), hand-tuned SIMD intrinsics for the inner kernel, and full multi-level tiling calibrated for each cache level. OpenBLAS's SGEMM kernel is 7,000 lines of x86 assembly for a reason. We got about 50% of theoretical peak; BLAS gets \~56%. That remaining margin is years of engineering.
+
+<LinkCard href="https://siboehm.com/articles/22/Fast-MMM-on-CPU" label="Reimagined from article by Simon Boehm" />

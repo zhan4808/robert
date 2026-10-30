@@ -6,6 +6,8 @@ import { ContentBlocks } from "../../components/content-blocks";
 import MobileNav from "../../components/mobile-nav";
 import TopNav from "../../components/top-nav";
 import { getVisibleJournals, journalPosts, type JournalTrack } from "../../../lib/data";
+import { pageMetadata } from "../../../lib/metadata";
+import { parseContentDate } from "../../../lib/site";
 
 const FRAME = "mx-auto w-full max-w-[56rem]";
 const MUTED = "text-[var(--muted-color)]";
@@ -22,7 +24,17 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const post = journalPosts.find((entry) => entry.slug === slug);
-    return post ? { title: post.month, description: post.subtitle } : {};
+    if (!post) return {};
+    const path = `/writing/${post.slug}`;
+    // Cards are only drawn for visible posts, so a hidden one shares the site-wide card rather than a broken link.
+    return pageMetadata({
+        title: post.month,
+        description: post.subtitle,
+        path,
+        article: { publishedTime: parseContentDate(post.date) },
+        image: post.hidden ? undefined : `${path}/opengraph-image`,
+        hidden: post.hidden,
+    });
 }
 
 export default async function PostPage({ params }: Props) {

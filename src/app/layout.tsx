@@ -4,6 +4,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { ThemeProvider } from "next-themes";
+import { AUTHOR, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_TEMPLATE, SITE_URL } from "../lib/site";
+import JsonLd from "./components/json-ld";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -30,9 +32,42 @@ const fontGeistMono = localFont({
 });
 
 export const metadata: Metadata = {
-    title: "Robert Zhang",
-    description: "Robert Zhang — EE student, systems builder.",
-    icons: { icon: "/site-icon.jpg" },
+    metadataBase: new URL(SITE_URL),
+    title: { default: SITE_NAME, template: SITE_TITLE_TEMPLATE },
+    description: SITE_DESCRIPTION,
+    applicationName: SITE_NAME,
+    authors: [{ name: AUTHOR.name, url: SITE_URL }],
+    creator: AUTHOR.name,
+    alternates: {
+        canonical: "/",
+        types: { "application/rss+xml": [{ url: "/feed.xml", title: `${SITE_NAME} — Writing` }] },
+    },
+    openGraph: {
+        type: "website",
+        siteName: SITE_NAME,
+        locale: "en_US",
+        url: "/",
+        title: SITE_NAME,
+        description: SITE_DESCRIPTION,
+    },
+    twitter: {
+        card: "summary_large_image",
+        creator: AUTHOR.xHandle,
+        title: SITE_NAME,
+        description: SITE_DESCRIPTION,
+    },
+    robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+            index: true,
+            follow: true,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+            "max-video-preview": -1,
+        },
+    },
+    // The favicon and home-screen icon come from icon.tsx and apple-icon.tsx beside this file.
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -42,6 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body
                 className={`${inter.variable} ${fontPlayfairDisplay.variable} ${fontGeistMono.variable} ${fontGeistSans.variable} scroll-smooth overflow-x-clip bg-background text-foreground`}
             >
+                <JsonLd />
                 <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="theme">
                     {children}
                 </ThemeProvider>

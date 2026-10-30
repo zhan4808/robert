@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { pageMetadata } from "../../../lib/metadata";
+import { parseContentDate } from "../../../lib/site";
 import { ContentBlocks } from "../../components/content-blocks";
-import { hasPage, projects } from "../../data/projects";
+import { hasPage, nameOf, projects } from "../../data/projects";
 import ProjectPage from "./project-page";
 
 export const dynamicParams = false;
@@ -11,16 +14,20 @@ export function generateStaticParams() {
 
 type Props = { params: Promise<{ slug: string }> };
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const project = projects.find((p) => p.slug === slug);
     if (!project || !hasPage(project)) return {};
-    return {
-        title: project.shortTitle ?? project.title,
+    const path = `/projects/${project.slug}`;
+    return pageMetadata({
+        title: nameOf(project),
+        cardTitle: project.title,
         description: project.description,
-        openGraph: { title: project.title, description: project.description },
-        twitter: { card: "summary", title: project.title, description: project.description },
-    };
+        path,
+        article: { publishedTime: parseContentDate(project.date) },
+        image: `${path}/opengraph-image`,
+        hidden: project.hidden,
+    });
 }
 
 /** The write-up is rendered here, on the server, since code highlighting and math need Node. */

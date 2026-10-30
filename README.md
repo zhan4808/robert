@@ -16,3 +16,5 @@ npm run dev
 ```
 
 `just check` runs lint, format check, and type check; `npm run build` builds for production.
+
+Images under `public/` go through `npm run media:optimize` before they are committed; see [docs/media.md](docs/media.md).

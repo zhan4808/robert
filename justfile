@@ -35,6 +35,6 @@ fix:
 clean:
     rm -rf .next tsconfig.tsbuildinfo
 
-# Convert an image (e.g. a Figma PNG export) to webp: just webp in.png public/projects/x/out.webp
-webp input output quality="90":
-    node -e "require('sharp')('{{ input }}').webp({ quality: {{ quality }} }).toFile('{{ output }}').then((i) => console.log(i.width + 'x' + i.height, Math.round(i.size / 1024) + 'KB'))"
+# Optimize everything under public/ and refresh the image manifest. See docs/media.md.
+media:
+    npm run media:optimize

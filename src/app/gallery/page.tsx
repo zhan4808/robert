@@ -115,7 +115,7 @@ export default function Gallery() {
                                         {/* Under the work on phones; on desktop it shows over the corner on hover, so the tiles sit flush. */}
                                         <figcaption className="mt-3 flex items-baseline justify-between gap-3 font-geistMono text-caption lg:pointer-events-none lg:absolute lg:bottom-3 lg:left-3 lg:mt-0 lg:max-w-[calc(100%-1.5rem)] lg:rounded-full lg:bg-[rgb(0_0_0/0.55)] lg:px-3 lg:py-1.5 lg:text-dark-foreground lg:opacity-0 lg:backdrop-blur-md lg:transition-opacity lg:duration-300 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
                                             <span className="truncate">{work.title}</span>
-                                            <span className="shrink-0 tabular-nums opacity-40 lg:opacity-60">
+                                            <span className="shrink-0 tabular-nums opacity-50 lg:opacity-60">
                                                 {details(work)}
                                             </span>
                                         </figcaption>

@@ -20,7 +20,8 @@ const secondaryLinks = [
 ];
 
 const fg = "var(--foreground-color)";
-const fgDim = "color-mix(in srgb, var(--foreground-color) 35%, transparent)";
+// Half strength is the lightest the secondary links can be and still read at 3:1 on the paper theme.
+const fgDim = "color-mix(in srgb, var(--foreground-color) 50%, transparent)";
 const fgIcon = "color-mix(in srgb, var(--foreground-color) 50%, transparent)";
 const bg = "var(--background-color)";
 const pillBg = "color-mix(in srgb, var(--foreground-color) 6%, transparent)";

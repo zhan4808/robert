@@ -165,7 +165,7 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
                                         <span className="flex items-center gap-[8px] text-caption leading-none">
                                             <Mark icon={m.icon} name={m.name} size={MARK_PX} scale={m.iconScale} />
                                             <span className="truncate opacity-60">{m.name}</span>
-                                            <span className="ml-auto shrink-0 pl-2 tabular-nums opacity-40">
+                                            <span className="ml-auto shrink-0 pl-2 tabular-nums opacity-50">
                                                 {m.dates}
                                             </span>
                                         </span>
@@ -179,7 +179,7 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
                                 <span className="flex items-center gap-[8px] text-caption leading-none">
                                     <Mark icon={src.icon} name={src.name} size={MARK_PX} scale={src.iconScale} />
                                     <span className="truncate opacity-60">{src.name}</span>
-                                    <span className="ml-auto shrink-0 pl-2 tabular-nums opacity-40">{src.dates}</span>
+                                    <span className="ml-auto shrink-0 pl-2 tabular-nums opacity-50">{src.dates}</span>
                                 </span>
 
                                 <span className="mt-[4px] text-meta leading-[18px]">{src.role}</span>
@@ -195,7 +195,7 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
 
                         {/* what a click does, set apart like a command hint */}
                         <span
-                            className="flex items-center justify-between px-[14px] py-[8px] text-label leading-none opacity-40"
+                            className="flex items-center justify-between px-[14px] py-[8px] text-label leading-none opacity-50"
                             style={{
                                 borderTop: `1px solid color-mix(in srgb, var(--foreground-color) ${isLight ? 8 : 7}%, transparent)`,
                             }}

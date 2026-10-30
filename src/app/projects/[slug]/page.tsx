@@ -4,6 +4,7 @@ import { getProject } from "../../../lib/content";
 import { imageMeta } from "../../../lib/images";
 import { renderMdx } from "../../../lib/mdx";
 import { pageMetadata } from "../../../lib/metadata";
+import { readingMinutes } from "../../../lib/reading-time";
 import { parseContentDate } from "../../../lib/site";
 import { hasPage, nameOf, projects, projectsByDate } from "../../data/projects";
 import ProjectPage from "./project-page";
@@ -26,7 +27,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         cardTitle: project.title,
         description: project.description,
         path,
-        article: { publishedTime: parseContentDate(project.date) },
+        article: {
+            publishedTime: parseContentDate(project.date),
+            modifiedTime: project.updated ? new Date(project.updated) : undefined,
+        },
         image: `${path}/opengraph-image`,
         hidden: project.hidden,
     });
@@ -40,9 +44,16 @@ export default async function Page({ params }: Props) {
     const project = doc.meta;
     // Looked up here so the manifest stays out of the client bundle.
     const heroMeta = project.hero?.type === "image" ? imageMeta(project.hero.src) : undefined;
+    const { content, headings } = await renderMdx(doc.body, `content/projects/${slug}.mdx`);
     return (
-        <ProjectPage project={project} pages={projectsByDate.filter(hasPage)} heroMeta={heroMeta}>
-            {await renderMdx(doc.body, `content/projects/${slug}.mdx`)}
+        <ProjectPage
+            project={project}
+            pages={projectsByDate.filter(hasPage)}
+            heroMeta={heroMeta}
+            headings={headings}
+            minutes={readingMinutes(doc.body)}
+        >
+            {content}
         </ProjectPage>
     );
 }

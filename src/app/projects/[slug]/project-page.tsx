@@ -8,8 +8,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import MobileNav from "../../components/mobile-nav";
 import TopNav from "../../components/top-nav";
 import InlineLink from "../../components/inline-link";
+import { TableOfContents } from "../../components/mdx/toc";
 import { LAST_PROJECT_KEY, nameOf, primaryLink, type Project } from "../../data/project-helpers";
 import type { ImageMeta } from "../../../lib/images";
+import type { Heading } from "../../../lib/mdx";
+import { formatIsoDate } from "../../../lib/site";
 import { finishTransition, isTransitioning, pushWithTransition } from "../../../lib/view-transition";
 
 /** One centred frame holds everything, so text and media share both edges. */
@@ -32,6 +35,8 @@ export default function ProjectPage({
     project,
     pages,
     heroMeta,
+    headings,
+    minutes,
     children,
 }: {
     project: Project;
@@ -39,6 +44,10 @@ export default function ProjectPage({
     pages: Project[];
     /** Size and blur placeholder for an image hero, from the manifest; the page looks it up on the server. */
     heroMeta?: ImageMeta;
+    /** The write-up's headings, for the table of contents. */
+    headings: Heading[];
+    /** How long the write-up takes to read. */
+    minutes: number;
     children: ReactNode;
 }) {
     const router = useRouter();
@@ -129,6 +138,10 @@ export default function ProjectPage({
                     <p className={`${BODY} mt-8`}>{project.longDescription}</p>
                     <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[14px] ${MUTED}`}>
                         <span className="font-geistMono text-[12px]">{project.date}</span>
+                        {project.updated && (
+                            <span className="font-geistMono text-[12px]">updated {formatIsoDate(project.updated)}</span>
+                        )}
+                        <span className="font-geistMono text-[12px]">{minutes} min read</span>
                         {project.paperUrl && <InlineLink href={project.paperUrl}>paper</InlineLink>}
                         {project.githubUrl && <InlineLink href={project.githubUrl}>code</InlineLink>}
                         {project.liveUrl && (
@@ -174,7 +187,10 @@ export default function ProjectPage({
                     </div>
                 )}
 
-                <div className="mt-20">{children}</div>
+                <div className="mt-20">
+                    <TableOfContents headings={headings} />
+                    {children}
+                </div>
 
                 {pages.length > 1 && (
                     <nav

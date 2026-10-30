@@ -26,6 +26,8 @@ export const projectFrontmatterSchema = z
         longDescription: nonEmpty,
         /** Written for people: "2026", "October 2025", or "January 21, 2026". */
         date: nonEmpty,
+        /** When the write-up was last revised, as an ISO date ("2026-03-04"); shown beside the date when set. */
+        updated: z.iso.date().optional(),
         year: z.number().int(),
         /** Where it sits among the projects; lower comes first. */
         order: z.number().int(),
@@ -65,6 +67,8 @@ export const postFrontmatterSchema = z
         subtitle: nonEmpty,
         /** Written for people: "October 2025" or "July 31, 2025". */
         date: nonEmpty,
+        /** When the post was last revised, as an ISO date ("2026-03-04"); shown beside the date when set. */
+        updated: z.iso.date().optional(),
         year: z.number().int(),
         /** Where it sits among the posts; lower comes first. */
         order: z.number().int(),

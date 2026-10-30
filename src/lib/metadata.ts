@@ -11,8 +11,8 @@ type PageMetadataInput = {
     description: string;
     /** Site-relative, e.g. "/projects/tiny-gemm". Doubles as the canonical URL. */
     path: string;
-    /** Articles carry a published date; everything else is a plain website page. */
-    article?: { publishedTime?: Date };
+    /** Articles carry a published date, and a modified one when they have been revised; everything else is a plain website page. */
+    article?: { publishedTime?: Date; modifiedTime?: Date };
     /** Site-relative URL of the page's share image. Defaults to the site-wide card. */
     image?: string;
     /** Hidden pages stay reachable by URL but ask crawlers to leave them out. */
@@ -50,6 +50,7 @@ export function pageMetadata({
                       type: "article",
                       authors: [AUTHOR.name],
                       ...(article.publishedTime ? { publishedTime: article.publishedTime.toISOString() } : {}),
+                      ...(article.modifiedTime ? { modifiedTime: article.modifiedTime.toISOString() } : {}),
                   }
                 : { type: "website" }),
         },

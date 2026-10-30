@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TableOfContents } from "../../components/mdx/toc";
 import MobileNav from "../../components/mobile-nav";
 import TopNav from "../../components/top-nav";
 import { getPost, getPosts, getVisiblePosts } from "../../../lib/content";
@@ -10,7 +11,8 @@ import { CONTENT_IMAGE_QUALITY, CONTENT_IMAGE_SIZES } from "../../../lib/image-s
 import { imageMeta } from "../../../lib/images";
 import { renderMdx } from "../../../lib/mdx";
 import { pageMetadata } from "../../../lib/metadata";
-import { parseContentDate } from "../../../lib/site";
+import { readingMinutes } from "../../../lib/reading-time";
+import { formatIsoDate, parseContentDate } from "../../../lib/site";
 
 const FRAME = "mx-auto w-full max-w-[56rem]";
 const MUTED = "text-[var(--muted-color)]";
@@ -34,7 +36,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: post.title,
         description: post.subtitle,
         path,
-        article: { publishedTime: parseContentDate(post.date) },
+        article: {
+            publishedTime: parseContentDate(post.date),
+            modifiedTime: post.updated ? new Date(post.updated) : undefined,
+        },
         image: post.hidden ? undefined : `${path}/opengraph-image`,
         hidden: post.hidden,
     });
@@ -52,6 +57,8 @@ export default async function PostPage({ params }: Props) {
     const newer = at > 0 ? visible[at - 1] : undefined;
     const older = at >= 0 && at < visible.length - 1 ? visible[at + 1] : undefined;
 
+    const { content, headings } = await renderMdx(doc.body, `content/blog/${slug}.mdx`);
+
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
             <MobileNav />
@@ -66,7 +73,11 @@ export default async function PostPage({ params }: Props) {
                     </Link>
                     <h1 className="mt-10 text-[28px] font-medium leading-[1.2] tracking-[-0.015em]">{post.title}</h1>
                     <p className={`mt-1 text-[16px] ${MUTED}`}>{post.subtitle}</p>
-                    <p className={`mt-4 font-geistMono text-[12px] ${MUTED}`}>{post.date}</p>
+                    <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 font-geistMono text-[12px] ${MUTED}`}>
+                        <span>{post.date}</span>
+                        {post.updated && <span>updated {formatIsoDate(post.updated)}</span>}
+                        <span>{readingMinutes(doc.body)} min read</span>
+                    </p>
                 </header>
 
                 {post.coverImage && <Cover src={post.coverImage} />}
@@ -74,7 +85,8 @@ export default async function PostPage({ params }: Props) {
                 {post.tracks.length > 0 && <Tracks tracks={post.tracks} />}
 
                 <div className="mt-16">
-                    <div className="flex flex-col gap-5">{await renderMdx(doc.body, `content/blog/${slug}.mdx`)}</div>
+                    <TableOfContents headings={headings} />
+                    <div className="flex flex-col gap-5">{content}</div>
                 </div>
 
                 {(newer || older) && (

@@ -53,3 +53,10 @@ export function parseContentDate(value: string): Date | undefined {
     const date = new Date(Date.UTC(Number(year), month, day ? Number(day) : 1));
     return Number.isNaN(date.getTime()) ? undefined : date;
 }
+
+/** An ISO date ("2026-03-04") written the way the content writes dates: "March 4, 2026". */
+export function formatIsoDate(value: string): string {
+    const [year, month, day] = value.split("-").map(Number);
+    const name = MONTHS[month - 1];
+    return `${name[0].toUpperCase()}${name.slice(1)} ${day}, ${year}`;
+}

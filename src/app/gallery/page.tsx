@@ -4,12 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image, { type StaticImageData } from "next/image";
 import MobileNav from "../components/mobile-nav";
 import TopNav from "../components/top-nav";
-import horseback from "../../../public/IMG_1493.jpg";
-import seaRanch from "../../../public/IMG_1760.jpg";
-import coastline from "../../../public/IMG_1887.jpg";
-import hoover from "../../../public/IMG_2767.jpg";
-import stars from "../../../public/IMG_2847.jpg";
-import newYork from "../../../public/IMG_3691.jpg";
+import horseback from "../../../public/IMG_1493.webp";
+import seaRanch from "../../../public/IMG_1760.webp";
+import coastline from "../../../public/IMG_1887.webp";
+import hoover from "../../../public/IMG_2767.webp";
+import stars from "../../../public/IMG_2847.webp";
+import newYork from "../../../public/IMG_3691.webp";
 
 type Work = {
     title: string;

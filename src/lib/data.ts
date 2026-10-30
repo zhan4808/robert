@@ -160,7 +160,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/CUDA_thread_hierarchy.png",
+                src: "/cuda-mmm/CUDA_thread_hierarchy.webp",
                 alt: "CUDA thread hierarchy diagram showing blockDim and threadIdx relationships",
                 caption:
                     "The CUDA thread hierarchy. blockDim.x × blockDim.y gives threads per block; gridDim.x × gridDim.y gives the total block count.",
@@ -182,7 +182,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/naive-kernel.png",
+                src: "/cuda-mmm/naive-kernel.webp",
                 alt: "Naive kernel visualization showing thread layout and computation assignments",
                 caption: "Each thread computes exactly one output entry of C.",
                 invert: true,
@@ -214,7 +214,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/Tile_quantization.png",
+                src: "/cuda-mmm/Tile_quantization.webp",
                 alt: "Tile quantization illustration showing partial block utilization",
                 caption: "Tile quantization: extra blocks are launched for the remainder, not all threads are active.",
                 invert: true,
@@ -243,7 +243,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/naive_kernel_mem_access.png",
+                src: "/cuda-mmm/naive_kernel_mem_access.webp",
                 alt: "Two threads' data access patterns from matrices A and B",
                 caption: "Memory access pattern of the naive kernel for two example threads (red and green).",
                 invert: true,
@@ -268,7 +268,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/threadId_to_warp_mapping.png",
+                src: "/cuda-mmm/threadId_to_warp_mapping.webp",
                 alt: "Illustration of how threadIds map to warps",
                 caption:
                     "Thread-to-warp mapping illustrated using an 8-thread warp example (real warps have 32 threads).",
@@ -280,7 +280,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/GMEM_coalescing.png",
+                src: "/cuda-mmm/GMEM_coalescing.webp",
                 alt: "Consecutive memory accesses grouped into single transactions",
                 caption: "Global memory coalescing groups consecutive warp accesses into fewer, larger transactions.",
                 invert: true,
@@ -291,7 +291,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/random_access_coalescing.png",
+                src: "/cuda-mmm/random_access_coalescing.webp",
                 alt: "Non-consecutive within-warp accesses that still coalesce",
                 caption:
                     "Non-consecutive within-warp accesses can still coalesce as long as they target consecutive addresses.",
@@ -303,7 +303,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/Naive_kernel_mem_coalescing.png",
+                src: "/cuda-mmm/Naive_kernel_mem_coalescing.webp",
                 alt: "Non-consecutive row loading from matrix A in naive kernel",
                 caption: "The naive kernel accesses A non-consecutively, preventing coalescing.",
                 invert: true,
@@ -314,7 +314,7 @@ export const journalPosts: JournalPost[] = [
             },
             {
                 type: "image",
-                src: "/cuda-mmm/Naive_kernel_improved_access.png",
+                src: "/cuda-mmm/Naive_kernel_improved_access.webp",
                 alt: "Reorganized thread-to-result mapping for coalescing",
                 caption: "Reorganizing the thread-to-result mapping enables coalesced global memory access.",
                 invert: true,
@@ -357,7 +357,7 @@ if (x < M && y < N) {
             },
             {
                 type: "image",
-                src: "/cuda-mmm/memory-hierarchy-in-gpus.png",
+                src: "/cuda-mmm/memory-hierarchy-in-gpus.webp",
                 alt: "GPU memory hierarchy showing cache structure for A100",
                 caption: "The GPU memory hierarchy. Shared memory is on-chip and orders of magnitude faster than DRAM.",
                 invert: true,
@@ -368,7 +368,7 @@ if (x < M && y < N) {
             },
             {
                 type: "image",
-                src: "/cuda-mmm/cache-blocking.png",
+                src: "/cuda-mmm/cache-blocking.webp",
                 alt: "Cache-blocking visualization showing chunk-based loading and computation",
                 caption:
                     "Cache-blocking: load tiles of A and B into shared memory, compute partial sums, then advance.",
@@ -406,7 +406,7 @@ C[threadRow * N + threadCol] =
             },
             {
                 type: "image",
-                src: "/cuda-mmm/roofline_kernel_3.png",
+                src: "/cuda-mmm/roofline_kernel_3.webp",
                 alt: "Roofline analysis showing performance vs arithmetic intensity for Kernel 3",
                 caption:
                     "Roofline plot for Kernel 3. We're far from the compute roofline — arithmetic intensity is the bottleneck.",
@@ -437,7 +437,7 @@ C[threadRow * N + threadCol] =
             },
             {
                 type: "image",
-                src: "/cuda-mmm/kernel_4_1D_blocktiling.png",
+                src: "/cuda-mmm/kernel_4_1D_blocktiling.webp",
                 alt: "1D blocktiling showing multiple results per thread computation pattern",
                 caption:
                     "1D blocktiling: each thread computes a column of TM output elements, improving register reuse.",
@@ -477,7 +477,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
             },
             {
                 type: "image",
-                src: "/cuda-mmm/1d_warp_tiling.png",
+                src: "/cuda-mmm/1d_warp_tiling.webp",
                 alt: "1D warp tiling benefits showing shared input advantage",
                 caption:
                     "The benefit of 1D blocktiling: threads in the same warp share loads from Bs, amortizing SMEM traffic.",
@@ -499,7 +499,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
             },
             {
                 type: "image",
-                src: "/cuda-mmm/raising_arith_inten.png",
+                src: "/cuda-mmm/raising_arith_inten.webp",
                 alt: "Arithmetic intensity explanation showing compute-to-bandwidth ratio improvement",
                 caption:
                     "2D tiling raises arithmetic intensity by reusing loaded values across both row and column dimensions.",
@@ -507,7 +507,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
             },
             {
                 type: "image",
-                src: "/cuda-mmm/kernel_5_2D_blocktiling.png",
+                src: "/cuda-mmm/kernel_5_2D_blocktiling.webp",
                 alt: "2D blocktiling diagram with three loop levels",
                 caption: "2D blocktiling: each thread computes an 8×8 result tile using three nested loops.",
                 invert: true,
@@ -552,14 +552,14 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
             },
             {
                 type: "image",
-                src: "/cuda-mmm/kernel_5_GMEM_loading.png",
+                src: "/cuda-mmm/kernel_5_GMEM_loading.webp",
                 alt: "Multiple-element loading per thread into SMEM",
                 caption: "GMEM loading pattern for Kernel 5: each thread loads multiple elements into shared memory.",
                 invert: true,
             },
             {
                 type: "image",
-                src: "/cuda-mmm/kernel_5_reg_blocking.png",
+                src: "/cuda-mmm/kernel_5_reg_blocking.webp",
                 alt: "Register blocking showing dotIdx loop across time",
                 caption:
                     "Register blocking: regM and regN cache SMEM values in registers, then compute outer products.",
@@ -581,7 +581,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
             },
             {
                 type: "image",
-                src: "/cuda-mmm/kernel_6_As_transpose.png",
+                src: "/cuda-mmm/kernel_6_As_transpose.webp",
                 alt: "Memory layout changes enabling vectorized SMEM loads for As",
                 caption: "Transposing As during the GMEM→SMEM transfer enables vectorized 128-bit SMEM loads.",
                 invert: true,
@@ -638,14 +638,14 @@ __syncthreads();`,
             },
             {
                 type: "image",
-                src: "/cuda-mmm/Loop_structure.png",
+                src: "/cuda-mmm/Loop_structure.webp",
                 alt: "Block, thread, and warp tiling nesting levels",
                 caption: "The three-level loop structure: block tiles → warp tiles → thread tiles.",
                 invert: true,
             },
             {
                 type: "image",
-                src: "/cuda-mmm/WarpSchedulers.png",
+                src: "/cuda-mmm/WarpSchedulers.webp",
                 alt: "Four warp schedulers per multiprocessor diagram",
                 caption:
                     "Each SM has four warp schedulers. Warptiling lets different warps run on different schedulers concurrently.",
@@ -657,7 +657,7 @@ __syncthreads();`,
             },
             {
                 type: "image",
-                src: "/cuda-mmm/kernel_10_warp_tiling.png",
+                src: "/cuda-mmm/kernel_10_warp_tiling.webp",
                 alt: "Three-level tiling visualization for Kernel 10",
                 caption: "Kernel 10 warptiling: each warp computes a (WSUBN*WNITER) × (WSUBM*WMITER) chunk of C.",
                 invert: true,
@@ -701,14 +701,14 @@ __syncthreads();`,
             },
             {
                 type: "image",
-                src: "/cuda-mmm/split_k.png",
+                src: "/cuda-mmm/split_k.webp",
                 alt: "Split-K concept showing K-dimension partitioning across multiple thread blocks",
                 caption: "Split-K: partition the K dimension across multiple blocks, useful for small square matrices.",
                 invert: true,
             },
             {
                 type: "image",
-                src: "/cuda-mmm/cublas_vs_kernel_10_sizes.png",
+                src: "/cuda-mmm/cublas_vs_kernel_10_sizes.webp",
                 alt: "Line graph comparing Kernel 10 performance vs cuBLAS across matrix sizes",
                 caption:
                     "Kernel 10 vs cuBLAS across matrix sizes. Near-parity at large dimensions; gap at small sizes.",
@@ -789,7 +789,7 @@ __syncthreads();`,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/Basic_MMM.png",
+                src: "/cpu-mmm/Basic_MMM.webp",
                 alt: "Basic matrix multiplication diagram",
                 caption: "Matrix multiplication: each output entry requires a dot product of a row and a column.",
                 invert: true,
@@ -844,7 +844,7 @@ end = time.time_ns() - start`,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/Scalar_vs_Vectorized.png",
+                src: "/cpu-mmm/Scalar_vs_Vectorized.webp",
                 alt: "Scalar vs vectorized operations comparison",
                 caption: "SIMD: one instruction, multiple data. AVX2 processes 8 floats per operation.",
                 invert: true,
@@ -928,7 +928,7 @@ inline void matmulImplNaiveRegisterAcc(const float *left, const float *right,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/stride_matrix_representation.png",
+                src: "/cpu-mmm/stride_matrix_representation.webp",
                 alt: "Strided matrix memory layout",
                 caption: "Row-major memory layout: rows are contiguous, columns are strided by N×4 bytes.",
                 invert: true,
@@ -939,7 +939,7 @@ inline void matmulImplNaiveRegisterAcc(const float *left, const float *right,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/cache-unaware-dot-product.png",
+                src: "/cpu-mmm/cache-unaware-dot-product.webp",
                 alt: "Cache-unfriendly access pattern for matrix B",
                 caption: "The naive loop order walks B column-by-column — every inner step is a cache miss.",
                 invert: true,
@@ -966,7 +966,7 @@ inline void matmulImplLoopOrder(const float *left, const float *right,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/cache-aware-dot-prod-reorder-loops.png",
+                src: "/cpu-mmm/cache-aware-dot-prod-reorder-loops.webp",
                 alt: "Optimized cache-aware access pattern after loop reordering",
                 caption:
                     "After loop reordering: the inner loop traverses B and C sequentially — cache-line friendly, vectorizable.",
@@ -1010,7 +1010,7 @@ vmovups ymmword ptr [rcx + 4*rbp], ymm4`,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/Basic_tiling_inner.png",
+                src: "/cpu-mmm/Basic_tiling_inner.webp",
                 alt: "Cache tiling concept visualization",
                 caption:
                     "Without tiling: by the time we revisit a tile of B for the next row of A, it's been evicted from cache.",
@@ -1038,7 +1038,7 @@ vmovups ymmword ptr [rcx + 4*rbp], ymm4`,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/Tiling_on_inner.png",
+                src: "/cpu-mmm/Tiling_on_inner.webp",
                 alt: "Tiling visualization with block boxes and colored arrows",
                 caption:
                     "Tiling: the colored arrows show that the same tile of B is reused across multiple rows of A before eviction.",
@@ -1079,7 +1079,7 @@ inline void matmulImplTiling(const float *left, const float *right,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/full_tiling.png",
+                src: "/cpu-mmm/full_tiling.webp",
                 alt: "Multi-dimensional tiling visualization",
                 caption:
                     "Tiling all three dimensions: outer tiles target L3, inner tiles target L2, innermost tiles target L1.",
@@ -1101,7 +1101,7 @@ inline void matmulImplTiling(const float *left, const float *right,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/tiled_MMM_dependecies.png",
+                src: "/cpu-mmm/tiled_MMM_dependecies.webp",
                 alt: "Thread dependency partitioning for matrix multiplication",
                 caption:
                     "Dependency structure: C[i][j] depends only on row i of A and column j of B — no cross-output dependencies.",
@@ -1113,7 +1113,7 @@ inline void matmulImplTiling(const float *left, const float *right,
             },
             {
                 type: "image",
-                src: "/cpu-mmm/Thread_partitioning.png",
+                src: "/cpu-mmm/Thread_partitioning.webp",
                 alt: "Work distribution across threads",
                 caption:
                     "Partitioning C into 16 chunks (4×4 blocks) assigned to 8 hyperthreads — roughly 2 chunks per thread.",
@@ -1246,7 +1246,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/interleaved-GPipe.png",
+                src: "/pipeline-parallel/interleaved-GPipe.webp",
                 alt: "Sketch of interleaved GPipe showing dependency arrows",
                 caption:
                     "GPipe with interleaving: dependency arrows show which microbatch results each GPU is waiting on.",
@@ -1275,14 +1275,14 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/Gpipe_bubbles.png",
+                src: "/pipeline-parallel/Gpipe_bubbles.webp",
                 alt: "Demonstration of pipeline bubble inefficiencies caused by data dependencies",
                 caption: "Pipeline bubbles: GPUs sit idle waiting for the previous stage to finish.",
                 invert: true,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/Gpipe_bubble_fractions.png",
+                src: "/pipeline-parallel/Gpipe_bubble_fractions.webp",
                 alt: "Example calculations comparing single vs 4-microbatch bubble fractions",
                 caption: "Bubble fraction comparison: 4 microbatches cuts wasted time dramatically vs. 1 microbatch.",
                 invert: true,
@@ -1307,7 +1307,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/GPipe-gradient-checkpointing.png",
+                src: "/pipeline-parallel/GPipe-gradient-checkpointing.webp",
                 alt: "Memory state during backward pass with gradient checkpointing",
                 caption:
                     "Gradient checkpointing: only boundary inputs are cached. Activations are recomputed during backward, adding ~33% compute overhead.",
@@ -1329,7 +1329,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/PipeDream_schedule.png",
+                src: "/pipeline-parallel/PipeDream_schedule.webp",
                 alt: "PipeDream schedule with 4 GPUs and 8 microbatches showing 1F1B pattern",
                 caption: "PipeDream 1F1B schedule: blue = forward, green = backward. Numbered by microbatch ID.",
             },
@@ -1348,7 +1348,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/Pipedream_steady_state.png",
+                src: "/pipeline-parallel/Pipedream_steady_state.webp",
                 alt: "PipeDream steady state showing GPU1 alternating forward and backward passes",
                 caption:
                     "PipeDream steady state: GPU1 alternates 1F1B after the warmup phase, keeping at most n microbatches in flight.",
@@ -1378,7 +1378,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/DP_and_PP.png",
+                src: "/pipeline-parallel/DP_and_PP.webp",
                 alt: "Illustration of orthogonal communication partners in combined data and pipeline parallelism",
                 caption:
                     "Combined DP + PP: each GPU participates in two communicators — one for pipeline neighbors, one for data-parallel peers.",
@@ -1479,7 +1479,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/distributed-computing-hardware.png",
+                src: "/pipeline-parallel/distributed-computing-hardware.webp",
                 alt: "Hardware hierarchy showing multi-node GPU clusters with PCIe, NVLink, InfiniBand",
                 caption:
                     "Distributed training hardware: NVLink at ~900GB/s within a node; InfiniBand HDR at ~200Gbps between nodes.",
@@ -1491,7 +1491,7 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
             },
             {
                 type: "image",
-                src: "/pipeline-parallel/strong-vs-weak-scaling.png",
+                src: "/pipeline-parallel/strong-vs-weak-scaling.webp",
                 alt: "Visual comparison of strong vs weak scaling strategies",
                 caption:
                     "Strong vs weak scaling: strong = fixed problem size across more GPUs; weak = fixed per-GPU workload.",
@@ -1564,13 +1564,13 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         subtitle: "finding excitement in the everyday",
         date: "July 31, 2025",
         year: 2025,
-        coverImage: "/oai2.jpeg",
+        coverImage: "/oai2.webp",
         coverGradient: "from-orange-300 via-pink-300 to-blue-300",
         tracks: [
             {
                 title: "where you are",
                 artist: "john summit",
-                albumArt: "/whereyouare.jpg",
+                albumArt: "/whereyouare.webp",
                 audioSrc: "/whereyouare.mp3",
                 spotifyUrl: "https://open.spotify.com/track/0bFBRve9nqszP6fC7eX8nY",
             },
@@ -1593,32 +1593,32 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
                 type: "gallery",
                 images: [
                     {
-                        src: "/IMG_1493.jpg",
+                        src: "/IMG_1493.webp",
                         alt: "Horseback riding on the beach",
                         caption: "horseback riding on the beach",
                     },
                     {
-                        src: "/IMG_1760.jpg",
+                        src: "/IMG_1760.webp",
                         alt: "Coastal landscape at sunset",
                         caption: "views at sea ranch, ca",
                     },
                     {
-                        src: "/IMG_1887.jpg",
+                        src: "/IMG_1887.webp",
                         alt: "Rocky shoreline at golden hour",
                         caption: "beautiful rugged coastline",
                     },
                     {
-                        src: "/IMG_2767.jpg",
+                        src: "/IMG_2767.webp",
                         alt: "Mountain camping at dawn",
                         caption: "backpacking with friends in hoover wilderness",
                     },
                     {
-                        src: "/IMG_2847.jpg",
+                        src: "/IMG_2847.webp",
                         alt: "Night sky over mountains",
                         caption: "stargazing in the wilderness",
                     },
                     {
-                        src: "/IMG_3691.jpg",
+                        src: "/IMG_3691.webp",
                         alt: "City skyline from rooftop",
                         caption: "new york city weekend getaway",
                     },
@@ -1659,13 +1659,13 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         date: "June 12, 2025",
         year: 2025,
         hidden: true,
-        coverImage: "/oai4.jpg",
+        coverImage: "/oai4.webp",
         coverGradient: "from-pink-300 via-fuchsia-300 to-red-300",
         tracks: [
             {
                 title: "gesture",
                 artist: "home alone",
-                albumArt: "/gesture.jpg",
+                albumArt: "/gesture.webp",
                 audioSrc: "/gesture.mp3",
                 spotifyUrl: "https://open.spotify.com/track/2r7E8XjJ1l9vD29kGZXV0K",
             },
@@ -1727,20 +1727,20 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         date: "May 17, 2025",
         year: 2025,
         hidden: true,
-        coverImage: "/WEBPtoJPG4.jpg",
+        coverImage: "/WEBPtoJPG4.webp",
         coverGradient: "from-yellow-100 via-blue-100 to-red-200",
         tracks: [
             {
                 title: "house of love",
                 artist: "smooth touch",
-                albumArt: "/houseoflove.jpg",
+                albumArt: "/houseoflove.webp",
                 audioSrc: "/houseoflove.mp3",
                 spotifyUrl: "https://open.spotify.com/track/7v0G2WwH1g1bEVF6t7F8x8",
             },
             {
                 title: "unforgettable",
                 artist: "smokepurpp",
-                albumArt: "/unforgettable.jpg",
+                albumArt: "/unforgettable.webp",
                 audioSrc: "/unforgettable.mp3",
                 spotifyUrl: "https://open.spotify.com/track/1w9m0wYdM0ZWsK8aZs1Xc9",
             },
@@ -1781,13 +1781,13 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         date: "April 25, 2025",
         year: 2025,
         hidden: true,
-        coverImage: "/oai1.jpg",
+        coverImage: "/oai1.webp",
         coverGradient: "from-purple-500 via-pink-500 to-blue-500",
         tracks: [
             {
                 title: "sunflower feelings",
                 artist: "kuzu mellow",
-                albumArt: "/sunflowerfeelings.jpeg",
+                albumArt: "/sunflowerfeelings.webp",
                 audioSrc: "/sunflowerfeelings.mp3",
                 spotifyUrl: "https://open.spotify.com/track/5H8gV0nYB0V3n3jX7aVtQ0",
             },
@@ -1845,13 +1845,13 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         date: "April 14, 2025",
         year: 2025,
         hidden: true,
-        coverImage: "/oai3.jpg",
+        coverImage: "/oai3.webp",
         coverGradient: "from-pink-200 via-rose-300 to-orange-200",
         tracks: [
             {
                 title: "charcoal baby",
                 artist: "blood orange",
-                albumArt: "/charcoalbaby.jpg",
+                albumArt: "/charcoalbaby.webp",
                 audioSrc: "/charcoalbaby.mp3",
                 spotifyUrl: "https://open.spotify.com/track/4jBfUBDkK4wzpv25VufQnS",
             },
@@ -1912,13 +1912,13 @@ inline void matmulImplRowColParallelInnerTiling(const float *left,
         subtitle: "finding what makes me",
         date: "December 22, 2024",
         year: 2024,
-        coverImage: "/oai5.png",
+        coverImage: "/oai5.webp",
         coverGradient: "from-blue-400 via-purple-400 to-pink-400",
         tracks: [
             {
                 title: "here with me",
                 artist: "d4v4d",
-                albumArt: "/herewithme.jpg",
+                albumArt: "/herewithme.webp",
                 audioSrc: "/herewithme.mp3",
                 spotifyUrl: "https://open.spotify.com/track/5PjdY0CKGZdEuoNab3yDmX",
             },
@@ -1963,7 +1963,7 @@ export const projects: Project[] = [
     {
         slug: "mla-profiling",
         shortTitle: "MLA Profiling",
-        thumb: "/mla-profiling/l2sweep.png",
+        thumb: "/mla-profiling/l2sweep.webp",
         thumbStyle: "figure",
         title: "The Hidden Bottleneck in MLA Serving: Reconstruction GEMMs and the L2 Cache Barrier",
         description:
@@ -1995,7 +1995,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/e2e.png",
+                        src: "/mla-profiling/e2e.webp",
                         alt: "Share of decode step by operation category",
                         caption:
                             "Decode step time breakdown on DeepSeek-V3 shapes. Linear projections dominate at 70.6%, with attention at 19.6% — reconstruction lives inside that attention slice.",
@@ -2016,7 +2016,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/recon_overhead.png",
+                        src: "/mla-profiling/recon_overhead.webp",
                         alt: "MLA attention-layer time decomposition: reconstruction BMMs vs attention kernel across batch sizes",
                         caption:
                             "Per-layer time split between reconstruction BMMs (red) and the attention kernel (blue). At bs=1, reconstruction is 61% of the total. It stays nearly constant (~35 µs) while attention scales linearly with batch size.",
@@ -2031,7 +2031,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/roofline.png",
+                        src: "/mla-profiling/roofline.webp",
                         alt: "H100 roofline plot with MLA reconstruction BMMs",
                         caption:
                             "H100 roofline with reconstruction BMMs plotted. Every operating point sits on the memory-bound slope, well below the compute ceiling. Even at bs=128, reconstruction achieves only 55% of the memory ceiling.",
@@ -2052,7 +2052,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/ppl.png",
+                        src: "/mla-profiling/ppl.webp",
                         alt: "Perplexity comparison: FP16 baseline, selective INT4, all INT4",
                         caption:
                             "Wikitext-2 perplexity. Selective INT4 of reconstruction weights adds +0.051 PPL. Naive INT4 of everything more than doubles it.",
@@ -2093,7 +2093,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/l2barrier.png",
+                        src: "/mla-profiling/l2barrier.webp",
                         alt: "L2 cache barrier: roofline predicted vs measured INT4/FP16 speedup",
                         caption:
                             "Roofline predicts 2-3.9× INT4 speedup (green). Measured performance is 0.2-0.5× (red). The 16 MB weight fits in H100's 50 MB L2, and INT4 dequantization shifts the kernel to compute-bound, doubly invalidating the roofline prediction.",
@@ -2121,7 +2121,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/l2sweep.png",
+                        src: "/mla-profiling/l2sweep.webp",
                         alt: "INT4/FP16 time ratio vs FP16 weight size, showing sharp transition at the 50 MB L2 boundary",
                         caption:
                             "Weight-size scaling across the L2 boundary. Below 50 MB (green, L2-resident), INT4 is ~1.9× slower. Above 50 MB, the ratio drops sharply toward parity as FP16 falls back to HBM. MLA's 16 MB operating point sits firmly in the L2-resident regime.",
@@ -2146,7 +2146,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/decode_bw.png",
+                        src: "/mla-profiling/decode_bw.webp",
                         alt: "Decode bandwidth vs batch size for FlashInfer and Triton",
                         caption:
                             "HBM bandwidth vs batch size in decode. FlashInfer saturates at 89% of H100 peak; Triton at 80%. The gap narrows as batch size increases.",
@@ -2157,7 +2157,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/mla-profiling/prefill_tflops.png",
+                        src: "/mla-profiling/prefill_tflops.webp",
                         alt: "Prefill TFLOPS by configuration for FlashInfer and Triton",
                         caption:
                             "Prefill compute throughput. FlashInfer is 2.1-2.7× higher across all configs. The gap widens with sequence length.",
@@ -2221,7 +2221,7 @@ export const projects: Project[] = [
     {
         slug: "tiny-gemm",
         shortTitle: "Tiny-GEMM",
-        thumb: "/tiny-gemm/int4_speedup_heatmap_m1.png",
+        thumb: "/tiny-gemm/int4_speedup_heatmap_m1.webp",
         thumbStyle: "figure",
         title: "Tiny-GEMM: Packed INT4 Triton GEMM for Decode-Heavy LLM Inference",
         description:
@@ -2263,7 +2263,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/architecture_diagram.png",
+                        src: "/tiny-gemm/architecture_diagram.webp",
                         alt: "Tiny-GEMM kernel architecture: INT4 unpack → SRAM → FP32 accumulate → output",
                         caption:
                             "Kernel flow: packed INT4 weights are loaded from DRAM, unpacked in shared memory, accumulated in FP32, and written to output. The unpack step is what sets the regime — it's free when work is large, expensive when it's not.",
@@ -2318,14 +2318,14 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/speedup_vs_n_k4096.png",
+                        src: "/tiny-gemm/speedup_vs_n_k4096.webp",
                         alt: "Speedup vs output width N at fixed K=4096",
                         caption:
                             "Speedup vs N at fixed K=4096. Sub-1× for narrow N, climbing to 3.7× at N=14336. The transition happens around N=2–4K.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/family_latency_m1.png",
+                        src: "/tiny-gemm/family_latency_m1.webp",
                         alt: "Latency by layer family at M=1",
                         caption:
                             "Latency by layer family at M=1. FFN layers improve substantially; projection layers are mixed; KV proj regresses.",
@@ -2342,7 +2342,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/prefill_vs_decode_speedup.png",
+                        src: "/tiny-gemm/prefill_vs_decode_speedup.webp",
                         alt: "Prefill vs decode speedup by layer family",
                         caption:
                             "Prefill vs decode speedup by family. KV proj goes from 0.62× in decode to ~2.3× in prefill — same kernel, same weights, just more work to amortize the overhead.",
@@ -2353,7 +2353,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/int4_speedup_heatmap_m1.png",
+                        src: "/tiny-gemm/int4_speedup_heatmap_m1.webp",
                         alt: "INT4 speedup heatmap across (K, N) at M=1",
                         caption:
                             "Speedup heatmap at M=1 across (K, N). The geometry is clear: large-N shapes in the top-right consistently win; small-N shapes lose.",
@@ -2388,14 +2388,14 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/regime_boundary.png",
+                        src: "/tiny-gemm/regime_boundary.webp",
                         alt: "Regime boundary: speedup vs arithmetic intensity",
                         caption:
                             "Each point is one (M, K, N) shape. The transition at α ≈ 8 FLOPs/byte cleanly separates regressions from wins.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/roofline_scatter.png",
+                        src: "/tiny-gemm/roofline_scatter.webp",
                         alt: "Roofline view: arithmetic intensity vs achieved TFLOPs",
                         caption:
                             "Roofline view. INT4 shifts points rightward (higher arithmetic intensity) and off the memory bandwidth ceiling — but narrow shapes land in the dequant-overhead region instead.",
@@ -2412,14 +2412,14 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/ncu_utilization_comparison.png",
+                        src: "/tiny-gemm/ncu_utilization_comparison.webp",
                         alt: "Hardware utilization: FP16 vs INT4 from Nsight Compute",
                         caption:
                             "FP16 vs INT4 hardware utilization from NCU. FP16 saturates DRAM. INT4 frees up bandwidth but the compute utilization reading tells you where that headroom goes.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/dequant_breakdown.png",
+                        src: "/tiny-gemm/dequant_breakdown.webp",
                         alt: "Dequantization overhead breakdown by shape",
                         caption:
                             "Microbenchmark isolating dequantization cost per shape. For KV proj, dequant is a large fraction of total runtime — explaining why INT4 loses there despite lower memory traffic.",
@@ -2430,21 +2430,21 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/peak_compute_utilization.png",
+                        src: "/tiny-gemm/peak_compute_utilization.webp",
                         alt: "Peak SM compute utilization: FP16 vs INT4",
                         caption:
                             "Peak SM utilization. INT4 is lower — bandwidth relief doesn't help when dequant eats the freed capacity.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/ncu_utilization_int4.png",
+                        src: "/tiny-gemm/ncu_utilization_int4.webp",
                         alt: "INT4 kernel NCU breakdown across shapes",
                         caption:
                             "INT4 kernel NCU breakdown across representative decode shapes — SM efficiency, memory throughput, warp stalls.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/memory_traffic_scatter.png",
+                        src: "/tiny-gemm/memory_traffic_scatter.webp",
                         alt: "Memory traffic: INT4 vs FP16",
                         caption:
                             "Memory traffic scatter. INT4 consistently halves DRAM reads for weights. The bandwidth savings are real; the question is always whether they exceed dequant cost.",
@@ -2461,14 +2461,14 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/batch_scaling_k4096_n4096.png",
+                        src: "/tiny-gemm/batch_scaling_k4096_n4096.webp",
                         alt: "Latency vs batch size at K=N=4096",
                         caption:
                             "Latency vs M at K=N=4096. Both scale sublinearly — launch overhead amortizes — but the INT4/FP16 ratio stays roughly constant.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/tokens_per_sec_k4096_n4096.png",
+                        src: "/tiny-gemm/tokens_per_sec_k4096_n4096.webp",
                         alt: "Tokens per second vs batch size",
                         caption:
                             "Throughput (tokens/sec) vs batch. INT4 throughput advantage grows with batch size as memory becomes the sustained bottleneck.",
@@ -2479,21 +2479,21 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/int4_speedup_by_m.png",
+                        src: "/tiny-gemm/int4_speedup_by_m.webp",
                         alt: "Speedup vs batch size M=1–8 by family",
                         caption:
                             "Speedup profile across M=1–8. Remarkably flat per family — the regime boundary is geometry-driven, not batch-driven.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/decode_latency_m1.png",
+                        src: "/tiny-gemm/decode_latency_m1.webp",
                         alt: "Absolute decode latency at M=1",
                         caption:
                             "Absolute latency at M=1. Wide FFN shapes dominate total transformer runtime — and these are exactly the shapes where INT4 wins the most.",
                     },
                     {
                         type: "image",
-                        src: "/tiny-gemm/kernel_time_top_shapes.png",
+                        src: "/tiny-gemm/kernel_time_top_shapes.webp",
                         alt: "Top shapes by CUDA execution time",
                         caption:
                             "Top decode shapes by CUDA time from Nsight Systems. A small set of wide FFN GEMMs accounts for most of decode runtime — optimizing them has outsized impact.",
@@ -2533,7 +2533,7 @@ export const projects: Project[] = [
     {
         slug: "atalla-kernels",
         shortTitle: "Atalla Kernels",
-        thumb: "/atalla/toplevelatalla.png",
+        thumb: "/atalla/toplevelatalla.webp",
         thumbStyle: "figure",
         title: "FlashAttention & Kernel Development on Atalla Ax01",
         description:
@@ -2560,7 +2560,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/atalla/toplevelatalla.png",
+                        src: "/atalla/toplevelatalla.webp",
                         alt: "Atalla Ax01 top-level system view",
                         caption:
                             "Atalla Ax01 top-level architecture. Compute (systolic array), memory (scratchpad + DDR4), systems software (kernels + PyTorch), compiler (PPCI-based), and FPGA emulation are all student-built.",
@@ -2568,7 +2568,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/atalla/atallaax02arch.png",
+                        src: "/atalla/atallaax02arch.webp",
                         alt: "Atalla Ax02 full chip architecture",
                         caption:
                             "Ax02 next-generation architecture: dual-core design with 128×128 systolic arrays, 2MB L1 scratchpad per core, shared L2 scratchpad, and HBM via Ramulator.",
@@ -2845,7 +2845,7 @@ export const projects: Project[] = [
     {
         slug: "graph-scheduling",
         shortTitle: "Graph Scheduling",
-        thumb: "/graph-scheduling/4_roofline.png",
+        thumb: "/graph-scheduling/4_roofline.webp",
         thumbStyle: "figure",
         title: "Memory-Constrained Graph Scheduling",
         description:
@@ -2875,7 +2875,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/graph-scheduling/1_memory_hierarchy.png",
+                        src: "/graph-scheduling/1_memory_hierarchy.webp",
                         alt: "Three-tier memory hierarchy: slow HBM, fast SRAM, ephemeral within-subgraph",
                         caption:
                             "Three-tier memory model. Ephemeral intermediates — tensors produced and consumed within a fused subgraph — cost zero capacity and zero bandwidth. That's what makes fusion the highest-leverage optimization.",
@@ -2901,7 +2901,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/graph-scheduling/4_roofline.png",
+                        src: "/graph-scheduling/4_roofline.webp",
                         alt: "Roofline model: compute-bound vs memory-bound regimes",
                         caption:
                             "Roofline plot. Each granularity choice places a tile at a specific arithmetic intensity. The goal is to operate at or above the ridge point where compute and memory are balanced.",
@@ -2923,7 +2923,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/graph-scheduling/2_fusion_before_after.png",
+                        src: "/graph-scheduling/2_fusion_before_after.webp",
                         alt: "Fusion before and after: intermediate tensor goes from HBM round-trip to ephemeral",
                         caption:
                             "Unfused (left): intermediate tensor written to HBM then reloaded. Fused (right): intermediate is ephemeral — lives entirely in SRAM, bandwidth cost eliminated.",
@@ -2948,7 +2948,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/graph-scheduling/3_traversal_order.png",
+                        src: "/graph-scheduling/3_traversal_order.webp",
                         alt: "Raster vs zig-zag tile traversal order",
                         caption:
                             "Raster order (left) reloads the B strip on every row change. Zig-zag (right) reuses the B strip across adjacent rows by reversing direction, halving the unique HBM loads in many cases.",
@@ -2964,7 +2964,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/graph-scheduling/5_diamond_strategies.png",
+                        src: "/graph-scheduling/5_diamond_strategies.webp",
                         alt: "Diamond graph: spill vs recompute vs retain strategies",
                         caption:
                             "Three strategies for a skip-connection pattern. Spill: 3 subgraphs, highest latency. Recompute: 2 subgraphs with the producer duplicated, avoids HBM round-trip. Retain: 2 subgraphs with the tensor kept resident, lowest latency if SRAM budget allows.",
@@ -2981,7 +2981,7 @@ export const projects: Project[] = [
                     },
                     {
                         type: "image",
-                        src: "/graph-scheduling/6_split_k.png",
+                        src: "/graph-scheduling/6_split_k.webp",
                         alt: "Split-K accumulation for chained MatMuls",
                         caption:
                             "Split-K for a chained MatMul (A×B)×C. Small k streams thin slices of B and C while keeping the accumulator resident in SRAM — enabling fusion of chains that would OOM at larger k values.",
@@ -2998,7 +2998,7 @@ export const projects: Project[] = [
                 blocks: [
                     {
                         type: "image",
-                        src: "/graph-scheduling/7_benchmark_results.png",
+                        src: "/graph-scheduling/7_benchmark_results.webp",
                         alt: "Benchmark results: speedup over unfused baseline per graph",
                         caption:
                             "Speedup over the unfused naive baseline across the 5 benchmark graphs. Larger graphs with more fusion opportunities (e.g., graph 17, 103 ops) see the largest gains.",

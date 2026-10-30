@@ -1,5 +1,6 @@
 "use client";
 import { motion } from "motion/react";
+import Link from "next/link";
 import Cited from "./citation";
 import Cursor from "./cursor";
 import Container from "./container";
@@ -10,7 +11,11 @@ const SOCIALS = [
     { label: "github", href: "https://github.com/zhan4808" },
     { label: "linkedin", href: "https://linkedin.com/in/robert05" },
     { label: "x", href: "https://x.com/robdobflob" },
+    // The past designs of this site; an internal page, so it stays in this tab.
+    { label: "archive", href: "/archive" },
 ];
+
+const isExternal = (href: string) => /^https?:/.test(href);
 
 const UNDERLINE =
     "underline decoration-faint decoration-1 underline-offset-[5px] focus-ring transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
@@ -24,19 +29,22 @@ const QuoteLines = () => (
     </>
 );
 
+const SOCIAL_LINK = `${UNDERLINE} opacity-60 hover:opacity-100 focus-visible:opacity-100`;
+
 const Socials = ({ className }: { className?: string }) => (
     <p className={className}>
         {SOCIALS.map(({ label, href }, i) => (
             <span key={label}>
                 {i > 0 && <span className="opacity-40"> / </span>}
-                <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${UNDERLINE} opacity-60 hover:opacity-100 focus-visible:opacity-100`}
-                >
-                    {label}
-                </a>
+                {isExternal(href) ? (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className={SOCIAL_LINK}>
+                        {label}
+                    </a>
+                ) : (
+                    <Link href={href} className={SOCIAL_LINK}>
+                        {label}
+                    </Link>
+                )}
             </span>
         ))}
     </p>

@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const post = journalPosts.find((entry) => entry.slug === slug);
     if (!post) return {};
-    const path = `/writing/${post.slug}`;
+    const path = `/blog/${post.slug}`;
     // Cards are only drawn for visible posts, so a hidden one shares the site-wide card rather than a broken link.
     return pageMetadata({
         title: post.month,
@@ -55,10 +55,10 @@ export default async function PostPage({ params }: Props) {
             <main className={`${FRAME} px-6 pb-40 pt-28 font-geistSans lg:pt-40`}>
                 <header>
                     <Link
-                        href="/writing"
+                        href="/blog"
                         className={`text-[14px] ${MUTED} outline-none transition-colors hover:text-foreground focus-visible:text-foreground`}
                     >
-                        ← Writing
+                        ← Blog
                     </Link>
                     <h1 className="mt-10 text-[28px] font-medium leading-[1.2] tracking-[-0.015em]">{post.month}</h1>
                     <p className={`mt-1 text-[16px] ${MUTED}`}>{post.subtitle}</p>
@@ -86,7 +86,7 @@ export default async function PostPage({ params }: Props) {
 
                 {(newer || older) && (
                     <nav
-                        aria-label="More writing"
+                        aria-label="More posts"
                         className={`mt-24 flex justify-between gap-6 border-t ${HAIRLINE} pt-6`}
                     >
                         {older ? <Pager post={older} label="older" back /> : <span />}
@@ -150,7 +150,7 @@ function Pager({
 }) {
     return (
         <Link
-            href={`/writing/${post.slug}`}
+            href={`/blog/${post.slug}`}
             className={`group flex flex-col gap-1 outline-none ${back ? "items-start" : "items-end text-right"}`}
         >
             <span className={`font-geistMono text-[12px] ${MUTED}`}>{label}</span>

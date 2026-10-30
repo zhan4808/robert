@@ -10,7 +10,7 @@ export function generateStaticParams() {
     return getVisibleJournals().map((post) => ({ slug: post.slug }));
 }
 
-export const alt = `Writing by ${SITE_NAME}`;
+export const alt = `Blog by ${SITE_NAME}`;
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 
@@ -18,5 +18,5 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     const { slug } = await params;
     const post = getVisibleJournals().find((entry) => entry.slug === slug);
     if (!post) notFound();
-    return articleCard({ section: "writing", when: post.date, title: post.month, line: post.subtitle });
+    return articleCard({ section: "blog", when: post.date, title: post.month, line: post.subtitle });
 }

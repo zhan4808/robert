@@ -4,7 +4,7 @@ import { AUTHOR, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, parseContentDate } fr
 /** The feed is built once at build time from the data file, like the pages it lists. */
 export const dynamic = "force-static";
 
-const FEED_TITLE = `${SITE_NAME} — Writing`;
+const FEED_TITLE = `${SITE_NAME} — Blog`;
 
 const escapeXml = (text: string): string =>
     text.replace(/[<>&'"]/g, (char) => {
@@ -35,7 +35,7 @@ function byDateDesc(posts: JournalPost[]): { post: JournalPost; date: Date | und
 }
 
 function item({ post, date }: { post: JournalPost; date: Date | undefined }): string {
-    const url = absoluteUrl(`/writing/${post.slug}`);
+    const url = absoluteUrl(`/blog/${post.slug}`);
     return [
         "        <item>",
         `            <title>${escapeXml(post.month)}</title>`,
@@ -55,7 +55,7 @@ export function GET(): Response {
         '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
         "    <channel>",
         `        <title>${escapeXml(FEED_TITLE)}</title>`,
-        `        <link>${absoluteUrl("/writing")}</link>`,
+        `        <link>${absoluteUrl("/blog")}</link>`,
         `        <description>${escapeXml(SITE_DESCRIPTION)}</description>`,
         "        <language>en-us</language>",
         `        <managingEditor>${escapeXml(`${AUTHOR.email} (${AUTHOR.name})`)}</managingEditor>`,

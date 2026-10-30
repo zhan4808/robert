@@ -6,7 +6,7 @@ import { getVisibleJournalsByYear } from "../../lib/data";
 const MUTED = "text-[var(--muted-color)]";
 
 /** Every post, newest year first, as one quiet list. */
-export default function Writing() {
+export default function Blog() {
     const years = [...getVisibleJournalsByYear().entries()];
 
     return (
@@ -15,7 +15,7 @@ export default function Writing() {
             <TopNav />
             <main className="mx-auto flex w-full max-w-[56rem] flex-col gap-14 px-6 pb-40 pt-28 lg:gap-20 lg:pt-40">
                 <header className="flex flex-col gap-4 font-geistMono">
-                    <h1 className="sr-only">Writing</h1>
+                    <h1 className="sr-only">Blog</h1>
                     <p className="text-[14px] lowercase leading-relaxed tracking-[0.02em] opacity-60">
                         notes on kernels, chips, and everything else.
                         <span
@@ -38,7 +38,7 @@ export default function Writing() {
                                         className="border-t border-[color-mix(in_srgb,var(--foreground-color)_10%,transparent)] last:border-b"
                                     >
                                         <Link
-                                            href={`/writing/${post.slug}`}
+                                            href={`/blog/${post.slug}`}
                                             className="group flex flex-col gap-1 py-4 outline-none sm:flex-row sm:items-baseline sm:gap-6"
                                         >
                                             <span className="text-[16px] decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">

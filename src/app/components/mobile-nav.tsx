@@ -10,8 +10,8 @@ import ThemeIcon from "./theme-icon";
 const navLinks = [
     { label: "Home", href: "/" },
     { label: "Projects", href: "/projects" },
-    { label: "Writing", href: "/writing" },
     { label: "Gallery", href: "/gallery" },
+    { label: "Blog", href: "/blog" },
 ];
 
 const secondaryLinks = [

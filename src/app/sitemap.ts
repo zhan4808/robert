@@ -28,13 +28,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
             priority: 0.7,
         })),
         {
-            url: absoluteUrl("/writing"),
+            url: absoluteUrl("/blog"),
             lastModified: newest(posts.map((post) => dateOf(post.date))),
             changeFrequency: "monthly",
             priority: 0.8,
         },
         ...posts.map((post) => ({
-            url: absoluteUrl(`/writing/${post.slug}`),
+            url: absoluteUrl(`/blog/${post.slug}`),
             lastModified: dateOf(post.date),
             changeFrequency: "yearly" as const,
             priority: 0.6,

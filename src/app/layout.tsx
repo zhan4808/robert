@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     creator: AUTHOR.name,
     alternates: {
         canonical: "/",
-        types: { "application/rss+xml": [{ url: "/feed.xml", title: `${SITE_NAME} — Writing` }] },
+        types: { "application/rss+xml": [{ url: "/feed.xml", title: `${SITE_NAME} — Blog` }] },
     },
     openGraph: {
         type: "website",

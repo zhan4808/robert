@@ -3,11 +3,11 @@ import type { ReactNode } from "react";
 import { pageMetadata } from "../../lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
-    title: "Writing",
+    title: "Blog",
     description: "Notes on kernels, chips, and everything else.",
-    path: "/writing",
+    path: "/blog",
 });
 
-export default function WritingLayout({ children }: { children: ReactNode }) {
+export default function BlogLayout({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }

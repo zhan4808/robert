@@ -26,10 +26,6 @@ const nextConfig: NextConfig = {
             },
         ];
     },
-    async redirects() {
-        // The journal used to live under /blog.
-        return [{ source: "/blog/:slug*", destination: "/writing/:slug*", permanent: true }];
-    },
     skipTrailingSlashRedirect: true,
 };
 

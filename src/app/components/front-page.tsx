@@ -9,7 +9,6 @@ const SOCIALS = [
     { label: "github", href: "https://github.com/zhan4808" },
     { label: "linkedin", href: "https://linkedin.com/in/robert05" },
     { label: "x", href: "https://x.com/robdobflob" },
-    { label: "email", href: "mailto:robertzhang930@gmail.com" },
 ];
 
 const UNDERLINE =
@@ -34,7 +33,7 @@ const Socials = ({ className }: { className?: string }) => (
                 {i > 0 && <span className="opacity-40"> / </span>}
                 <a
                     href={href}
-                    target={href.startsWith("mailto:") ? undefined : "_blank"}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className={`${UNDERLINE} opacity-60 hover:opacity-100 focus-visible:opacity-100`}
                 >
@@ -94,16 +93,14 @@ const desktopPage = ({ stats }: { stats: PondStats }) => {
             >
                 <h1>Hi, I&apos;m Robert.</h1>
                 <p>
-                    Applied AI @ <Cited source="astera">Astera Labs</Cited>, electrical engineering @{" "}
-                    <Cited source="purdue">Purdue</Cited>. I work on GPU kernels, ML systems, and the hardware
-                    underneath.
+                    Applied AI @ <Cited source="astera">Astera Labs</Cited>, passionate about making models run fast.
                 </p>
                 <p>
-                    Before that, <Cited source="sandisk">SanDisk</Cited>, <Cited source="endian">Endian</Cited>,{" "}
-                    <Cited source="stars">STARS</Cited>, and a couple of <Cited source="labs">research labs</Cited>.
+                    Before that, <Cited source="sandisk">SanDisk</Cited>, <Cited source="endian">Endian</Cited>, and a
+                    couple of <Cited source="labs">research labs</Cited>.
                 </p>
                 <p>
-                    Currently, building @ <Cited source="socet">SoCET</Cited>, fellow @{" "}
+                    Currently, researching @ <Cited source="socet">Purdue SoCET</Cited>, fellow @{" "}
                     <Cited source="comma">Comma Capital</Cited>.
                 </p>
                 <Socials className="mt-[1.5vh]" />
@@ -144,17 +141,15 @@ const mobilePage = () => {
             >
                 <h1>Hi, I&apos;m Robert.</h1>
                 <p>
-                    Applied AI @ <MobileLink source="astera">Astera Labs</MobileLink>, electrical engineering @{" "}
-                    <MobileLink source="purdue">Purdue</MobileLink>. GPU kernels, ML systems, and the hardware
-                    underneath.
+                    Applied AI @ <MobileLink source="astera">Astera Labs</MobileLink>, passionate about making models
+                    run fast.
                 </p>
                 <p>
                     Before that, <MobileLink source="sandisk">SanDisk</MobileLink>,{" "}
-                    <MobileLink source="endian">Endian</MobileLink>, <MobileLink source="stars">STARS</MobileLink>, and
-                    a couple of research labs.
+                    <MobileLink source="endian">Endian</MobileLink>, and a couple of research labs.
                 </p>
                 <p>
-                    Currently, building @ <MobileLink source="socet">SoCET</MobileLink>, fellow @{" "}
+                    Currently, researching @ <MobileLink source="socet">Purdue SoCET</MobileLink>, fellow @{" "}
                     <MobileLink source="comma">Comma Capital</MobileLink>.
                 </p>
                 <Socials className="mt-2" />

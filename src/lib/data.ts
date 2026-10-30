@@ -48,6 +48,11 @@ export interface Project {
     shortTitle?: string;
     /** 3:2 preview on the projects strip. */
     thumb?: string;
+    /**
+     * How the preview sits in its tile. "cover" (default) crops to fill, for photos and renders. "figure" fits a
+     * white-background plot or diagram inside the tile, knocks the white out, and inverts it in dark mode.
+     */
+    thumbStyle?: "cover" | "figure";
     description: string;
     longDescription: string;
     date: string;
@@ -1958,7 +1963,8 @@ export const projects: Project[] = [
     {
         slug: "mla-profiling",
         shortTitle: "MLA Profiling",
-        thumb: "/mla-profiling/l2barrier.png",
+        thumb: "/mla-profiling/l2sweep.png",
+        thumbStyle: "figure",
         title: "The Hidden Bottleneck in MLA Serving: Reconstruction GEMMs and the L2 Cache Barrier",
         description:
             "Profiling MLA attention on H100 reveals reconstruction GEMMs consume 61% of attention-layer time. INT4 quantization should help but doesn't, because the weights fit in L2 cache.",
@@ -2215,7 +2221,8 @@ export const projects: Project[] = [
     {
         slug: "tiny-gemm",
         shortTitle: "Tiny-GEMM",
-        thumb: "/tiny-gemm/architecture_diagram.png",
+        thumb: "/tiny-gemm/int4_speedup_heatmap_m1.png",
+        thumbStyle: "figure",
         title: "Tiny-GEMM: Packed INT4 Triton GEMM for Decode-Heavy LLM Inference",
         description:
             "Packed INT4 GEMM kernel in Triton for decode-heavy LLM inference with hardware counter attribution and a regime model for when quantization helps. Up to 3.7× speedup on A10G.",
@@ -2527,6 +2534,7 @@ export const projects: Project[] = [
         slug: "atalla-kernels",
         shortTitle: "Atalla Kernels",
         thumb: "/atalla/toplevelatalla.png",
+        thumbStyle: "figure",
         title: "FlashAttention & Kernel Development on Atalla Ax01",
         description:
             "Kernel development and HW/SW co-design for Atalla, a student-built weight-stationary systolic array AI accelerator. FlashAttention mapping, im2col convolution, tiled GEMM, and PyTorch backend integration.",
@@ -2838,6 +2846,7 @@ export const projects: Project[] = [
         slug: "graph-scheduling",
         shortTitle: "Graph Scheduling",
         thumb: "/graph-scheduling/4_roofline.png",
+        thumbStyle: "figure",
         title: "Memory-Constrained Graph Scheduling",
         description:
             "A scheduler for ML accelerator computation DAGs that minimizes latency while respecting tight on-chip SRAM capacity constraints. Google MLSys 2026, Track A.",
@@ -3001,6 +3010,7 @@ export const projects: Project[] = [
     {
         slug: "sparse-attention",
         shortTitle: "Sparse Attention",
+        thumb: "/sparse-attention/thumb.svg",
         title: "Sparse Attention Kernel for DeepSeek V3.2 on B200",
         description:
             "A fused CUDA kernel implementing DeepSeek Sparse Attention on NVIDIA B200 (Blackwell). FlashInfer AI Kernel Generation Contest, MLSys 2026.",

@@ -301,19 +301,31 @@ export function Thumb({
             </span>
         );
     }
+    const figure = project.thumbStyle === "figure";
+    const image = (
+        <Image
+            src={project.thumb}
+            alt=""
+            fill
+            // fetchPriority, not preload: a preload would also download it on phones, where the strip is hidden.
+            fetchPriority={priority ? "high" : undefined}
+            sizes={sizes}
+            quality={IMAGE_QUALITY}
+            unoptimized={project.thumb.endsWith(".gif")}
+            className={`transition-transform duration-700 ease-out ${zoom ? "group-hover:scale-[1.03] group-focus-visible:scale-[1.03]" : ""} ${
+                figure
+                    ? // Multiply drops a plot's white paper onto the tile; in dark mode the plot is inverted (with its
+                      // hues restored) and screened on instead, so the paper vanishes either way.
+                      "object-contain mix-blend-multiply dark:invert dark:hue-rotate-180 dark:mix-blend-screen"
+                    : "object-cover"
+            }`}
+        />
+    );
+    if (!figure) return <span className={`${className} ${tile}`}>{image}</span>;
+    // A filled image ignores its parent's padding, so an inner box gives the figure its margin.
     return (
-        <span className={`${className} ${tile}`}>
-            <Image
-                src={project.thumb}
-                alt=""
-                fill
-                // fetchPriority, not preload: a preload would also download it on phones, where the strip is hidden.
-                fetchPriority={priority ? "high" : undefined}
-                sizes={sizes}
-                quality={IMAGE_QUALITY}
-                unoptimized={project.thumb.endsWith(".gif")}
-                className={`object-cover transition-transform duration-700 ease-out ${zoom ? "group-hover:scale-[1.03] group-focus-visible:scale-[1.03]" : ""}`}
-            />
+        <span className={`${className} ${tile} p-[6%]`}>
+            <span className="relative block h-full w-full">{image}</span>
         </span>
     );
 }

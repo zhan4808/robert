@@ -8,8 +8,8 @@ repository stays small and every raster file arrives sized, in WebP, with a blur
 1. Drop the original anywhere under `public/` (a per-post folder like `public/cuda-mmm/` keeps things findable). Any
    format is fine: a phone JPEG, a matplotlib PNG, a Figma export.
 2. Run `npm run media:optimize` (or `just media`).
-3. Reference the output path from `src/lib/data.ts`: `/cuda-mmm/split_k.webp`, not the original name. If you had
-   already written the original name, the script rewrites it for you.
+3. Reference the output path from the content file (`<Figure src="/cuda-mmm/split_k.webp" />`), not the original
+   name. If you had already written the original name, the script rewrites it for you.
 
 Commit the optimized file, the manifest (`src/lib/image-meta.json`), and any rewritten references together.
 
@@ -30,7 +30,7 @@ The cap (2400px covers a 1200px frame on a 2x display) always applies to photos.
 downscaled when that makes the file smaller: resampling touches every pixel of a lossless image and can double its
 size, and the Next optimizer resizes on the way out anyway. A source that WebP cannot make smaller is kept as it is.
 EXIF rotation is baked in and metadata is stripped. Originals are deleted once the WebP is written, and every
-`"/old.jpg"` string and `public/old.jpg` static import under `src/` is rewritten to the new name.
+`"/old.jpg"` string and `public/old.jpg` static import under `src/` and `content/` is rewritten to the new name.
 
 Audio is deliberately left as it is: the MP3s are already lossy and re-encoding would only degrade them. The
 `<audio>` elements use `preload="none"`, so nothing downloads until someone presses play.

@@ -1,7 +1,8 @@
 # robert
 
 Personal site: [Next.js](https://nextjs.org) 16, React 19, Tailwind. The landing page is an interactive pixel koi pond;
-the rest is projects, writing, and a small photo gallery. Content lives in `src/lib/data.ts`.
+the rest is projects, writing, and a small photo gallery. Write-ups are MDX files under `content/`; see
+[docs/content.md](docs/content.md).
 
 ## Credit
 

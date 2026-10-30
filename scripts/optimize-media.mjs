@@ -2,12 +2,12 @@
 /**
  * Media pipeline for everything under public/. Idempotent: a second run changes nothing. See docs/media.md.
  *
- *   npm run media:optimize                 optimize, rewrite references under src/, write the manifest
+ *   npm run media:optimize                 optimize, rewrite references under src/ and content/, write the manifest
  *   npm run media:optimize -- --dry        report what would change without touching anything
  *   npm run media:optimize -- --manifest   only regenerate src/lib/image-meta.json
  *
  * Raster images (jpg, jpeg, png, webp) become WebP with EXIF rotation baked in and metadata stripped, and each
- * "/old.ext" reference under src/ is rewritten to the new name:
+ * "/old.ext" reference under src/ and content/ is rewritten to the new name:
  *   - jpg/jpeg, and png photographs (continuous-tone, judged by entropy), become lossy WebP at WEBP_QUALITY, capped
  *     at MAX_EDGE on the long edge.
  *   - png plots and diagrams become *lossless* WebP: pixel-identical, so axis text and hairlines stay sharp, and
@@ -29,6 +29,7 @@ import sharp from "sharp";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLIC = join(ROOT, "public");
 const SRC = join(ROOT, "src");
+const CONTENT = join(ROOT, "content");
 const MANIFEST = join(SRC, "lib", "image-meta.json");
 
 /** Longest edge, in pixels, of anything served. 2400 covers a 1200px frame on a 2x display. */
@@ -124,17 +125,21 @@ async function optimize(file) {
         : { out, buffer: full, reason: `figure, lossless, kept at ${width}x${height} (capping would grow it)` };
 }
 
-/** Rewrites every reference to a renamed file under src/: "/a.jpg" strings and ../public/a.jpg static imports. */
+/**
+ * Rewrites every reference to a renamed file under src/ and content/: "/a.jpg" strings, ../public/a.jpg static
+ * imports, and unquoted frontmatter values (`thumb: /a.jpg`).
+ */
 async function rewriteReferences(renames) {
     if (renames.length === 0) return [];
-    const files = (await walk(SRC)).filter((f) => /\.(tsx?|jsx?|mjs|css|mdx?)$/.test(f));
+    const files = [...(await walk(SRC)), ...(await walk(CONTENT))].filter((f) => /\.(tsx?|jsx?|mjs|css|mdx?)$/.test(f));
     const touched = [];
     for (const file of files) {
         const before = await readFile(file, "utf8");
         let after = before;
         for (const { from, to } of renames) {
-            // Both spellings end in the site path, so one replacement covers data.ts and static imports.
+            // Both spellings end in the site path, so one replacement covers content files and static imports.
             after = after.split(`${from}"`).join(`${to}"`).split(`${from}'`).join(`${to}'`);
+            after = after.split(`${from}\n`).join(`${to}\n`);
         }
         if (after !== before) {
             touched.push(relative(ROOT, file));

@@ -50,7 +50,7 @@ export function CopyButton() {
             type="button"
             onClick={copy}
             aria-live="polite"
-            className={`rounded-[4px] px-1.5 py-0.5 font-geistMono text-[12px] outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-[color-mix(in_srgb,var(--foreground-color)_28%,transparent)] ${MUTED}`}
+            className={`rounded-chip px-1.5 py-0.5 font-geistMono text-caption outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-[color-mix(in_srgb,var(--foreground-color)_28%,transparent)] ${MUTED}`}
         >
             {copied ? "copied" : "copy"}
         </button>

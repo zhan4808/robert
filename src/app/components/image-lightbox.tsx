@@ -134,7 +134,7 @@ export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONT
         setOffset({ x: 0, y: 0 });
     }, []);
 
-    const thumbClassName = `h-auto w-full rounded-[6px] border border-[color-mix(in_srgb,var(--foreground-color)_10%,transparent)] transition-opacity group-hover:opacity-90${className ? ` ${className}` : ""}`;
+    const thumbClassName = `h-auto w-full rounded-card border border-hairline transition-opacity group-hover:opacity-90${className ? ` ${className}` : ""}`;
 
     return (
         <>
@@ -143,7 +143,7 @@ export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONT
                 <button
                     type="button"
                     onClick={openLightbox}
-                    className="cursor-zoom-in focus:outline-none rounded-[6px] overflow-hidden"
+                    className="cursor-zoom-in focus:outline-none rounded-card overflow-hidden"
                     aria-label="Expand image"
                 >
                     {meta ? (
@@ -166,9 +166,7 @@ export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONT
                         <img src={src} alt={alt} className={thumbClassName} />
                     )}
                 </button>
-                {caption && (
-                    <figcaption className="font-geistMono text-[12px] text-[var(--muted-color)]">{caption}</figcaption>
-                )}
+                {caption && <figcaption className="font-geistMono text-caption text-muted">{caption}</figcaption>}
             </figure>
 
             {/* Lightbox overlay */}

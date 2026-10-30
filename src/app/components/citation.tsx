@@ -121,7 +121,7 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
                 className={`cursor-pointer inline align-baseline underline decoration-1 underline-offset-[5px] transition-[text-decoration-color] duration-150 outline-none focus-visible:decoration-2 ${
                     open
                         ? "decoration-foreground text-foreground"
-                        : "decoration-[color-mix(in_srgb,var(--foreground-color)_35%,transparent)] hover:decoration-foreground hover:text-foreground focus-visible:decoration-foreground focus-visible:text-foreground"
+                        : "decoration-faint hover:decoration-foreground hover:text-foreground focus-visible:decoration-foreground focus-visible:text-foreground"
                 }`}
             >
                 {children}
@@ -136,7 +136,7 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
                         transition={{ duration: 0.12, ease: "easeOut" }}
                         onClick={members ? undefined : activate}
                         data-koi-ignore
-                        className="absolute bottom-full left-0 z-50 mb-[10px] flex origin-bottom-left flex-col overflow-hidden rounded-[8px] cursor-pointer font-geistMono text-foreground"
+                        className="absolute bottom-full left-0 z-50 mb-[10px] flex origin-bottom-left flex-col overflow-hidden rounded-panel cursor-pointer font-geistMono text-foreground"
                         style={{
                             width: CARD_W,
                             // Linear-style elevated surface: a solid step up from the page, a hairline border,
@@ -160,32 +160,32 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
                                             e.stopPropagation();
                                             go(m);
                                         }}
-                                        className="flex flex-col gap-[6px] rounded-[6px] px-[8px] py-[8px] transition-colors duration-100 hover:bg-[color-mix(in_srgb,var(--foreground-color)_6%,transparent)]"
+                                        className="flex flex-col gap-[6px] rounded-card px-[8px] py-[8px] transition-colors duration-100 hover:bg-tile"
                                     >
-                                        <span className="flex items-center gap-[8px] text-[12px] leading-none">
+                                        <span className="flex items-center gap-[8px] text-caption leading-none">
                                             <Mark icon={m.icon} name={m.name} size={MARK_PX} scale={m.iconScale} />
                                             <span className="truncate opacity-60">{m.name}</span>
                                             <span className="ml-auto shrink-0 pl-2 tabular-nums opacity-40">
                                                 {m.dates}
                                             </span>
                                         </span>
-                                        <span className="text-[12px] leading-[18px] opacity-60">{m.summary}</span>
+                                        <span className="text-caption leading-[18px] opacity-60">{m.summary}</span>
                                     </span>
                                 ))}
                             </span>
                         ) : (
                             <span className="flex flex-col gap-[6px] px-[14px] pb-[12px] pt-[12px]">
                                 {/* source, with the date as right-aligned metadata */}
-                                <span className="flex items-center gap-[8px] text-[12px] leading-none">
+                                <span className="flex items-center gap-[8px] text-caption leading-none">
                                     <Mark icon={src.icon} name={src.name} size={MARK_PX} scale={src.iconScale} />
                                     <span className="truncate opacity-60">{src.name}</span>
                                     <span className="ml-auto shrink-0 pl-2 tabular-nums opacity-40">{src.dates}</span>
                                 </span>
 
-                                <span className="mt-[4px] text-[13px] leading-[18px]">{src.role}</span>
+                                <span className="mt-[4px] text-meta leading-[18px]">{src.role}</span>
 
                                 <span
-                                    className="text-[12px] leading-[18px] overflow-hidden opacity-60"
+                                    className="text-caption leading-[18px] overflow-hidden opacity-60"
                                     style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
                                 >
                                     {src.summary}
@@ -195,7 +195,7 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
 
                         {/* what a click does, set apart like a command hint */}
                         <span
-                            className="flex items-center justify-between px-[14px] py-[8px] text-[11px] leading-none opacity-40"
+                            className="flex items-center justify-between px-[14px] py-[8px] text-label leading-none opacity-40"
                             style={{
                                 borderTop: `1px solid color-mix(in srgb, var(--foreground-color) ${isLight ? 8 : 7}%, transparent)`,
                             }}

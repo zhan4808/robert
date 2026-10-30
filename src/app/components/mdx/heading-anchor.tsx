@@ -9,7 +9,7 @@ export function HeadingAnchor({ id }: { id: string }) {
         <a
             href={`#${id}`}
             aria-label="Link to this section"
-            className={`absolute -left-6 top-0 w-6 font-geistMono text-[13px] font-normal no-underline opacity-0 outline-none transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 ${MUTED}`}
+            className={`absolute -left-6 top-0 w-6 font-geistMono text-meta font-normal no-underline opacity-0 outline-none transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 ${MUTED}`}
         >
             #
         </a>

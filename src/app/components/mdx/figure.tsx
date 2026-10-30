@@ -61,7 +61,7 @@ export function Gallery({ number, children }: { number?: string; children?: Reac
     return (
         <figure className="flex flex-col gap-2">
             {grid}
-            <figcaption className={`font-geistMono text-[12px] ${MUTED}`}>
+            <figcaption className={`font-geistMono text-caption ${MUTED}`}>
                 <FigureLabel number={number} />
             </figcaption>
         </figure>

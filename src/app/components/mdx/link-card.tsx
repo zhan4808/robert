@@ -4,10 +4,10 @@ import { MUTED } from "./styles";
 export function LinkCard({ href, label, description }: { href: string; label: string; description?: string }) {
     return (
         <div className="flex flex-col gap-0.5">
-            <a href={href} target="_blank" rel="noopener noreferrer" className="ink-link w-fit text-[15px]">
+            <a href={href} target="_blank" rel="noopener noreferrer" className="ink-link w-fit text-ui">
                 {label}
             </a>
-            {description && <p className={`text-[14px] ${MUTED}`}>{description}</p>}
+            {description && <p className={`text-small ${MUTED}`}>{description}</p>}
         </div>
     );
 }

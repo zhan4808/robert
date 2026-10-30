@@ -171,7 +171,7 @@ function DesktopStrip({ projects }: { projects: Project[] }) {
             {/* The padding lines the first and last tiles up with the 56rem column the project pages use. */}
             <div
                 ref={stripRef}
-                className="flex gap-3 overflow-x-auto px-[max(1.5rem,calc((100vw-56rem)/2))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex gap-3 overflow-x-auto px-[max(1.5rem,calc((100vw-theme(maxWidth.column))/2))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 {projects.map((project, i) => (
                     <StripTile key={project.slug} project={project} priority={i < 2} />
@@ -196,19 +196,15 @@ function StripTile({ project, priority }: { project: Project; priority: boolean 
                     sizes="(min-height: 1100px) 63rem, 93vh"
                     className="relative block aspect-[3/2] h-[min(62vh,42rem)] overflow-hidden"
                 />
-                <span className="pointer-events-none absolute bottom-4 left-4 translate-y-1 rounded-full bg-[rgb(0_0_0/0.55)] px-3 py-1.5 font-geistMono text-[12px] text-dark-foreground opacity-0 backdrop-blur-md transition-[opacity,transform] duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                <span className="pointer-events-none absolute bottom-4 left-4 translate-y-1 rounded-full bg-[rgb(0_0_0/0.55)] px-3 py-1.5 font-geistMono text-caption text-dark-foreground opacity-0 backdrop-blur-md transition-[opacity,transform] duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
                     {external ? "read write-up ↗" : "view project"}
                 </span>
             </span>
             <span className="mt-3 flex items-baseline gap-3">
-                <span className="whitespace-nowrap text-[15px]">{nameOf(project)}</span>
-                <span className="whitespace-nowrap font-geistMono text-[12px] text-[var(--muted-color)]">
-                    {project.date}
-                </span>
+                <span className="whitespace-nowrap text-ui">{nameOf(project)}</span>
+                <span className="whitespace-nowrap font-geistMono text-caption text-muted">{project.date}</span>
             </span>
-            <span className="mt-1 block text-[14px] leading-[1.5] text-[var(--muted-color)]">
-                {project.description}
-            </span>
+            <span className="mt-1 block text-small leading-normal text-muted">{project.description}</span>
         </>
     );
     // As wide as the thumbnail, so a long description wraps instead of pushing the next tile along.
@@ -259,13 +255,13 @@ function MobileLayout({ projects }: { projects: Project[] }) {
                             className="relative block w-full overflow-hidden rounded-2xl h-[65vw]"
                         />
 
-                        <h2 className="font-inter text-[21px] mt-[5vw] mb-2 text-foreground">{nameOf(project)}</h2>
+                        <h2 className="font-inter text-heading mt-[5vw] mb-2 text-foreground">{nameOf(project)}</h2>
 
-                        <p className="font-inter text-[17px] text-foreground opacity-60">{project.description}</p>
+                        <p className="font-inter text-lede text-foreground opacity-60">{project.description}</p>
 
                         <div className="mt-5">
-                            <p className="font-inter text-[17px] text-foreground opacity-60 mb-1">Year</p>
-                            <p className="font-inter text-[17px] text-foreground">{project.date}</p>
+                            <p className="font-inter text-lede text-foreground opacity-60 mb-1">Year</p>
+                            <p className="font-inter text-lede text-foreground">{project.date}</p>
                         </div>
 
                         <a

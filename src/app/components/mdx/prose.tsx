@@ -40,7 +40,7 @@ export function H2({ id, className, children, ...props }: ComponentProps<"h2">) 
         );
     }
     return (
-        <h2 {...props} id={id} className="group relative mt-6 scroll-mt-28 text-[16px] font-medium leading-[1.6]">
+        <h2 {...props} id={id} className="group relative mt-6 scroll-mt-28 text-body font-medium leading-compact">
             {id && <HeadingAnchor id={id} />}
             {children}
         </h2>
@@ -52,7 +52,7 @@ export function H3({ id, children, ...props }: ComponentProps<"h3">) {
         <h3
             {...props}
             id={id}
-            className={`group relative mt-3 scroll-mt-28 text-[15px] font-medium leading-[1.6] ${MUTED}`}
+            className={`group relative mt-3 scroll-mt-28 text-ui font-medium leading-compact ${MUTED}`}
         >
             {id && <HeadingAnchor id={id} />}
             {children}
@@ -86,7 +86,7 @@ type AProps = ComponentProps<"a"> & {
 export function A({ href = "#", children, ...props }: AProps) {
     if (props["data-footnote-ref"]) {
         return (
-            <a {...props} href={href} className={`footnote-ref font-geistMono text-[11px] ${MUTED}`}>
+            <a {...props} href={href} className={`footnote-ref font-geistMono text-label ${MUTED}`}>
                 {children}
             </a>
         );
@@ -112,7 +112,7 @@ export function Quote({ author, children }: { author?: string; children?: ReactN
     return (
         <blockquote className={`border-l ${HAIRLINE} pl-5`}>
             {quoted}
-            {author && <cite className={`mt-2 block font-geistMono text-[12px] not-italic ${MUTED}`}>— {author}</cite>}
+            {author && <cite className={`mt-2 block font-geistMono text-caption not-italic ${MUTED}`}>— {author}</cite>}
         </blockquote>
     );
 }
@@ -120,7 +120,7 @@ export function Quote({ author, children }: { author?: string; children?: ReactN
 export function Table(props: ComponentProps<"table">) {
     return (
         <div data-scrolls className="overflow-x-auto">
-            <table {...props} className="w-full border-collapse text-[14px]" />
+            <table {...props} className="w-full border-collapse text-small" />
         </div>
     );
 }
@@ -130,7 +130,7 @@ export function Tr(props: ComponentProps<"tr">) {
 }
 
 export function Th(props: ComponentProps<"th">) {
-    return <th {...props} className="whitespace-nowrap py-2 pr-4 text-left font-geistMono text-[12px] font-medium" />;
+    return <th {...props} className="whitespace-nowrap py-2 pr-4 text-left font-geistMono text-caption font-medium" />;
 }
 
 export function Td(props: ComponentProps<"td">) {
@@ -144,12 +144,7 @@ type CodeProps = ComponentProps<"code"> & {
 
 export function Code({ block, ...props }: CodeProps) {
     if (block) return <code {...props} />;
-    return (
-        <code
-            {...props}
-            className="rounded-[4px] bg-[color-mix(in_srgb,var(--foreground-color)_6%,transparent)] px-1 py-0.5 font-geistMono text-[0.92em]"
-        />
-    );
+    return <code {...props} className="rounded-chip bg-tile px-1 py-0.5 font-geistMono text-[0.92em]" />;
 }
 
 type PreProps = ComponentProps<"pre"> & {
@@ -175,10 +170,10 @@ export function Pre({ children, className, "data-title": title, ...props }: PreP
     });
     const highlighted = className?.includes("shiki");
     return (
-        <div data-code-block className={`${PANEL} relative font-geistMono text-[13px] leading-[1.6]`}>
+        <div data-code-block className={`${PANEL} relative font-geistMono text-meta leading-compact`}>
             {title ? (
                 <div className={`flex items-center justify-between gap-4 border-b ${HAIRLINE} py-1.5 pl-4 pr-2`}>
-                    <span className={`truncate text-[12px] ${MUTED}`}>{title}</span>
+                    <span className={`truncate text-caption ${MUTED}`}>{title}</span>
                     <CopyButton />
                 </div>
             ) : (

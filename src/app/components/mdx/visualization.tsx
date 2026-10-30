@@ -18,8 +18,8 @@ export function Visualization({ title, caption, media }: VisualizationProps) {
     return (
         <section className={`${PANEL} flex flex-col gap-3 p-4`}>
             <div className="flex flex-col gap-1">
-                <h3 className="text-[15px] font-medium">{title}</h3>
-                <p className={`text-[14px] ${MUTED}`}>{caption}</p>
+                <h3 className="text-ui font-medium">{title}</h3>
+                <p className={`text-small ${MUTED}`}>{caption}</p>
             </div>
             {media && <VisualizationMedia media={media} />}
         </section>
@@ -29,12 +29,12 @@ export function Visualization({ title, caption, media }: VisualizationProps) {
 /** The panel's figure: a video as-is, or an image sized and blurred in from the manifest. */
 function VisualizationMedia({ media }: { media: Media }) {
     if (media.type === "video") {
-        return <video src={media.src} controls playsInline className="w-full rounded-[4px]" />;
+        return <video src={media.src} controls playsInline className="w-full rounded-chip" />;
     }
     const meta = imageMeta(media.src);
     if (!meta) {
         // eslint-disable-next-line @next/next/no-img-element -- no manifest entry (an SVG, or not yet optimized)
-        return <img src={media.src} alt={media.alt} className="w-full rounded-[4px]" />;
+        return <img src={media.src} alt={media.alt} className="w-full rounded-chip" />;
     }
     return (
         <Image
@@ -47,7 +47,7 @@ function VisualizationMedia({ media }: { media: Media }) {
             sizes={CONTENT_IMAGE_SIZES}
             quality={CONTENT_IMAGE_QUALITY}
             unoptimized={media.src.endsWith(".gif")}
-            className="h-auto w-full rounded-[4px]"
+            className="h-auto w-full rounded-chip"
         />
     );
 }

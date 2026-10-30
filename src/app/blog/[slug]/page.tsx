@@ -14,9 +14,9 @@ import { pageMetadata } from "../../../lib/metadata";
 import { readingMinutes } from "../../../lib/reading-time";
 import { formatIsoDate, parseContentDate } from "../../../lib/site";
 
-const FRAME = "mx-auto w-full max-w-[56rem]";
-const MUTED = "text-[var(--muted-color)]";
-const HAIRLINE = "border-[color-mix(in_srgb,var(--foreground-color)_10%,transparent)]";
+const FRAME = "mx-auto w-full max-w-column";
+const MUTED = "text-muted";
+const HAIRLINE = "border-hairline";
 
 export const dynamicParams = false;
 
@@ -67,13 +67,13 @@ export default async function PostPage({ params }: Props) {
                 <header>
                     <Link
                         href="/blog"
-                        className={`text-[14px] ${MUTED} outline-none transition-colors hover:text-foreground focus-visible:text-foreground`}
+                        className={`text-small ${MUTED} outline-none transition-colors hover:text-foreground focus-visible:text-foreground`}
                     >
                         ← Blog
                     </Link>
-                    <h1 className="mt-10 text-[28px] font-medium leading-[1.2] tracking-[-0.015em]">{post.title}</h1>
-                    <p className={`mt-1 text-[16px] ${MUTED}`}>{post.subtitle}</p>
-                    <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 font-geistMono text-[12px] ${MUTED}`}>
+                    <h1 className="mt-10 text-title font-medium">{post.title}</h1>
+                    <p className={`mt-1 text-body ${MUTED}`}>{post.subtitle}</p>
+                    <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 font-geistMono text-caption ${MUTED}`}>
                         <span>{post.date}</span>
                         {post.updated && <span>updated {formatIsoDate(post.updated)}</span>}
                         <span>{readingMinutes(doc.body)} min read</span>
@@ -117,7 +117,7 @@ function Cover({ src }: { src: string }) {
             preload
             sizes={CONTENT_IMAGE_SIZES}
             quality={CONTENT_IMAGE_QUALITY}
-            className="mt-12 block aspect-[2/1] h-auto w-full rounded-[6px] object-cover"
+            className="mt-12 block aspect-[2/1] h-auto w-full rounded-card object-cover"
         />
     );
 }
@@ -134,7 +134,7 @@ function AlbumArt({ src }: { src: string }) {
             placeholder={meta ? "blur" : "empty"}
             blurDataURL={meta?.blurDataURL}
             sizes="48px"
-            className="size-12 shrink-0 rounded-[4px] object-cover"
+            className="size-12 shrink-0 rounded-chip object-cover"
         />
     );
 }
@@ -143,14 +143,14 @@ function AlbumArt({ src }: { src: string }) {
 function Tracks({ tracks }: { tracks: JournalTrack[] }) {
     return (
         <section aria-label="Listening" className="mt-12 flex flex-col gap-3">
-            <p className={`font-geistMono text-[13px] ${MUTED}`}>listening</p>
+            <p className={`font-geistMono text-meta ${MUTED}`}>listening</p>
             <ul className="flex flex-col gap-3">
                 {tracks.map((track) => (
                     <li key={track.title} className="flex items-center gap-4">
                         {track.albumArt && <AlbumArt src={track.albumArt} />}
                         <span className="flex min-w-0 flex-1 flex-col">
-                            <span className="truncate text-[15px]">{track.title}</span>
-                            <span className={`truncate text-[13px] ${MUTED}`}>{track.artist}</span>
+                            <span className="truncate text-ui">{track.title}</span>
+                            <span className={`truncate text-meta ${MUTED}`}>{track.artist}</span>
                         </span>
                         {track.audioSrc && (
                             <audio src={track.audioSrc} controls preload="none" className="h-8 max-w-[14rem]" />
@@ -160,7 +160,7 @@ function Tracks({ tracks }: { tracks: JournalTrack[] }) {
                                 href={track.spotifyUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className={`ink-link font-geistMono text-[12px] ${MUTED}`}
+                                className={`ink-link font-geistMono text-caption ${MUTED}`}
                             >
                                 spotify ↗
                             </a>
@@ -186,8 +186,8 @@ function Pager({
             href={`/blog/${post.slug}`}
             className={`group flex flex-col gap-1 outline-none ${back ? "items-start" : "items-end text-right"}`}
         >
-            <span className={`font-geistMono text-[12px] ${MUTED}`}>{label}</span>
-            <span className="text-[16px] decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
+            <span className={`font-geistMono text-caption ${MUTED}`}>{label}</span>
+            <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
                 {back ? `← ${post.title}` : `${post.title} →`}
             </span>
         </Link>

@@ -8,7 +8,7 @@ import { HeadingAnchor } from "./heading-anchor";
 export function Section({ id, title, children }: { id: string; title: string; children?: ReactNode }) {
     return (
         <section id={id} className="scroll-mt-28 [&:not(:first-child)]:mt-16">
-            <h2 className="group relative mb-5 text-[16px] font-medium leading-[1.6]">
+            <h2 className="group relative mb-5 text-body font-medium leading-compact">
                 <HeadingAnchor id={id} />
                 {title}
             </h2>

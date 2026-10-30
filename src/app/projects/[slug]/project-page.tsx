@@ -16,14 +16,14 @@ import { formatIsoDate } from "../../../lib/site";
 import { finishTransition, isTransitioning, pushWithTransition } from "../../../lib/view-transition";
 
 /** One centred frame holds everything, so text and media share both edges. */
-const FRAME = "mx-auto w-full max-w-[56rem]";
-const BODY = "text-[16px] leading-[1.7] [text-wrap:pretty]";
-const MUTED = "text-[var(--muted-color)]";
+const FRAME = "mx-auto w-full max-w-column";
+const BODY = "text-body leading-body [text-wrap:pretty]";
+const MUTED = "text-muted";
 // Next re-encodes at 75 by default, which smears the small text in diagrams.
 const IMAGE_QUALITY = 90;
 const GLIDE = 0.18; // share of the remaining distance the page covers each frame when scrolled with a wheel
 const MEDIA =
-    "block aspect-video h-auto w-full rounded-[6px] bg-black shadow-[0_0_0_1px_color-mix(in_srgb,var(--foreground-color)_8%,transparent)]";
+    "block aspect-video h-auto w-full rounded-card bg-black shadow-[0_0_0_1px_color-mix(in_srgb,var(--foreground-color)_8%,transparent)]";
 
 /** Shows the hostname for an outside link, or a label for a file on this site. */
 const linkLabel = (href: string) => {
@@ -129,19 +129,21 @@ export default function ProjectPage({
                             // The reverse of opening a project: this page slides off to the right, uncovering the strip.
                             pushWithTransition(router, "/projects", "back");
                         }}
-                        className={`text-[14px] ${MUTED} outline-none transition-colors hover:text-foreground focus-visible:text-foreground`}
+                        className={`text-small ${MUTED} outline-none transition-colors hover:text-foreground focus-visible:text-foreground`}
                     >
                         ← Projects
                     </Link>
-                    <h1 className="mt-10 text-[28px] font-medium leading-[1.2] tracking-[-0.015em]">{project.title}</h1>
-                    <p className={`mt-1 text-[16px] ${MUTED}`}>{project.description}</p>
+                    <h1 className="mt-10 text-title font-medium">{project.title}</h1>
+                    <p className={`mt-1 text-body ${MUTED}`}>{project.description}</p>
                     <p className={`${BODY} mt-8`}>{project.longDescription}</p>
-                    <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[14px] ${MUTED}`}>
-                        <span className="font-geistMono text-[12px]">{project.date}</span>
+                    <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 text-small ${MUTED}`}>
+                        <span className="font-geistMono text-caption">{project.date}</span>
                         {project.updated && (
-                            <span className="font-geistMono text-[12px]">updated {formatIsoDate(project.updated)}</span>
+                            <span className="font-geistMono text-caption">
+                                updated {formatIsoDate(project.updated)}
+                            </span>
                         )}
-                        <span className="font-geistMono text-[12px]">{minutes} min read</span>
+                        <span className="font-geistMono text-caption">{minutes} min read</span>
                         {project.paperUrl && <InlineLink href={project.paperUrl}>paper</InlineLink>}
                         {project.githubUrl && <InlineLink href={project.githubUrl}>code</InlineLink>}
                         {project.liveUrl && (
@@ -195,7 +197,7 @@ export default function ProjectPage({
                 {pages.length > 1 && (
                     <nav
                         aria-label="More projects"
-                        className="mt-24 flex items-start justify-between gap-6 border-t border-[color-mix(in_srgb,var(--foreground-color)_10%,transparent)] pt-6"
+                        className="mt-24 flex items-start justify-between gap-6 border-t border-hairline pt-6"
                     >
                         <PagerLink project={prev} direction="back" />
                         <PagerLink project={next} direction="forward" />
@@ -275,25 +277,25 @@ function PagerLink({ project, direction }: { project: Project; direction: "back"
             }}
             className={`group relative flex flex-col gap-1 outline-none ${back ? "items-start" : "items-end text-right"}`}
         >
-            <span className={`font-geistMono text-[12px] ${MUTED}`}>{back ? "previous" : "next"}</span>
-            <span className="text-[16px] decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
+            <span className={`font-geistMono text-caption ${MUTED}`}>{back ? "previous" : "next"}</span>
+            <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
                 {back ? `← ${name}` : `${name} →`}
             </span>
             <span
                 ref={cardRef}
                 aria-hidden
-                className="pointer-events-none fixed left-0 top-0 z-50 w-[17rem] rounded-[8px] border border-[color-mix(in_srgb,var(--foreground-color)_10%,transparent)] bg-background p-2 text-left opacity-0 shadow-[0_12px_32px_rgb(0_0_0/0.25)] transition-[opacity,scale] duration-200 ease-out [scale:0.96] will-change-transform group-hover:opacity-100 group-hover:[scale:1] group-focus-visible:opacity-100 group-focus-visible:[scale:1]"
+                className="pointer-events-none fixed left-0 top-0 z-50 w-[17rem] rounded-panel border border-hairline bg-background p-2 text-left opacity-0 shadow-[0_12px_32px_rgb(0_0_0/0.25)] transition-[opacity,scale] duration-200 ease-out [scale:0.96] will-change-transform group-hover:opacity-100 group-hover:[scale:1] group-focus-visible:opacity-100 group-focus-visible:[scale:1]"
             >
                 <Thumb
                     project={project}
                     sizes="17rem"
-                    className="relative block aspect-[3/2] overflow-hidden rounded-[4px]"
+                    className="relative block aspect-[3/2] overflow-hidden rounded-chip"
                 />
                 <span className="mt-2 flex items-baseline gap-2 px-1">
-                    <span className="text-[14px]">{name}</span>
-                    <span className={`font-geistMono text-[11px] ${MUTED}`}>{project.date}</span>
+                    <span className="text-small">{name}</span>
+                    <span className={`font-geistMono text-label ${MUTED}`}>{project.date}</span>
                 </span>
-                <span className={`mt-0.5 block px-1 pb-1 text-[13px] leading-[1.45] ${MUTED}`}>
+                <span className={`mt-0.5 block px-1 pb-1 text-meta leading-[1.45] ${MUTED}`}>
                     {project.description}
                 </span>
             </span>
@@ -315,10 +317,10 @@ export function Thumb({
     priority?: boolean;
     zoom?: boolean;
 }) {
-    const tile = "bg-[color-mix(in_srgb,var(--foreground-color)_6%,transparent)]";
+    const tile = "bg-tile";
     if (!project.thumb) {
         return (
-            <span className={`${className} ${tile} flex items-end p-4 font-geistMono text-[13px] ${MUTED}`}>
+            <span className={`${className} ${tile} flex items-end p-4 font-geistMono text-meta ${MUTED}`}>
                 {nameOf(project).toLowerCase()}
             </span>
         );

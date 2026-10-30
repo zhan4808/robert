@@ -12,7 +12,7 @@ const SOCIALS = [
 ];
 
 const UNDERLINE =
-    "underline decoration-[color-mix(in_srgb,var(--foreground-color)_35%,transparent)] decoration-1 underline-offset-[5px] outline-none transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
+    "underline decoration-faint decoration-1 underline-offset-[5px] outline-none transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
 
 const QuoteLines = () => (
     <>
@@ -61,7 +61,7 @@ const desktopPage = ({ stats }: { stats: PondStats }) => {
                 <div
                     data-koi-avoid
                     aria-hidden="true"
-                    className="absolute right-6 top-8 font-geistMono text-[11px] leading-relaxed tabular-nums lg:right-[20vw]"
+                    className="absolute right-6 top-8 font-geistMono text-label leading-relaxed tabular-nums lg:right-gutter"
                 >
                     <div className="opacity-[0.32]">{stats.koi}</div>
                     {/* The pellet count flashes each time it changes, tying a click or a bite to the number. */}
@@ -77,7 +77,7 @@ const desktopPage = ({ stats }: { stats: PondStats }) => {
             )}
             <motion.blockquote
                 data-koi-avoid
-                className="font-geistMono text-[14px] lowercase leading-relaxed tracking-[0.02em]"
+                className="font-geistMono text-small lowercase leading-relaxed tracking-tagline"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.6 }}
                 transition={{ duration: 0.4 }}
@@ -86,7 +86,7 @@ const desktopPage = ({ stats }: { stats: PondStats }) => {
             </motion.blockquote>
             <motion.div
                 data-koi-avoid
-                className="cited-prose max-w-[54rem] font-geistMono text-[15px] leading-[max(22px,3vh)]"
+                className="cited-prose max-w-[54rem] font-geistMono text-ui leading-[max(22px,3vh)]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3, delay: 0.2 }}
@@ -125,7 +125,7 @@ const mobilePage = () => {
         >
             <motion.blockquote
                 data-koi-avoid
-                className="text-[13px] lowercase leading-relaxed tracking-[0.02em]"
+                className="text-meta lowercase leading-relaxed tracking-tagline"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.6 }}
                 transition={{ duration: 0.4 }}
@@ -134,7 +134,7 @@ const mobilePage = () => {
             </motion.blockquote>
             <motion.div
                 data-koi-avoid
-                className="flex flex-col gap-3 text-[14px] leading-[1.6]"
+                className="flex flex-col gap-3 text-small leading-compact"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3, delay: 0.2 }}

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getProject } from "../../../lib/content";
+import { imageMeta } from "../../../lib/images";
+import { renderMdx } from "../../../lib/mdx";
 import { pageMetadata } from "../../../lib/metadata";
 import { parseContentDate } from "../../../lib/site";
-import { ContentBlocks } from "../../components/content-blocks";
-import { imageMeta } from "../../../lib/images";
-import { hasPage, nameOf, projects } from "../../data/projects";
+import { hasPage, nameOf, projects, projectsByDate } from "../../data/projects";
 import ProjectPage from "./project-page";
 
 export const dynamicParams = false;
@@ -31,21 +32,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     });
 }
 
-/** The write-up is rendered here, on the server, since code highlighting and math need Node. */
+/** The write-up is compiled here, on the server, since code highlighting and math need Node. */
 export default async function Page({ params }: Props) {
     const { slug } = await params;
-    const project = projects.find((p) => p.slug === slug && hasPage(p));
-    if (!project) notFound();
+    const doc = getProject(slug);
+    if (!doc || doc.meta.hidden || !hasPage(doc.meta)) notFound();
+    const project = doc.meta;
     // Looked up here so the manifest stays out of the client bundle.
     const heroMeta = project.hero?.type === "image" ? imageMeta(project.hero.src) : undefined;
     return (
-        <ProjectPage slug={project.slug} heroMeta={heroMeta}>
-            {project.sections.map((section) => (
-                <section key={section.id} id={section.id} className="[&:not(:first-child)]:mt-16">
-                    <h2 className="mb-5 text-[16px] font-medium leading-[1.6]">{section.title}</h2>
-                    <ContentBlocks blocks={section.blocks} />
-                </section>
-            ))}
+        <ProjectPage project={project} pages={projectsByDate.filter(hasPage)} heroMeta={heroMeta}>
+            {await renderMdx(doc.body, `content/projects/${slug}.mdx`)}
         </ProjectPage>
     );
 }

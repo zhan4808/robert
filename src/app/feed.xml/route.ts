@@ -1,7 +1,8 @@
-import { getVisibleJournals, type JournalPost } from "../../lib/data";
+import { getVisiblePosts } from "../../lib/content";
+import type { JournalPost } from "../../lib/content-schema";
 import { AUTHOR, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, parseContentDate } from "../../lib/site";
 
-/** The feed is built once at build time from the data file, like the pages it lists. */
+/** The feed is built once at build time from the content files, like the pages it lists. */
 export const dynamic = "force-static";
 
 const FEED_TITLE = `${SITE_NAME} — Blog`;
@@ -38,7 +39,7 @@ function item({ post, date }: { post: JournalPost; date: Date | undefined }): st
     const url = absoluteUrl(`/blog/${post.slug}`);
     return [
         "        <item>",
-        `            <title>${escapeXml(post.month)}</title>`,
+        `            <title>${escapeXml(post.title)}</title>`,
         `            <link>${url}</link>`,
         `            <guid isPermaLink="true">${url}</guid>`,
         `            <description>${escapeXml(post.subtitle)}</description>`,
@@ -48,7 +49,7 @@ function item({ post, date }: { post: JournalPost; date: Date | undefined }): st
 }
 
 export function GET(): Response {
-    const posts = byDateDesc(getVisibleJournals());
+    const posts = byDateDesc(getVisiblePosts());
     const newest = posts.find((entry) => entry.date)?.date;
     const xml = [
         '<?xml version="1.0" encoding="UTF-8"?>',

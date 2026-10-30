@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getVisibleJournals } from "../lib/data";
+import { getVisiblePosts } from "../lib/content";
 import { absoluteUrl, parseContentDate } from "../lib/site";
 import { hasPage, projects } from "./data/projects";
 
@@ -11,7 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         dates.length ? dates.reduce((latest, date) => (date > latest ? date : latest)) : buildTime;
 
     const projectPages = projects.filter(hasPage);
-    const posts = getVisibleJournals();
+    const posts = getVisiblePosts();
 
     return [
         { url: absoluteUrl("/"), lastModified: buildTime, changeFrequency: "monthly", priority: 1 },

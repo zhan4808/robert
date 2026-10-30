@@ -8,15 +8,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import MobileNav from "../../components/mobile-nav";
 import TopNav from "../../components/top-nav";
 import InlineLink from "../../components/inline-link";
-import {
-    LAST_PROJECT_KEY,
-    hasPage,
-    nameOf,
-    primaryLink,
-    projects,
-    projectsByDate,
-    type Project,
-} from "../../data/projects";
+import { LAST_PROJECT_KEY, nameOf, primaryLink, type Project } from "../../data/project-helpers";
 import type { ImageMeta } from "../../../lib/images";
 import { finishTransition, isTransitioning, pushWithTransition } from "../../../lib/view-transition";
 
@@ -37,17 +29,20 @@ const linkLabel = (href: string) => {
 };
 
 export default function ProjectPage({
-    slug,
+    project,
+    pages,
     heroMeta,
     children,
 }: {
-    slug: string;
+    project: Project;
+    /** Every project with a page, newest first, for previous and next. */
+    pages: Project[];
     /** Size and blur placeholder for an image hero, from the manifest; the page looks it up on the server. */
     heroMeta?: ImageMeta;
     children: ReactNode;
 }) {
     const router = useRouter();
-    const project = projects.find((p) => p.slug === slug);
+    const { slug } = project;
     const still = useReducedMotion() ?? false;
 
     // Wheel scrolling glides to where it's headed instead of stepping, the same feel as the projects strip.
@@ -98,12 +93,10 @@ export default function ProjectPage({
     }, [slug]);
 
     // Previous and next follow the strip's order and wrap around, so there's always somewhere to go.
-    const pages = projectsByDate.filter(hasPage);
     const at = pages.findIndex((p) => p.slug === slug);
     const prev = pages[(at - 1 + pages.length) % pages.length];
     const next = pages[(at + 1) % pages.length];
 
-    if (!project) return null;
     const link = primaryLink(project);
     const hero = project.hero;
 

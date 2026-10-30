@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ContentBlocks } from "../../components/content-blocks";
 import MobileNav from "../../components/mobile-nav";
 import TopNav from "../../components/top-nav";
-import { getVisibleJournals, journalPosts, type JournalTrack } from "../../../lib/data";
+import { getPost, getPosts, getVisiblePosts } from "../../../lib/content";
+import type { JournalTrack } from "../../../lib/content-schema";
 import { CONTENT_IMAGE_QUALITY, CONTENT_IMAGE_SIZES } from "../../../lib/image-sizes";
 import { imageMeta } from "../../../lib/images";
+import { renderMdx } from "../../../lib/mdx";
 import { pageMetadata } from "../../../lib/metadata";
 import { parseContentDate } from "../../../lib/site";
 
@@ -18,19 +19,19 @@ const HAIRLINE = "border-[color-mix(in_srgb,var(--foreground-color)_10%,transpar
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-    return journalPosts.map((post) => ({ slug: post.slug }));
+    return getPosts().map((post) => ({ slug: post.slug }));
 }
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
-    const post = journalPosts.find((entry) => entry.slug === slug);
+    const post = getPosts().find((entry) => entry.slug === slug);
     if (!post) return {};
     const path = `/blog/${post.slug}`;
     // Cards are only drawn for visible posts, so a hidden one shares the site-wide card rather than a broken link.
     return pageMetadata({
-        title: post.month,
+        title: post.title,
         description: post.subtitle,
         path,
         article: { publishedTime: parseContentDate(post.date) },
@@ -41,11 +42,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PostPage({ params }: Props) {
     const { slug } = await params;
-    const post = journalPosts.find((p) => p.slug === slug);
-    if (!post) notFound();
+    const doc = getPost(slug);
+    if (!doc) notFound();
+    const post = doc.meta;
 
     // Previous and next step through the visible posts in order; hidden posts still open by URL.
-    const visible = getVisibleJournals();
+    const visible = getVisiblePosts();
     const at = visible.findIndex((p) => p.slug === slug);
     const newer = at > 0 ? visible[at - 1] : undefined;
     const older = at >= 0 && at < visible.length - 1 ? visible[at + 1] : undefined;
@@ -62,7 +64,7 @@ export default async function PostPage({ params }: Props) {
                     >
                         ← Blog
                     </Link>
-                    <h1 className="mt-10 text-[28px] font-medium leading-[1.2] tracking-[-0.015em]">{post.month}</h1>
+                    <h1 className="mt-10 text-[28px] font-medium leading-[1.2] tracking-[-0.015em]">{post.title}</h1>
                     <p className={`mt-1 text-[16px] ${MUTED}`}>{post.subtitle}</p>
                     <p className={`mt-4 font-geistMono text-[12px] ${MUTED}`}>{post.date}</p>
                 </header>
@@ -72,7 +74,7 @@ export default async function PostPage({ params }: Props) {
                 {post.tracks.length > 0 && <Tracks tracks={post.tracks} />}
 
                 <div className="mt-16">
-                    <ContentBlocks blocks={post.blocks} />
+                    <div className="flex flex-col gap-5">{await renderMdx(doc.body, `content/blog/${slug}.mdx`)}</div>
                 </div>
 
                 {(newer || older) && (
@@ -163,7 +165,7 @@ function Pager({
     label,
     back = false,
 }: {
-    post: { slug: string; month: string };
+    post: { slug: string; title: string };
     label: string;
     back?: boolean;
 }) {
@@ -174,7 +176,7 @@ function Pager({
         >
             <span className={`font-geistMono text-[12px] ${MUTED}`}>{label}</span>
             <span className="text-[16px] decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
-                {back ? `← ${post.month}` : `${post.month} →`}
+                {back ? `← ${post.title}` : `${post.title} →`}
             </span>
         </Link>
     );

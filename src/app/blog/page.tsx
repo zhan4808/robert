@@ -1,13 +1,13 @@
 import Link from "next/link";
 import MobileNav from "../components/mobile-nav";
 import TopNav from "../components/top-nav";
-import { getVisibleJournalsByYear } from "../../lib/data";
+import { getVisiblePostsByYear } from "../../lib/content";
 
 const MUTED = "text-[var(--muted-color)]";
 
 /** Every post, newest year first, as one quiet list. */
 export default function Blog() {
-    const years = [...getVisibleJournalsByYear().entries()];
+    const years = [...getVisiblePostsByYear().entries()];
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
@@ -42,7 +42,7 @@ export default function Blog() {
                                             className="group flex flex-col gap-1 py-4 outline-none sm:flex-row sm:items-baseline sm:gap-6"
                                         >
                                             <span className="text-[16px] decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
-                                                {post.month}
+                                                {post.title}
                                             </span>
                                             <span className={`min-w-0 flex-1 text-[14px] ${MUTED}`}>
                                                 {post.subtitle}

@@ -12,6 +12,7 @@ const navLinks = [
     { label: "Projects", href: "/projects" },
     { label: "Gallery", href: "/gallery" },
     { label: "Blog", href: "/blog" },
+    { label: "Archive", href: "/archive" },
 ];
 
 const secondaryLinks = [

@@ -40,5 +40,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
             priority: 0.6,
         })),
         { url: absoluteUrl("/gallery"), lastModified: buildTime, changeFrequency: "monthly", priority: 0.5 },
+        { url: absoluteUrl("/archive"), lastModified: buildTime, changeFrequency: "yearly", priority: 0.4 },
     ];
 }

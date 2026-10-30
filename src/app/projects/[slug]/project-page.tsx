@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import MobileNav from "../../components/mobile-nav";
 import TopNav from "../../components/top-nav";
 import InlineLink from "../../components/inline-link";
 import { TableOfContents } from "../../components/mdx/toc";
+import { useGlideScroll } from "../../components/use-glide-scroll";
+import { HOVER_CARD, useHoverCard } from "../../components/use-hover-card";
 import { LAST_PROJECT_KEY, nameOf, primaryLink, type Project } from "../../data/project-helpers";
 import type { ImageMeta } from "../../../lib/images";
 import type { Heading } from "../../../lib/mdx";
@@ -21,7 +23,6 @@ const BODY = "text-body leading-body [text-wrap:pretty]";
 const MUTED = "text-muted";
 // Next re-encodes at 75 by default, which smears the small text in diagrams.
 const IMAGE_QUALITY = 90;
-const GLIDE = 0.18; // share of the remaining distance the page covers each frame when scrolled with a wheel
 const MEDIA =
     "block aspect-video h-auto w-full rounded-card bg-black shadow-[0_0_0_1px_color-mix(in_srgb,var(--foreground-color)_8%,transparent)]";
 
@@ -54,43 +55,7 @@ export default function ProjectPage({
     const { slug } = project;
     const still = useReducedMotion() ?? false;
 
-    // Wheel scrolling glides to where it's headed instead of stepping, the same feel as the projects strip.
-    useEffect(() => {
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-        let target = window.scrollY;
-        let raf = 0;
-        // "instant" overrides the page's CSS smooth scrolling, which would otherwise animate every frame's step.
-        const to = (top: number) => window.scrollTo({ top, behavior: "instant" });
-
-        const glide = () => {
-            const gap = target - window.scrollY;
-            if (Math.abs(gap) < 1) {
-                to(target);
-                raf = 0;
-                return;
-            }
-            // At least a pixel a frame, so rounding can't stall it just short of the target.
-            to(window.scrollY + Math.sign(gap) * Math.max(1, Math.abs(gap) * GLIDE));
-            raf = requestAnimationFrame(glide);
-        };
-
-        const onWheel = (e: WheelEvent) => {
-            // Pinch-zoom, sideways swipes and anything inside a scrollable box (code, tables) stay with the browser.
-            if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-            if (e.composedPath().some((n) => n instanceof HTMLElement && n.dataset.scrolls !== undefined)) return;
-            e.preventDefault();
-            const max = document.documentElement.scrollHeight - window.innerHeight;
-            if (!raf) target = window.scrollY;
-            target = Math.max(0, Math.min(max, target + (e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY)));
-            if (!raf) raf = requestAnimationFrame(glide);
-        };
-
-        window.addEventListener("wheel", onWheel, { passive: false });
-        return () => {
-            cancelAnimationFrame(raf);
-            window.removeEventListener("wheel", onWheel);
-        };
-    }, []);
+    useGlideScroll();
 
     // Arriving with a slide (from the strip or a neighbouring project), the page slides in as soon as it has rendered.
     const [arrivedSliding] = useState(() => typeof window !== "undefined" && isTransitioning());
@@ -210,50 +175,16 @@ export default function ProjectPage({
     );
 }
 
-const CARD_GAP = 18; // px between the cursor and the preview card's lower edge
-const CARD_FOLLOW = 0.25; // share of the remaining distance the card covers each frame as it trails the cursor
-
 /**
  * A link to the previous or next project. Hovering it floats a small card with that project's thumbnail, name and
  * description that trails the cursor; clicking slides over to it the same way the strip does.
  */
 function PagerLink({ project, direction }: { project: Project; direction: "back" | "forward" }) {
     const router = useRouter();
-    const cardRef = useRef<HTMLSpanElement>(null);
-    const follow = useRef({ x: 0, y: 0, tx: 0, ty: 0, raf: 0 });
+    const { cardRef, onPointerEnter, onPointerMove, onFocus } = useHoverCard();
     const href = `/projects/${project.slug}`;
     const back = direction === "back";
     const name = nameOf(project);
-
-    useEffect(() => () => cancelAnimationFrame(follow.current.raf), []);
-
-    // Above the point and centred on it, kept on screen; flips below when there's no room above.
-    const aim = (x: number, y: number) => {
-        const card = cardRef.current;
-        if (!card) return;
-        const f = follow.current;
-        f.tx = Math.max(12, Math.min(window.innerWidth - card.offsetWidth - 12, x - card.offsetWidth / 2));
-        f.ty = y - card.offsetHeight - CARD_GAP < 12 ? y + CARD_GAP : y - card.offsetHeight - CARD_GAP;
-    };
-    const place = () => {
-        const f = follow.current;
-        cardRef.current?.style.setProperty("transform", `translate3d(${f.x}px, ${f.y}px, 0)`);
-    };
-    const step = () => {
-        const f = follow.current;
-        f.x += (f.tx - f.x) * CARD_FOLLOW;
-        f.y += (f.ty - f.y) * CARD_FOLLOW;
-        place();
-        f.raf = Math.abs(f.tx - f.x) + Math.abs(f.ty - f.y) > 0.5 ? requestAnimationFrame(step) : 0;
-    };
-    // Jump straight to the point on arrival so the card doesn't fly in from wherever it last was.
-    const settle = (x: number, y: number) => {
-        aim(x, y);
-        const f = follow.current;
-        f.x = f.tx;
-        f.y = f.ty;
-        place();
-    };
 
     return (
         <Link
@@ -263,31 +194,16 @@ function PagerLink({ project, direction }: { project: Project; direction: "back"
                 e.preventDefault();
                 pushWithTransition(router, href, direction);
             }}
-            onPointerEnter={(e) => settle(e.clientX, e.clientY)}
-            onPointerMove={(e) => {
-                aim(e.clientX, e.clientY);
-                if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-                    settle(e.clientX, e.clientY);
-                } else if (!follow.current.raf) {
-                    follow.current.raf = requestAnimationFrame(step);
-                }
-            }}
-            // From the keyboard there's no cursor, so the card sits over the link itself.
-            onFocus={(e) => {
-                const r = e.currentTarget.getBoundingClientRect();
-                settle(r.left + r.width / 2, r.top);
-            }}
+            onPointerEnter={onPointerEnter}
+            onPointerMove={onPointerMove}
+            onFocus={onFocus}
             className={`group relative flex flex-col gap-1 focus-ring ${back ? "items-start" : "items-end text-right"}`}
         >
             <span className={`font-geistMono text-caption ${MUTED}`}>{back ? "previous" : "next"}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
                 {back ? `← ${name}` : `${name} →`}
             </span>
-            <span
-                ref={cardRef}
-                aria-hidden
-                className="pointer-events-none fixed left-0 top-0 z-50 w-[17rem] rounded-panel border border-hairline bg-background p-2 text-left opacity-0 shadow-[0_12px_32px_rgb(0_0_0/0.25)] transition-[opacity,scale] duration-200 ease-out [scale:0.96] will-change-transform group-hover:opacity-100 group-hover:[scale:1] group-focus-visible:opacity-100 group-focus-visible:[scale:1]"
-            >
+            <span ref={cardRef} aria-hidden className={HOVER_CARD}>
                 <Thumb
                     project={project}
                     sizes="17rem"

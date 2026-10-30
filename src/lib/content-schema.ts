@@ -74,6 +74,8 @@ export const postFrontmatterSchema = z
         order: z.number().int(),
         /** Hidden posts still build at their URL (with noindex) but stay out of the list, the feed, and the sitemap. */
         hidden: z.boolean().optional(),
+        /** A journal entry (the default) or a technical write-up; shown as a small label beside the date. */
+        kind: z.enum(["journal", "technical"]).default("journal"),
         coverImage: nonEmpty.optional(),
         /** Tailwind gradient stops, e.g. "from-orange-300 via-pink-300 to-blue-300". */
         coverGradient: nonEmpty.optional(),

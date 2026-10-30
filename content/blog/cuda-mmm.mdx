@@ -4,6 +4,7 @@ subtitle: going from naive to 94% of cuBLAS, one kernel at a time
 date: October 2025
 year: 2025
 order: 1
+kind: technical
 ---
 
 SGEMM is probably the single most important computational kernel in modern deep learning — if you could only profile one operation in a transformer, it would be this one. I wanted to understand from first principles why GPUs are so good at it, and what it actually takes to close the gap with cuBLAS. This is my attempt to work through that iteratively, going from a naive kernel to something that hits \~94% of cuBLAS on an A6000.

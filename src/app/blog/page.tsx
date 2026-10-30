@@ -2,9 +2,15 @@ import Link from "next/link";
 import Cursor from "../components/cursor";
 import MobileNav from "../components/mobile-nav";
 import TopNav from "../components/top-nav";
-import { getVisiblePostsByYear } from "../../lib/content";
+import { getPost, getVisiblePostsByYear } from "../../lib/content";
+import type { JournalPost } from "../../lib/content-schema";
+import { imageMeta } from "../../lib/images";
+import { readingMinutes } from "../../lib/reading-time";
+import { PostCover } from "./post-cover";
 
 const MUTED = "text-muted";
+// The cover is 7rem wide from sm up and spans the entry below that.
+const COVER_SIZES = "(min-width: 640px) 7rem, 100vw";
 
 /** Every post, newest year first, as one quiet list. */
 export default function Blog() {
@@ -35,24 +41,7 @@ export default function Blog() {
                             </h2>
                             <ul className="flex min-w-0 flex-1 flex-col">
                                 {posts.map((post) => (
-                                    <li key={post.slug} className="border-t border-hairline last:border-b">
-                                        <Link
-                                            href={`/blog/${post.slug}`}
-                                            className="group flex flex-col gap-1 py-4 focus-ring sm:flex-row sm:items-baseline sm:gap-6"
-                                        >
-                                            <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
-                                                {post.title}
-                                            </span>
-                                            <span className={`min-w-0 flex-1 text-small ${MUTED}`}>
-                                                {post.subtitle}
-                                            </span>
-                                            <span
-                                                className={`shrink-0 font-geistMono text-caption tabular-nums ${MUTED}`}
-                                            >
-                                                {post.date}
-                                            </span>
-                                        </Link>
-                                    </li>
+                                    <Entry key={post.slug} post={post} />
                                 ))}
                             </ul>
                         </div>
@@ -60,5 +49,34 @@ export default function Blog() {
                 </section>
             </main>
         </div>
+    );
+}
+
+/** One post: its cover beside the title, subtitle, and a mono line with the date, length, and kind. */
+function Entry({ post }: { post: JournalPost }) {
+    const minutes = readingMinutes(getPost(post.slug)?.body ?? "");
+    return (
+        <li className="border-t border-hairline last:border-b">
+            <Link
+                href={`/blog/${post.slug}`}
+                className="group flex flex-col gap-4 py-5 focus-ring sm:flex-row sm:items-start sm:gap-6"
+            >
+                <PostCover
+                    post={post}
+                    meta={post.coverImage ? imageMeta(post.coverImage) : undefined}
+                    sizes={COVER_SIZES}
+                    className="w-full shrink-0 sm:w-28"
+                />
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
+                        {post.title}
+                    </span>
+                    <span className={`text-small ${MUTED}`}>{post.subtitle}</span>
+                    <span className={`mt-1 font-geistMono text-caption tabular-nums ${MUTED}`}>
+                        {post.date} · {minutes} min read · {post.kind}
+                    </span>
+                </span>
+            </Link>
+        </li>
     );
 }

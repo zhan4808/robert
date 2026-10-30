@@ -1,0 +1,6 @@
+# Media and data files, not source.
+public
+# Generated
+.next
+node_modules
+package-lock.json

@@ -106,6 +106,99 @@
     color: var(--shiki-dark);
 }
 
+/* A line the fence's `{3-5}` meta points at: a faint band the width of the block, padding included (1rem on the
+   left, 1rem plus the 3.5rem kept clear for the copy button on the right). */
+.shiki .line.highlighted {
+    display: inline-block;
+    width: calc(100% + 5.5rem);
+    margin: 0 -4.5rem 0 -1rem;
+    padding: 0 1rem;
+    background: color-mix(in srgb, var(--foreground-color) 6%, transparent);
+}
+
+/* `showLineNumbers`: a muted counter in the gutter, drawn by CSS so copying the code leaves it out. */
+.shiki.line-numbers code {
+    counter-reset: line;
+}
+.shiki.line-numbers .line::before {
+    counter-increment: line;
+    content: counter(line);
+    display: inline-block;
+    width: 2ch;
+    margin-right: 1.5rem;
+    text-align: right;
+    color: var(--muted-color);
+}
+
+/* Numbered lists count in mono, in the margin, like the labels elsewhere on the page. */
+.prose-ol {
+    counter-reset: item;
+    padding-left: 1.75rem;
+}
+.prose-ol > li {
+    position: relative;
+    counter-increment: item;
+}
+.prose-ol > li::before {
+    content: counter(item) ".";
+    position: absolute;
+    left: -1.75rem;
+    top: 0.2em;
+    font-family: var(--font-geist-mono);
+    font-size: 12px;
+    color: var(--muted-color);
+}
+
+/* GFM footnotes: the number in the text, and the list at the end under a hairline. */
+.footnote-ref {
+    text-decoration: none;
+    vertical-align: super;
+    font-size: 11px;
+    line-height: 1;
+}
+.footnote-ref:hover,
+.footnote-ref:focus-visible {
+    color: var(--foreground-color);
+}
+[data-footnotes] {
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid color-mix(in srgb, var(--foreground-color) 10%, transparent);
+    font-family: var(--font-geist-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted-color);
+}
+[data-footnotes] ol {
+    padding-left: 1.75rem;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+[data-footnotes] li {
+    scroll-margin-top: 7rem;
+}
+[data-footnotes] li::before {
+    top: 0;
+    color: inherit;
+}
+[data-footnotes] p {
+    display: inline;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+.footnote-backref {
+    margin-left: 0.4rem;
+    text-decoration: none;
+    color: inherit;
+    transition: color 150ms ease;
+}
+.footnote-backref:hover,
+.footnote-backref:focus-visible {
+    color: var(--foreground-color);
+}
+
 /* Math inherits the page colour rather than KaTeX's default black. */
 .katex {
     font-size: 1.05em;

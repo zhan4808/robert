@@ -1,5 +1,7 @@
 import { Children, cloneElement, isValidElement, type ComponentProps, type ReactNode } from "react";
 import InlineLink from "../inline-link";
+import { CopyButton } from "./copy-button";
+import { HeadingAnchor } from "./heading-anchor";
 import { BODY, HAIRLINE, MUTED, PANEL, PROSE } from "./styles";
 
 /**
@@ -27,27 +29,75 @@ export function P({ variant, children, ...props }: PProps) {
     );
 }
 
-export function H2(props: ComponentProps<"h2">) {
-    return <h2 {...props} className="mt-6 text-[16px] font-medium leading-[1.6]" />;
+/** The headings get an id from the compiler and a `#` link to it at the left margin on hover. */
+export function H2({ id, className, children, ...props }: ComponentProps<"h2">) {
+    // GFM's footnotes section opens with a visually hidden "Footnotes" heading, which stays hidden.
+    if (className?.includes("sr-only")) {
+        return (
+            <h2 {...props} id={id} className="sr-only">
+                {children}
+            </h2>
+        );
+    }
+    return (
+        <h2 {...props} id={id} className="group relative mt-6 scroll-mt-28 text-[16px] font-medium leading-[1.6]">
+            {id && <HeadingAnchor id={id} />}
+            {children}
+        </h2>
+    );
 }
 
-export function H3(props: ComponentProps<"h3">) {
-    return <h3 {...props} className={`mt-3 text-[15px] font-medium leading-[1.6] ${MUTED}`} />;
+export function H3({ id, children, ...props }: ComponentProps<"h3">) {
+    return (
+        <h3
+            {...props}
+            id={id}
+            className={`group relative mt-3 scroll-mt-28 text-[15px] font-medium leading-[1.6] ${MUTED}`}
+        >
+            {id && <HeadingAnchor id={id} />}
+            {children}
+        </h3>
+    );
 }
 
 export function Ul(props: ComponentProps<"ul">) {
     return <ul {...props} className={`list-disc space-y-1.5 pl-5 ${BODY} ${PROSE}`} />;
 }
 
+/** Numbered in mono by the `.prose-ol` counter in globals.css. */
 export function Ol(props: ComponentProps<"ol">) {
-    return <ol {...props} className={`list-decimal space-y-1.5 pl-5 ${BODY} ${PROSE}`} />;
+    return <ol {...props} className={`prose-ol space-y-1.5 ${BODY} ${PROSE}`} />;
 }
 
 export function Hr(props: ComponentProps<"hr">) {
-    return <hr {...props} className={`border-t ${HAIRLINE}`} />;
+    return <hr {...props} className={`my-2 border-t ${HAIRLINE}`} />;
 }
 
-export function A({ href = "#", children }: ComponentProps<"a">) {
+export function Strong(props: ComponentProps<"strong">) {
+    return <strong {...props} className="font-medium text-foreground" />;
+}
+
+type AProps = ComponentProps<"a"> & {
+    /** Set by GFM on a footnote's number in the text, and on the arrow that leads back from the footnote. */
+    "data-footnote-ref"?: boolean;
+    "data-footnote-backref"?: string;
+};
+
+export function A({ href = "#", children, ...props }: AProps) {
+    if (props["data-footnote-ref"]) {
+        return (
+            <a {...props} href={href} className={`footnote-ref font-geistMono text-[11px] ${MUTED}`}>
+                {children}
+            </a>
+        );
+    }
+    if (props["data-footnote-backref"] !== undefined) {
+        return (
+            <a {...props} href={href} className="footnote-backref">
+                {children}
+            </a>
+        );
+    }
     return <InlineLink href={href}>{children}</InlineLink>;
 }
 
@@ -97,16 +147,23 @@ export function Code({ block, ...props }: CodeProps) {
     return (
         <code
             {...props}
-            className="rounded-[4px] bg-[color-mix(in_srgb,var(--foreground-color)_6%,transparent)] px-1 py-0.5 font-geistMono text-[0.875em]"
+            className="rounded-[4px] bg-[color-mix(in_srgb,var(--foreground-color)_6%,transparent)] px-1 py-0.5 font-geistMono text-[0.92em]"
         />
     );
 }
 
+type PreProps = ComponentProps<"pre"> & {
+    /** The fence's `title="..."`, read by the compiler. */
+    "data-title"?: string;
+};
+
 /**
- * A code block. Fenced code with a language arrives here already highlighted by shiki (both themes; globals.css picks
- * one), and keeps shiki's own <pre>. A fence without a language is a plain panel in the body colour.
+ * A code block: a panel with the fence's title in a header bar when it has one, a copy button, and the code. Fenced
+ * code with a language arrives here already highlighted by shiki (both themes; globals.css picks one), with line
+ * numbers and highlighted lines marked by the compiler, and keeps shiki's own <pre>. A fence without a language is
+ * the same panel in the body colour.
  */
-export function Pre({ children, className, ...props }: ComponentProps<"pre">) {
+export function Pre({ children, className, "data-title": title, ...props }: PreProps) {
     const code = Children.map(children, (child) => {
         if (!isValidElement<CodeProps>(child) || child.type !== Code) return child;
         // Markdown ends a fence's text with a newline, which would draw as an empty last line.
@@ -116,25 +173,27 @@ export function Pre({ children, className, ...props }: ComponentProps<"pre">) {
             children: typeof text === "string" ? text.replace(/\n$/, "") : text,
         });
     });
-    if (className?.includes("shiki")) {
-        return (
-            <div
-                data-scrolls
-                className={`${PANEL} overflow-x-auto font-geistMono text-[13px] leading-[1.6] [&>pre]:!bg-transparent [&>pre]:p-4`}
-            >
-                <pre {...props} className={className}>
+    const highlighted = className?.includes("shiki");
+    return (
+        <div data-code-block className={`${PANEL} relative font-geistMono text-[13px] leading-[1.6]`}>
+            {title ? (
+                <div className={`flex items-center justify-between gap-4 border-b ${HAIRLINE} py-1.5 pl-4 pr-2`}>
+                    <span className={`truncate text-[12px] ${MUTED}`}>{title}</span>
+                    <CopyButton />
+                </div>
+            ) : (
+                <div className="absolute right-2 top-2">
+                    <CopyButton />
+                </div>
+            )}
+            <div data-scrolls className="overflow-x-auto">
+                <pre
+                    {...props}
+                    className={`${highlighted ? `${className} !bg-transparent` : PROSE} px-4 py-3 [&>code]:block [&>code]:min-w-max [&>code]:pr-14`}
+                >
                     {code}
                 </pre>
             </div>
-        );
-    }
-    return (
-        <pre
-            {...props}
-            data-scrolls
-            className={`${PANEL} overflow-x-auto px-4 py-3 font-geistMono text-[13px] leading-[1.6] ${PROSE}`}
-        >
-            {code}
-        </pre>
+        </div>
     );
 }

@@ -1,14 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { CONTENT_IMAGE_QUALITY, CONTENT_IMAGE_SIZES } from "../../lib/image-sizes";
 import type { ImageMeta } from "../../lib/images";
 
 interface ImageLightboxProps {
     src: string;
     alt: string;
-    caption?: string;
+    caption?: ReactNode;
     className?: string;
     /** Size and blur placeholder from the manifest; without it the thumbnail is a plain <img>. */
     meta?: ImageMeta;

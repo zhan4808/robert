@@ -2,7 +2,8 @@ import type { MDXComponents } from "mdx/types";
 import { Figure, Gallery } from "./figure";
 import { LinkCard } from "./link-card";
 import { Gradient, Video } from "./media";
-import { A, Code, H2, H3, Hr, Ol, P, Pre, Quote, Table, Td, Th, Tr, Ul } from "./prose";
+import { Note } from "./note";
+import { A, Code, H2, H3, Hr, Ol, P, Pre, Quote, Strong, Table, Td, Th, Tr, Ul } from "./prose";
 import { Section } from "./section";
 import { Visualization } from "./visualization";
 
@@ -18,6 +19,7 @@ export const mdxComponents: MDXComponents = {
     ol: Ol,
     hr: Hr,
     a: A,
+    strong: Strong,
     blockquote: Quote,
     table: Table,
     tr: Tr,
@@ -31,6 +33,7 @@ export const mdxComponents: MDXComponents = {
     Video,
     Gradient,
     LinkCard,
+    Note,
     Quote,
     Visualization,
 };

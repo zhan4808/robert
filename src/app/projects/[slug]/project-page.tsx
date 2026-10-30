@@ -337,7 +337,8 @@ export function Thumb({
             fetchPriority={priority ? "high" : undefined}
             sizes={sizes}
             quality={IMAGE_QUALITY}
-            unoptimized={project.thumb.endsWith(".gif")}
+            // Gifs the optimizer can't improve and SVGs it only passes through skip the /_next/image hop.
+            unoptimized={/\.(gif|svg)$/.test(project.thumb)}
             className={`transition-transform duration-700 ease-out ${zoom ? "group-hover:scale-[1.03] group-focus-visible:scale-[1.03]" : ""} ${
                 figure
                     ? // Multiply drops a plot's white paper onto the tile; in dark mode the plot is inverted (with its

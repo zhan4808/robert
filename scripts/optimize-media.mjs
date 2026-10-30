@@ -46,13 +46,6 @@ const PHOTO_ENTROPY = 5;
 const RASTER = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 /** In the manifest (they render through <Image>) but never re-encoded. */
 const MANIFEST_ONLY = new Set([".gif"]);
-/**
- * Files that keep their name and format: re-encoded in place (capped, same codec) instead of becoming WebP. The
- * site icon is referenced from layout.tsx as a favicon, where JPEG is the safer format.
- */
-const KEEP_FORMAT = new Set(["/site-icon.jpg"]);
-/** An in-place re-encode is only kept when it saves this share of the file, so a second run stops at once. */
-const IN_PLACE_MIN_SAVING = 0.1;
 
 const args = new Set(process.argv.slice(2));
 const dry = args.has("--dry") || args.has("--dry-run");
@@ -100,15 +93,6 @@ async function optimize(file) {
     const { width, height } = await dimensions(file);
     const oversized = Math.max(width, height) > MAX_EDGE;
     const capped = oversized ? `, ${width}x${height} capped` : "";
-
-    if (KEEP_FORMAT.has(sitePath(file))) {
-        const image = prepare(file, true);
-        const buffer =
-            ext === ".png"
-                ? await image.png({ compressionLevel: 9, effort: 10, palette: false }).toBuffer()
-                : await image.jpeg({ quality: WEBP_QUALITY, mozjpeg: true }).toBuffer();
-        return { out: file, buffer, reason: `kept as ${ext}${capped}` };
-    }
 
     if (ext === ".webp" && !oversized) return null;
     const out = file.slice(0, -ext.length) + ".webp";
@@ -179,24 +163,22 @@ async function main() {
 
             const inputSize = (await stat(file)).size;
             const { out, buffer, reason } = job;
-            // Re-encoding an already optimized file in place would only add generation loss.
-            if (out === file && buffer.length > inputSize * (1 - IN_PLACE_MIN_SAVING)) continue;
             // A lossless source that WebP can't beat stays as it is.
-            if (out !== file && buffer.length >= inputSize) {
+            if (buffer.length >= inputSize) {
                 console.log(`keep ${relative(ROOT, file)}: ${kb(inputSize)} (WebP would be ${kb(buffer.length)})`);
                 continue;
             }
             const rel = relative(ROOT, file);
             console.log(
-                `${dry ? "would write" : "write"} ${relative(ROOT, out)}${out === file ? "" : ` (was ${rel})`}: ${kb(inputSize)} -> ${kb(buffer.length)} [${reason}]`
+                `${dry ? "would write" : "write"} ${relative(ROOT, out)} (was ${rel}): ${kb(inputSize)} -> ${kb(buffer.length)} [${reason}]`
             );
             before += inputSize;
             after += buffer.length;
             if (!dry) {
                 await writeFile(out, buffer);
-                if (out !== file) await rm(file);
+                await rm(file);
             }
-            if (out !== file) renames.push({ from: sitePath(file), to: sitePath(out) });
+            renames.push({ from: sitePath(file), to: sitePath(out) });
         }
 
         const touched = await rewriteReferences(renames);

@@ -23,7 +23,6 @@ Commit the optimized file, the manifest (`src/lib/image-meta.json`), and any rew
 | `.png` photograph (high entropy)   | lossy WebP, quality 82, capped at 2400px                                   |
 | `.png` plot or diagram             | **lossless** WebP: pixel-identical, so axis text stays sharp, ~45% smaller |
 | `.webp`                            | left alone unless it is over the cap                                       |
-| `/site-icon.jpg`                   | stays JPEG (it's the favicon), re-encoded in place                         |
 | `.svg` `.pdf` `.gif` `.mp3` `.mp4` | never touched                                                              |
 
 The cap (2400px covers a 1200px frame on a 2x display) always applies to photos. A figure over the cap is only

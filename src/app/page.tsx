@@ -29,7 +29,7 @@ export default function Home() {
             <KoiPond onStats={setStats} className="absolute inset-0 h-full w-full" />
             <MobileNav />
             <TopNav />
-            <main className="relative z-20 flex h-full flex-col">
+            <main id="main" tabIndex={-1} className="relative z-20 flex h-full flex-col outline-none">
                 <FrontPage stats={stats} />
             </main>
         </div>

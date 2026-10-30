@@ -12,7 +12,7 @@ const LINKS = [
     { label: "blog", href: "/blog" },
 ];
 
-const ITEM = "transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 outline-none";
+const ITEM = "transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 focus-ring";
 
 type TopNavProps = {
     /** The nav is sitting over a dark cover image, so it uses light text whatever the theme. */

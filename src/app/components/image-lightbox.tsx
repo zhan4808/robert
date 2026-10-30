@@ -143,7 +143,7 @@ export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONT
                 <button
                     type="button"
                     onClick={openLightbox}
-                    className="cursor-zoom-in focus:outline-none rounded-card overflow-hidden"
+                    className="cursor-zoom-in focus-ring rounded-card overflow-hidden"
                     aria-label="Expand image"
                 >
                     {meta ? (
@@ -181,7 +181,7 @@ export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONT
                     <button
                         type="button"
                         onClick={closeLightbox}
-                        className="absolute top-4 right-4 z-10 text-white/70 hover:text-white transition-colors text-sm select-none"
+                        className="focus-ring absolute top-4 right-4 z-10 text-white/70 hover:text-white transition-colors text-sm select-none"
                         aria-label="Close"
                     >
                         esc ✕

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -56,6 +56,8 @@ const Mark = ({
 const Cited = ({ source, children }: { source: string; children: React.ReactNode }) => {
     // The card only renders after a hover, so the theme is always known by then.
     const isLight = useTheme().resolvedTheme === "light";
+    // With reduced motion the card only fades in and out.
+    const still = useReducedMotion() ?? false;
     const src = SOURCES[source];
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -118,7 +120,7 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
                 onBlur={hide}
                 aria-label={`${src.name}, ${src.role}`}
                 // A plain underline marks the mention; it darkens on hover, focus, or while the card is open.
-                className={`cursor-pointer inline align-baseline underline decoration-1 underline-offset-[5px] transition-[text-decoration-color] duration-150 outline-none focus-visible:decoration-2 ${
+                className={`cursor-pointer inline align-baseline underline decoration-1 underline-offset-[5px] transition-[text-decoration-color] duration-150 focus-ring focus-visible:decoration-2 ${
                     open
                         ? "decoration-foreground text-foreground"
                         : "decoration-faint hover:decoration-foreground hover:text-foreground focus-visible:decoration-foreground focus-visible:text-foreground"
@@ -130,9 +132,13 @@ const Cited = ({ source, children }: { source: string; children: React.ReactNode
             <AnimatePresence>
                 {open && (
                     <motion.span
-                        initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                        initial={still ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 2, scale: 0.99, transition: { duration: 0.08, ease: "easeIn" } }}
+                        exit={{
+                            opacity: 0,
+                            ...(still ? {} : { y: 2, scale: 0.99 }),
+                            transition: { duration: 0.08, ease: "easeIn" },
+                        }}
                         transition={{ duration: 0.12, ease: "easeOut" }}
                         onClick={members ? undefined : activate}
                         data-koi-ignore

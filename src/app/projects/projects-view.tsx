@@ -35,9 +35,12 @@ export default function ProjectsView({ projects }: { projects: Project[] }) {
 
     return (
         <div className="h-screen w-full overflow-hidden bg-background text-foreground">
-            <MobileLayout projects={projects} />
             <TopNav />
-            <DesktopStrip projects={byDate(projects)} />
+            {/* One landmark for both layouts, so the skip link has a single place to land. */}
+            <main id="main" tabIndex={-1} className="h-full outline-none">
+                <MobileLayout projects={projects} />
+                <DesktopStrip projects={byDate(projects)} />
+            </main>
         </div>
     );
 }
@@ -167,7 +170,7 @@ function DesktopStrip({ projects }: { projects: Project[] }) {
     }, []);
 
     return (
-        <main className="flex h-full flex-col justify-center pt-12 max-lg:hidden">
+        <div className="flex h-full flex-col justify-center pt-12 max-lg:hidden">
             {/* The padding lines the first and last tiles up with the 56rem column the project pages use. */}
             <div
                 ref={stripRef}
@@ -177,7 +180,7 @@ function DesktopStrip({ projects }: { projects: Project[] }) {
                     <StripTile key={project.slug} project={project} priority={i < 2} />
                 ))}
             </div>
-        </main>
+        </div>
     );
 }
 
@@ -208,7 +211,7 @@ function StripTile({ project, priority }: { project: Project; priority: boolean 
         </>
     );
     // As wide as the thumbnail, so a long description wraps instead of pushing the next tile along.
-    const className = "group relative block w-min shrink-0 outline-none focus-visible:underline";
+    const className = "group relative block w-min shrink-0 focus-ring";
 
     if (external) {
         return (
@@ -245,7 +248,7 @@ function MobileLayout({ projects }: { projects: Project[] }) {
     return (
         <div className="w-full h-full overflow-y-auto bg-background lg:hidden">
             <MobileNav />
-            <Container as="main" className="flex flex-col pt-[20vw] pb-[12vh]">
+            <Container className="flex flex-col pt-[20vw] pb-[12vh]">
                 {projects.map((project, i) => (
                     <article key={project.slug} className="flex flex-col pb-[16vw]">
                         <Thumb
@@ -270,7 +273,7 @@ function MobileLayout({ projects }: { projects: Project[] }) {
                                 target: "_blank",
                                 rel: "noopener noreferrer",
                             })}
-                            className="mt-5 self-start inline-flex items-center justify-center whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground active:scale-95 transition-all text-foreground py-1 px-4 rounded-full"
+                            className="mt-5 self-start inline-flex items-center justify-center whitespace-nowrap focus-ring active:scale-95 transition-all text-foreground py-1 px-4 rounded-full"
                             style={{ background: "color-mix(in srgb, var(--foreground-color) 8%, transparent)" }}
                         >
                             View project

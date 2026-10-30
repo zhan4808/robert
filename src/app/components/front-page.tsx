@@ -12,7 +12,7 @@ const SOCIALS = [
 ];
 
 const UNDERLINE =
-    "underline decoration-faint decoration-1 underline-offset-[5px] outline-none transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
+    "underline decoration-faint decoration-1 underline-offset-[5px] focus-ring transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
 
 const QuoteLines = () => (
     <>

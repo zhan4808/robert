@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { ExternalLink, Github } from "lucide-react";
@@ -29,6 +29,10 @@ const pillBg = "color-mix(in srgb, var(--foreground-color) 6%, transparent)";
 export default function MobileNav() {
     const [open, setOpen] = useState(false);
     const { resolvedTheme, setTheme } = useTheme();
+    // With reduced motion the menu and its icon still fade, but nothing slides or turns.
+    const still = useReducedMotion() ?? false;
+    const turn = still ? 0 : 45;
+    const rise = still ? 0 : 16;
 
     return (
         <>
@@ -36,7 +40,7 @@ export default function MobileNav() {
             <div className="fixed top-[3vw] left-[3vw] right-[3vw] z-50 lg:hidden">
                 <button
                     onClick={() => setOpen((v) => !v)}
-                    className="w-full flex items-center justify-between px-[5vw] py-[3.5vw] rounded-full cursor-pointer"
+                    className="focus-ring w-full flex items-center justify-between px-[5vw] py-[3.5vw] rounded-full cursor-pointer"
                     style={{ background: pillBg, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}
                 >
                     <span className="font-inter font-normal text-20 tracking-normal" style={{ color: fg }}>
@@ -48,9 +52,9 @@ export default function MobileNav() {
                                 <motion.div
                                     key="close"
                                     className="absolute inset-0"
-                                    initial={{ opacity: 0, rotate: 45 }}
+                                    initial={{ opacity: 0, rotate: turn }}
                                     animate={{ opacity: 1, rotate: 0 }}
-                                    exit={{ opacity: 0, rotate: 45 }}
+                                    exit={{ opacity: 0, rotate: turn }}
                                     transition={{ duration: 0.18 }}
                                 >
                                     <CloseIcon color={fgIcon} />
@@ -59,9 +63,9 @@ export default function MobileNav() {
                                 <motion.div
                                     key="grid"
                                     className="absolute inset-0"
-                                    initial={{ opacity: 0, rotate: -45 }}
+                                    initial={{ opacity: 0, rotate: -turn }}
                                     animate={{ opacity: 1, rotate: 0 }}
-                                    exit={{ opacity: 0, rotate: -45 }}
+                                    exit={{ opacity: 0, rotate: -turn }}
                                     transition={{ duration: 0.18 }}
                                 >
                                     <GridIcon color={fgIcon} />
@@ -87,14 +91,14 @@ export default function MobileNav() {
                             {navLinks.map((link, i) => (
                                 <motion.div
                                     key={link.href}
-                                    initial={{ opacity: 0, y: 16 }}
+                                    initial={{ opacity: 0, y: rise }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.07 + 0.08, duration: 0.28, ease: "easeOut" }}
                                 >
                                     <Link
                                         href={link.href}
                                         onClick={() => setOpen(false)}
-                                        className="font-playfairDisplay font-bold text-[14vw] leading-[17vw] block text-center"
+                                        className="focus-ring font-playfairDisplay font-bold text-[14vw] leading-[17vw] block text-center"
                                         style={{ color: fg }}
                                     >
                                         {link.label}
@@ -110,7 +114,7 @@ export default function MobileNav() {
                                     href={link.href}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="font-inter text-[3.5vw] tracking-wide flex items-center gap-[1.5vw]"
+                                    className="focus-ring font-inter text-[3.5vw] tracking-wide flex items-center gap-[1.5vw]"
                                     style={{ color: fgDim }}
                                 >
                                     {link.label}
@@ -124,7 +128,7 @@ export default function MobileNav() {
                             <button
                                 onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
                                 aria-label="Toggle theme"
-                                className="cursor-pointer"
+                                className="focus-ring cursor-pointer"
                                 style={{ color: fgDim }}
                             >
                                 <ThemeIcon size="4.5vw" />

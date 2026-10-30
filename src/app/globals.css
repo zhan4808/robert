@@ -36,9 +36,44 @@
         text-decoration-color: currentColor;
     }
     .ink-link:focus-visible {
-        outline: 1px solid color-mix(in srgb, var(--foreground-color) 28%, transparent);
+        outline: 1px solid var(--foreground-color);
         outline-offset: 3px;
         border-radius: 2px;
+    }
+
+    /*
+     * The focus ring every other control shares, the same hairline as the ink-link's: a step outside the element,
+     * following its corners. A text link has no corners of its own, so it gets a slight rounding; `:where` keeps that
+     * below any rounded-* utility on the element.
+     */
+    .focus-ring {
+        outline: none;
+    }
+    .focus-ring:focus-visible {
+        outline: 1px solid var(--foreground-color);
+        outline-offset: 3px;
+    }
+    :where(.focus-ring):focus-visible {
+        border-radius: 2px;
+    }
+
+    /* "skip to content": off screen until it is tabbed to, then a small mono pill in the top-left corner. */
+    .skip-link {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 100;
+        padding: 0.375rem 0.625rem;
+        border: 1px solid theme(colors.hairline);
+        border-radius: theme(borderRadius.card);
+        background: var(--background-color);
+        color: var(--foreground-color);
+        font-family: theme(fontFamily.geistMono);
+        font-size: theme(fontSize.caption);
+        text-transform: lowercase;
+    }
+    .skip-link:not(:focus) {
+        @apply sr-only;
     }
 }
 

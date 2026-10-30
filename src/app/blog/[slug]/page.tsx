@@ -63,11 +63,11 @@ export default async function PostPage({ params }: Props) {
         <div className="min-h-screen w-full bg-background text-foreground">
             <MobileNav />
             <TopNav />
-            <main className={`${FRAME} px-6 pb-40 pt-28 font-geistSans lg:pt-40`}>
+            <main id="main" tabIndex={-1} className={`${FRAME} px-6 pb-40 pt-28 font-geistSans outline-none lg:pt-40`}>
                 <header>
                     <Link
                         href="/blog"
-                        className={`text-small ${MUTED} outline-none transition-colors hover:text-foreground focus-visible:text-foreground`}
+                        className={`text-small ${MUTED} focus-ring transition-colors hover:text-foreground focus-visible:text-foreground`}
                     >
                         ← Blog
                     </Link>
@@ -184,7 +184,7 @@ function Pager({
     return (
         <Link
             href={`/blog/${post.slug}`}
-            className={`group flex flex-col gap-1 outline-none ${back ? "items-start" : "items-end text-right"}`}
+            className={`group flex flex-col gap-1 focus-ring ${back ? "items-start" : "items-end text-right"}`}
         >
             <span className={`font-geistMono text-caption ${MUTED}`}>{label}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">

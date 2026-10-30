@@ -24,7 +24,7 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
                     <a
                         href={`#${heading.id}`}
                         aria-current={heading.id === active ? "location" : undefined}
-                        className={`-ml-px block border-l-2 py-1 font-geistMono leading-normal outline-none transition-colors hover:text-foreground focus-visible:text-foreground ${
+                        className={`-ml-px block border-l-2 py-1 font-geistMono leading-normal focus-ring transition-colors hover:text-foreground focus-visible:text-foreground ${
                             heading.depth === 3 ? "pl-6 text-label" : "pl-3 text-caption"
                         } ${heading.id === active ? "border-foreground text-foreground" : `border-transparent ${MUTED}`}`}
                     >
@@ -48,7 +48,7 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
             </nav>
             <details className="group mb-10 min-[1280px]:hidden">
                 <summary
-                    className={`w-fit cursor-pointer list-none font-geistMono text-caption outline-none transition-colors hover:text-foreground focus-visible:text-foreground [&::-webkit-details-marker]:hidden ${MUTED}`}
+                    className={`w-fit cursor-pointer list-none font-geistMono text-caption focus-ring transition-colors hover:text-foreground focus-visible:text-foreground [&::-webkit-details-marker]:hidden ${MUTED}`}
                 >
                     contents <span className="inline-block transition-transform group-open:rotate-90">→</span>
                 </summary>

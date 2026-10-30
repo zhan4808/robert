@@ -75,10 +75,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         // next-themes sets the theme class on <html> before React hydrates, which React would otherwise flag.
         <html lang="en" suppressHydrationWarning>
             <body
-                className={`${inter.variable} ${fontPlayfairDisplay.variable} ${fontGeistMono.variable} ${fontGeistSans.variable} scroll-smooth overflow-x-clip bg-background text-foreground`}
+                className={`${inter.variable} ${fontPlayfairDisplay.variable} ${fontGeistMono.variable} ${fontGeistSans.variable} scroll-smooth motion-reduce:scroll-auto overflow-x-clip bg-background text-foreground`}
             >
+                {/* Hidden until it is tabbed to; every page's <main> carries id="main". */}
+                <a href="#main" className="skip-link focus-ring">
+                    skip to content
+                </a>
                 <JsonLd />
-                <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="theme">
+                {/* Follows the system until the toggle picks a theme, which is then kept. */}
+                <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="theme">
                     {children}
                 </ThemeProvider>
             </body>

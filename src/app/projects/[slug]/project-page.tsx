@@ -118,7 +118,9 @@ export default function ProjectPage({
                 initial={arrivedSliding ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className={`${FRAME} px-6 pb-40 pt-28 font-geistSans lg:box-content lg:pt-40`}
+                id="main"
+                tabIndex={-1}
+                className={`${FRAME} px-6 pb-40 pt-28 font-geistSans outline-none lg:box-content lg:pt-40`}
             >
                 <header>
                     <Link
@@ -129,7 +131,7 @@ export default function ProjectPage({
                             // The reverse of opening a project: this page slides off to the right, uncovering the strip.
                             pushWithTransition(router, "/projects", "back");
                         }}
-                        className={`text-small ${MUTED} outline-none transition-colors hover:text-foreground focus-visible:text-foreground`}
+                        className={`text-small ${MUTED} focus-ring transition-colors hover:text-foreground focus-visible:text-foreground`}
                     >
                         ← Projects
                     </Link>
@@ -275,7 +277,7 @@ function PagerLink({ project, direction }: { project: Project; direction: "back"
                 const r = e.currentTarget.getBoundingClientRect();
                 settle(r.left + r.width / 2, r.top);
             }}
-            className={`group relative flex flex-col gap-1 outline-none ${back ? "items-start" : "items-end text-right"}`}
+            className={`group relative flex flex-col gap-1 focus-ring ${back ? "items-start" : "items-end text-right"}`}
         >
             <span className={`font-geistMono text-caption ${MUTED}`}>{back ? "previous" : "next"}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">

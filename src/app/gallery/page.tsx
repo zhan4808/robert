@@ -49,7 +49,7 @@ function columnFlex(works: number[]) {
 }
 
 const UNDERLINE =
-    "underline decoration-faint decoration-1 underline-offset-[5px] outline-none transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
+    "underline decoration-faint decoration-1 underline-offset-[5px] focus-ring transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
 
 const details = (work: Work) => [work.place, work.year].filter(Boolean).join(" · ");
 
@@ -60,7 +60,11 @@ export default function Gallery() {
         <div className="min-h-screen w-full bg-background text-foreground">
             <MobileNav />
             <TopNav />
-            <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-14 px-6 pb-24 pt-28 lg:gap-20 lg:px-[6vw] lg:pt-36">
+            <main
+                id="main"
+                tabIndex={-1}
+                className="mx-auto flex w-full max-w-[1280px] flex-col gap-14 px-6 pb-24 pt-28 outline-none lg:gap-20 lg:px-[6vw] lg:pt-36"
+            >
                 <header className="flex flex-col gap-6 font-geistMono lg:flex-row lg:items-end lg:justify-between">
                     <div className="flex flex-col gap-4">
                         <h1 className="sr-only">Gallery</h1>
@@ -101,7 +105,7 @@ export default function Gallery() {
                                             type="button"
                                             onClick={() => setOpen(i)}
                                             aria-label={`View ${work.title} larger`}
-                                            className="block w-full overflow-hidden rounded-[3px] outline-none focus-visible:ring-1 focus-visible:ring-foreground"
+                                            className="block w-full overflow-hidden rounded-[3px] focus-ring"
                                         >
                                             <Image
                                                 src={work.src}
@@ -133,10 +137,10 @@ export default function Gallery() {
 }
 
 const SIDE_BUTTON =
-    "h-24 w-[6vw] shrink-0 text-[22px] opacity-40 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100 max-lg:hidden";
+    "h-24 w-[6vw] shrink-0 text-[22px] opacity-40 focus-ring transition-opacity hover:opacity-100 focus-visible:opacity-100 max-lg:hidden";
 // Clicks anywhere else in the viewer close it.
 const STAY_OPEN = "img, button, [data-stay-open]";
-const SMALL_BUTTON = "opacity-50 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100 lg:hidden";
+const SMALL_BUTTON = "opacity-50 focus-ring transition-opacity hover:opacity-100 focus-visible:opacity-100 lg:hidden";
 
 /** One piece on its own, as large as fits. Arrow keys or a swipe step through the works and Escape closes. */
 function Lightbox({

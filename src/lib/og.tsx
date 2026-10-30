@@ -148,30 +148,3 @@ export function articleCard({
         footer: [SITE_NAME.toLowerCase(), SITE_HOST],
     });
 }
-
-/** A lowercase "r" on the site's dark background, for the favicon and the home-screen icon. */
-export async function monogram(size: number, radius = 0): Promise<ImageResponse> {
-    return new ImageResponse(
-        <div
-            style={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: BACKGROUND,
-                color: FOREGROUND,
-                borderRadius: radius,
-                fontFamily: "Geist",
-                fontWeight: 500,
-                fontSize: size * 0.85,
-                lineHeight: 1,
-                // Sits the x-height letter at the optical centre instead of the box's.
-                paddingBottom: size * 0.06,
-            }}
-        >
-            r
-        </div>,
-        { width: size, height: size, fonts: await loadFonts() }
-    );
-}

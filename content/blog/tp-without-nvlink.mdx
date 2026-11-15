@@ -1,0 +1,150 @@
+---
+title: "Tensor Parallelism Without NVLink: Where the All-Reduce Time Actually Goes"
+subtitle: "at decode sizes you pay for latency, not bandwidth"
+date: November 2026
+year: 2026
+order: -4
+kind: technical
+---
+
+The cheapest way to serve a large model is starting to look like a box of workstation GPUs. A card in the RTX Pro 6000 class has plenty of memory and compute for its price. What it doesn't have is NVLink. The GPUs talk over PCIe, and once a model spans more than one box, over Ethernet.
+
+I spent the fall in Astera Labs' CTO office measuring what that costs. The rig was two 8-GPU PCIe boxes joined by 400G RoCE Ethernet through a single switch. We served MoE models (GLM-5.3-Flash, Qwen3.5-122B and others) with vLLM on 4, 8 and 16 GPUs and profiled every decode step. This is the first of four posts on what we found, and it answers one question: **when a tensor-parallel all-reduce is slow, what is it actually spending its time on?**
+
+<Note title="summary">
+
+- At the message sizes decode produces, almost all of an all-reduce is fixed per-call cost. The bytes barely matter.
+- GPUs waiting on slow peers was not the problem. Eager-mode profiles invent it; CUDA-graph profiles don't show it.
+- Crossing Ethernet costs latency, not bandwidth. At large sizes every layout hits the same wall: each GPU's own PCIe link.
+- On NVLink-less hardware, keep tensor parallelism inside one box and scale out with replicas.
+
+</Note>
+
+## Why tensor parallelism needs all-reduce
+
+Tensor parallelism splits every weight matrix across N GPUs. Each GPU multiplies its slice and ends up holding a partial result, and those partial results have to be summed before the next layer can start. That sum is an **all-reduce**. A transformer layer does it twice: once after attention, once after the MLP.
+
+Two things make it expensive. It sits on the critical path, because nothing downstream can run until it finishes. And it repeats on every layer of every step. GLM-5.3-Flash makes 91 all-reduces per decode step and Qwen3.5-122B makes 96. The architecture fixes that count; prompt length doesn't change it.
+
+On these boxes every one of those all-reduces is an NCCL call. vLLM ships its own custom all-reduce kernel, but it switches itself off for more than two GPUs that only have PCIe between them. So NCCL's choices decide your latency.
+
+## A simple model of what an all-reduce costs
+
+For this setup NCCL's default is a **ring**. The N GPUs form a loop and the message is cut into N chunks. For N−1 steps, each GPU passes a chunk to its neighbour and adds in the chunk it receives, until every chunk holds a full sum somewhere on the ring. For another N−1 steps, the finished chunks travel around so every GPU ends up with all of them. That's 2(N−1) steps, and each GPU sends 2(N−1)/N of the message.
+
+Every step has a fixed cost (launching the work, signalling the neighbour, waiting for its flag) plus the time to move one chunk. Add them up and you get the standard model:
+
+$$
+t \;\approx\; \underbrace{2(N-1)\,\alpha}_{\text{startup}} \;+\; \underbrace{\frac{2(N-1)}{N}\cdot\frac{n}{B}}_{\text{transfer}}
+$$
+
+Here α is the fixed cost per step, n is the message size and B is the link bandwidth. The startup term ignores message size. The transfer term grows with it. Which one wins depends entirely on n, so the next question is how big these messages really are.
+
+## Decode messages are tiny
+
+Each all-reduce carries the activations for the tokens in the step:
+
+$$
+\text{message bytes} = \text{tokens in step} \times \text{hidden dim} \times \text{bytes per activation}
+$$
+
+In decode, each running request contributes one token per step. With a hidden size of 4096 in bf16, that's 8 KiB per request in flight: one request sends 8 KiB all-reduces, and 512 concurrent requests send 4 MiB. Prefill lives in a different world. An 8,192-token chunk at the same hidden size sends 64 MiB per all-reduce. One serving session sweeps the whole range.
+
+Put a few kilobytes into the model above and the transfer term all but vanishes. That's the hypothesis. The rest of this post tests it against real decode steps.
+
+<Note title="measuring this yourself">
+
+Collectives replayed from a CUDA graph emit no NCCL profiler events. Take message sizes and counts from an `--enforce-eager` run, and take timings only from graph-mode runs.
+
+</Note>
+
+## Splitting real all-reduces into three parts
+
+For every all-reduce in a captured decode step, I split the measured kernel time into three terms:
+
+1. **Startup.** The time the same call takes at 256 bytes, with the algorithm and protocol NCCL actually picked. This is the α term: launch, flag handshakes, ring steps. Paid on every call, whatever its size.
+2. **Transfer.** What an isolated benchmark adds on top of startup at that message size. This is the bytes term.
+3. **Residual wait.** In-run time minus the isolated prediction. Whatever the benchmark can't explain lands here, including GPUs waiting on peers that arrived late.
+
+<Figure
+  src="/nvlink-series/fig1-allreduce-breakdown.webp"
+  alt="All-reduce time split into startup, transfer and residual wait, by concurrency, one box vs two boxes over Ethernet"
+  caption="How all-reduce time splits at each load level. GLM-5.3-Flash, CUDA graphs. Left: one 8-GPU PCIe box. Right: 16 GPUs across two boxes over RoCE."
+/>
+
+## Finding 1: at low load, it's almost all startup
+
+With a handful of requests in flight, each all-reduce carries a few kilobytes. There's nothing to transfer, so the time is fixed cost, just as the model predicts. Below a few hundred kilobytes the latency curve is flat: making the message bigger barely moves it.
+
+Startup scales with the number of ring steps, 2(N−1). Every GPU you add to the tensor-parallel group adds a roughly constant slice of latency to every call, however small the message. Inside one box, transfer only overtakes startup once a few hundred requests are running.
+
+The right half of Figure 1 has a twist. Across two boxes, startup takes over again at the highest loads. That isn't physics. At a certain size NCCL switches protocol, and the new protocol has a higher fixed cost per call. Why that switch lands in the wrong place off NVLink is the subject of part 2.
+
+## Finding 2: GPUs waiting on each other isn't the problem
+
+Our summer profiles said most communication time was spin-wait, GPUs sitting idle until slower peers caught up. I expected this project to be about stragglers. It wasn't. Those profiles were taken in eager mode, where the gaps between kernel launches get counted as communication. In CUDA-graph captures, which is how vLLM actually serves, residual wait inside one box is a thin sliver at every load.
+
+Across Ethernet a real residual does appear at medium load, and it has two specific causes:
+
+- **The first all-reduce of each graph replay pays a wake-up cost.** NCCL's network proxy thread has to wake up before data moves. It's a fixed charge, once per decode step: small inside one box, much larger across Ethernet.
+- **Ring/LL across the two boxes runs at one of two speeds, decided at launch.** Same fixed cost, different throughput, and it sticks for the life of the process. I never isolated the cause. If you benchmark across hosts, run several launches before you believe a number.
+
+Genuine rank-to-rank jitter was a few microseconds, and slack in the step absorbed it. The lesson: profile in graph mode before you go hunting for stragglers. An eager-mode profile will show you a problem your server doesn't have.
+
+## Finding 3: crossing Ethernet costs latency, not bandwidth
+
+<Figure
+  src="/nvlink-series/fig2-latency-vs-size.webp"
+  alt="Time per all-reduce vs message size, one PCIe box vs two boxes over Ethernet"
+  caption="Time per all-reduce against message size (log-log), NCCL defaults. Blue: 8 GPUs in one PCIe box. Orange: 16 GPUs across two boxes over Ethernet. Shaded: the sizes decode actually sends."
+/>
+
+Start at the right edge of Figure 2. At large messages the two curves meet: one bus bandwidth fits every layout we measured, Ethernet included, because the bottleneck is each GPU's own PCIe Gen5 x16 link, not the network. Now look at the shaded band where decode lives. That's where the gap is. Crossing Ethernet adds fixed cost to every call, and decode is almost all fixed cost.
+
+So where does the extra fixed cost come from? Not the wire. The fabric ran near line rate, and NIC hardware timestamps put the switch and cables at a small slice of each crossing. Most of it is software and host-side hops: NCCL's proxy thread, the NIC's PCIe side, and turning GPU writes into RDMA operations.
+
+Two NIC details surprised me:
+
+- By default, NCCL sent all cross-host ring traffic through one NIC per host and left the rest idle. Behind a PCIe switch, every NIC looked equally close to every GPU, so nothing told NCCL to spread out.
+- For all-reduce, that barely matters. A ring across two hosts enters and leaves each host at one GPU, so it can use at most two NICs per host. Extra rails help all-to-all, all-gather and send/recv, which is MoE expert-parallel traffic, not tensor-parallel traffic.
+
+## Finding 4: more GPUs means more communication, and the growth is latency
+
+<Figure
+  src="/nvlink-series/fig3-comm-share-tp.webp"
+  alt="Communication share of the decode step at TP4, TP8 and TP16 over Ethernet"
+  caption="Communication share of a GLM-5.3-Flash decode step at TP4 and TP8 in one box, and TP16 across two boxes over Ethernet."
+/>
+
+Going from 4 to 8 to 16 GPUs, the bytes each GPU sends per step barely change: 2(N−1)/N of the message goes from 1.5× to 1.75× to about 1.9×. Everything else changes. Each GPU's compute shrinks, because the weights are split more ways. Ring steps per call go from 6 to 14 to 30. At 16 GPUs, every call also crosses Ethernet twice.
+
+So communication's share of the step climbs with every doubling and jumps when the group crosses the network. At medium load across Ethernet, it rivals compute. None of that growth is bandwidth. It's the startup term, multiplied.
+
+## What I'd do on an NVLink-less box
+
+1. **Keep tensor parallelism inside one PCIe box and scale out with independent replicas.** On our 16 GPUs, two independent TP8 servers beat one TP16 server over Ethernet at every concurrency we ran. Nothing has to cross the network per step.
+2. **Profile in CUDA-graph mode.** Eager mode inflates communication and invents spin-wait.
+3. **Use nccl-tests the right way.** Force the algorithm and protocol your serving run uses (`NCCL_ALGO`, `NCCL_PROTO`) and compare like with like. Done that way, per-call time inside vLLM matched the isolated benchmark closely. Across hosts, run several launches because of the two-speed behaviour.
+4. **Don't buy more NIC rails to speed up tensor-parallel all-reduce.** A two-host ring can't use them.
+5. **Check which protocol NCCL picked**, with `NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=TUNING`. Off NVLink it's often the wrong one, which is where [part 2](/blog/nccl-defaults-off-nvlink) picks up.
+
+## How I measured it
+
+Decode steps came from Nsight Systems captures of vLLM in CUDA-graph mode, with kernels classified through CUPTI correlation IDs. Startup and transfer came from an isolated harness on vLLM's own PyNccl communicator: 50 bf16 all-reduces in one CUDA graph, median of 60 replays, slowest rank. The `torch.distributed` path adds a per-call cost that grows with graph length, so match the code path your server uses.
+
+Message sizes and counts came from eager runs with the NCCL profiler plugin and were checked against the formula above. nccl-tests sweeps were the cross-check.
+
+**Next:** NCCL picks its algorithm and protocol from a static cost model built around NVLink and InfiniBand-class networks. On PCIe plus RoCE it switches in the wrong places, and fixing that was the single biggest win of the project. [Read part 2.](/blog/nccl-defaults-off-nvlink)
+
+*Thanks to Helia Naeimi, Chris Petersen and Haoyuan Xu at Astera Labs. Measurements were made during my internship and are shared with permission, with absolute numbers omitted.*
+
+<Note title="series">
+
+LLM inference without NVLink:
+
+- **1. Where the all-reduce time goes** (this post)
+- [2. NCCL's defaults are tuned for NVLink. Off it, they pick wrong.](/blog/nccl-defaults-off-nvlink)
+- [3. PCIe vs Ethernet scale-up: when each one wins](/blog/pcie-vs-ethernet-scale-up)
+- [4. Reading a multi-GPU vLLM run without fooling yourself](/blog/reading-vllm-runs)
+
+</Note>

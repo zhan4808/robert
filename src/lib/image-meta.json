@@ -394,6 +394,26 @@
         "height": 1322,
         "blurDataURL": "data:image/webp;base64,UklGRkwAAABXRUJQVlA4IEAAAADwAQCdASoKAAcAAoBCJbACdAERH9fjhsAA/vaUpLf4WHM6y6upyAGVaw5N/+PxknDMrb+vp9IGQF/GKgfq3AAA"
     },
+    "/nvlink-series/fig1-allreduce-breakdown.webp": {
+        "width": 2000,
+        "height": 840,
+        "blurDataURL": "data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADQAQCdASoKAAQAAoBCJYgCdAEOuwXvAAD+88l+9xFsS+svtqgDa6FL8qNdK9eqW3K2AAAA"
+    },
+    "/nvlink-series/fig2-latency-vs-size.webp": {
+        "width": 1500,
+        "height": 840,
+        "blurDataURL": "data:image/webp;base64,UklGRiwAAABXRUJQVlA4ICAAAAAwAQCdASoKAAYAAoBCJaQAA3AA/viTLYnP+lktQ8GAAA=="
+    },
+    "/nvlink-series/fig3-comm-share-tp.webp": {
+        "width": 1500,
+        "height": 840,
+        "blurDataURL": "data:image/webp;base64,UklGRigAAABXRUJQVlA4IBwAAAAwAQCdASoKAAYAAoBCJaQAA3AA/vjmIpkoGwAA"
+    },
+    "/nvlink-series/post2-fig1-forced-protocols.webp": {
+        "width": 1600,
+        "height": 920,
+        "blurDataURL": "data:image/webp;base64,UklGRioAAABXRUJQVlA4IB4AAAAwAQCdASoKAAYAAoBCJaQAA3AA/vipjzvLUdI/AAA="
+    },
     "/oai1.webp": {
         "width": 1402,
         "height": 788,

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="960" height="300">
+<defs><marker id="a-26282b" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#26282b"/></marker><marker id="a-6b6f76" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6f76"/></marker><marker id="a-a7abb2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a7abb2"/></marker><marker id="a-2b78d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b78d6"/></marker><marker id="a-19a974" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#19a974"/></marker><marker id="a-e8673a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8673a"/></marker><marker id="a-6b55d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b55d6"/></marker><marker id="a-17345e" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#17345e"/></marker></defs>
+<rect width="960" height="300" fill="#fcfbf8"/>
+<text x="30.0" y="48.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" fill="#26282b" text-anchor="start" font-weight="600">decode message (KBs)</text>
+<rect x="30.0" y="60.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="71.0" y="60.0" width="4.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="80.0" y="60.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="121.0" y="60.0" width="4.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="130.0" y="60.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="171.0" y="60.0" width="4.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="180.0" y="60.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="221.0" y="60.0" width="4.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="230.0" y="60.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="271.0" y="60.0" width="4.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="280.0" y="60.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="321.0" y="60.0" width="4.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="338.0" y="83.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#6b6f76" text-anchor="start" font-weight="400">time →</text>
+<text x="30.0" y="148.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" fill="#26282b" text-anchor="start" font-weight="600">prefill message (tens of MB)</text>
+<rect x="30.0" y="160.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="71.0" y="160.0" width="70.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="146.0" y="160.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="187.0" y="160.0" width="70.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="262.0" y="160.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="303.0" y="160.0" width="70.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="378.0" y="160.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="419.0" y="160.0" width="70.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="494.0" y="160.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="535.0" y="160.0" width="70.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="610.0" y="160.0" width="40.0" height="34.0" rx="4" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="651.0" y="160.0" width="70.0" height="34.0" rx="4" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="30.0" y="262.0" width="18.0" height="18.0" rx="3" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="56.0" y="276.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#26282b" text-anchor="start" font-weight="400">α: fixed cost per ring step (launch, signal, wait for flag)</text>
+<rect x="500.0" y="262.0" width="18.0" height="18.0" rx="3" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="526.0" y="276.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#26282b" text-anchor="start" font-weight="400">n/B per step: moving one chunk</text>
+<text x="930.0" y="82.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#e8673a" text-anchor="end" font-weight="700">startup dominates</text>
+<text x="930.0" y="182.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#2b78d6" text-anchor="end" font-weight="700">transfer dominates</text>
+</svg>

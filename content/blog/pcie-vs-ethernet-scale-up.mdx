@@ -11,6 +11,12 @@ Parts [1](/blog/tp-without-nvlink) and [2](/blog/nccl-defaults-off-nvlink) were 
 
 We had both setups side by side. One was two 8-GPU boxes over 400G RoCE through a single Ethernet switch. The other was a rack with the same GPU model, where the boxes share a PCIe switch fabric.
 
+<Figure
+  src="/nvlink-series/diagrams/p3-two-fabrics.svg"
+  alt="Two pairs of identical boxes, one joined by an Ethernet switch with NICs and RDMA, the other by a PCIe switch fabric"
+  caption="The two setups. Inside a box they are the same; only the hop through the middle differs, and the Ethernet hop has many more steps in it."
+/>
+
 <Note title="summary">
 
 - Inside one box, the two racks behave identically. Every difference comes from the hop between boxes.
@@ -34,6 +40,12 @@ This is part 1's startup term again, with a much smaller α for the steps that l
 
 ## What that does to layouts
 
+<Figure
+  src="/nvlink-series/diagrams/p3-layouts.svg"
+  alt="Three layouts of 16 GPUs: TP16 with many crossings, two TP8 replicas with none, PP2 by TP8 with one hand-off"
+  caption="Three ways to use 16 GPUs in two boxes, and what each sends between them per step."
+/>
+
 | Question | PCIe switch fabric | RoCE Ethernet |
 | --- | --- | --- |
 | Split one TP group across two boxes? | Cost was within noise | Clear throughput loss at every load we ran (stock NCCL) |
@@ -50,6 +62,12 @@ We also replayed an agentic coding trace: very long contexts and heavy prefix re
 
 The layout itself turned out to be the interesting part. In MLA models (DeepSeek-style attention, here GLM-5.2), the compressed latent KV cache is replicated on every tensor-parallel rank. So doubling TP doesn't grow the cache pool. Pipeline parallelism does, because each stage holds the cache for its own layers only. For long-context MLA serving across 16 GPUs, PP2 × TP8 beat TP16, and by more than any fabric difference.
 
+<Figure
+  src="/nvlink-series/diagrams/p3-mla-kv.svg"
+  alt="Grids of KV cache cells: TP16 holds all 8 layers for T tokens per GPU; PP2 by TP8 holds 4 layers for 2T tokens in the same space"
+  caption="Why pipeline parallelism grows an MLA model's KV pool and tensor parallelism doesn't. Same memory per GPU, twice the tokens."
+/>
+
 Two more things we learned the hard way here:
 
 - Every layout collapsed once the working set of contexts outgrew the cache. Prefix-cache hit rate fell off a cliff, and time to first token went with it.
@@ -64,6 +82,12 @@ After that fix, TP16 over Ethernet improved a lot at high load. It still trailed
 That leaves an open question for hardware: how much of the remaining crossing cost can move out of software and into the fabric?
 
 ## Decision guide
+
+<Figure
+  src="/nvlink-series/diagrams/p3-decision.svg"
+  alt="Flowchart from 16 GPUs in two boxes through questions about MLA, prefill-heavy work and fabric to a recommended layout"
+  caption="The decision guide as a flowchart."
+/>
 
 1. **Latency-sensitive decode on 16+ GPUs:** a PCIe fabric lets you run one big TP group. On Ethernet, don't.
 2. **Throughput at high concurrency on Ethernet:** independent replicas, plus a tuned NCCL rule (part 2) for anything that has to cross boxes.

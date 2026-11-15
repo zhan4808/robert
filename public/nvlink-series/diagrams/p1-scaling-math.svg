@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="960" height="300">
+<defs><marker id="a-26282b" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#26282b"/></marker><marker id="a-6b6f76" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6f76"/></marker><marker id="a-a7abb2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a7abb2"/></marker><marker id="a-2b78d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b78d6"/></marker><marker id="a-19a974" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#19a974"/></marker><marker id="a-e8673a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8673a"/></marker><marker id="a-6b55d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b55d6"/></marker><marker id="a-17345e" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#17345e"/></marker></defs>
+<rect width="960" height="300" fill="#fcfbf8"/>
+<text x="40.0" y="36.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" fill="#26282b" text-anchor="start" font-weight="600">Ring steps per all-reduce: 2(N−1)</text>
+<text x="520.0" y="36.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" fill="#26282b" text-anchor="start" font-weight="600">Bytes each GPU sends: 2(N−1)/N × message</text>
+<rect x="70.0" y="216.0" width="70.0" height="34.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="105.0" y="206.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" fill="#26282b" text-anchor="middle" font-weight="700">6</text>
+<text x="105.0" y="274.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#6b6f76" text-anchor="middle" font-weight="400">TP4</text>
+<rect x="550.0" y="137.5" width="70.0" height="112.5" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="585.0" y="127.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" fill="#26282b" text-anchor="middle" font-weight="700">1.5×</text>
+<text x="585.0" y="274.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#6b6f76" text-anchor="middle" font-weight="400">TP4</text>
+<rect x="200.0" y="170.7" width="70.0" height="79.3" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="235.0" y="160.7" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" fill="#26282b" text-anchor="middle" font-weight="700">14</text>
+<text x="235.0" y="274.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#6b6f76" text-anchor="middle" font-weight="400">TP8</text>
+<rect x="680.0" y="118.8" width="70.0" height="131.2" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="715.0" y="108.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" fill="#26282b" text-anchor="middle" font-weight="700">1.75×</text>
+<text x="715.0" y="274.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#6b6f76" text-anchor="middle" font-weight="400">TP8</text>
+<rect x="330.0" y="80.0" width="70.0" height="170.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="365.0" y="70.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" fill="#26282b" text-anchor="middle" font-weight="700">30</text>
+<text x="365.0" y="274.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#6b6f76" text-anchor="middle" font-weight="400">TP16</text>
+<rect x="810.0" y="109.4" width="70.0" height="140.6" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="845.0" y="99.4" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" fill="#26282b" text-anchor="middle" font-weight="700">1.875×</text>
+<text x="845.0" y="274.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#6b6f76" text-anchor="middle" font-weight="400">TP16</text>
+<line x1="530.0" y1="100.0" x2="930.0" y2="100.0" stroke="#a7abb2" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5 5"/>
+<text x="534.0" y="92.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#6b6f76" text-anchor="start" font-weight="400">2× ceiling</text>
+<line x1="40.0" y1="250.0" x2="460.0" y2="250.0" stroke="#d9d6cf" stroke-width="1.5" stroke-linecap="round"/>
+<line x1="530.0" y1="250.0" x2="930.0" y2="250.0" stroke="#d9d6cf" stroke-width="1.5" stroke-linecap="round"/>
+<text x="250.0" y="290.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#e8673a" text-anchor="middle" font-weight="600">latency term: grows with every GPU</text>
+<text x="730.0" y="290.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#2b78d6" text-anchor="middle" font-weight="600">bandwidth term: barely moves</text>
+</svg>

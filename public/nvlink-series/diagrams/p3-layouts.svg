@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 360" width="980" height="360">
+<defs><marker id="a-26282b" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#26282b"/></marker><marker id="a-6b6f76" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6f76"/></marker><marker id="a-a7abb2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a7abb2"/></marker><marker id="a-2b78d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b78d6"/></marker><marker id="a-19a974" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#19a974"/></marker><marker id="a-e8673a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8673a"/></marker><marker id="a-6b55d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b55d6"/></marker><marker id="a-17345e" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#17345e"/></marker></defs>
+<rect width="980" height="360" fill="#fcfbf8"/>
+<text x="170.0" y="32.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" fill="#26282b" text-anchor="middle" font-weight="700">TP16</text>
+<text x="170.0" y="52.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#6b6f76" text-anchor="middle" font-weight="400">one group spans both boxes</text>
+<rect x="20.0" y="80.0" width="300.0" height="80.0" rx="10" fill="#fff" stroke="#d9d6cf" stroke-width="1.5" opacity="1.0"/>
+<text x="30.0" y="98.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" fill="#6b6f76" text-anchor="start" font-weight="400">box A</text>
+<rect x="32.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="68.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="104.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="140.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="176.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="212.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="248.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="284.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="20.0" y="200.0" width="300.0" height="80.0" rx="10" fill="#fff" stroke="#d9d6cf" stroke-width="1.5" opacity="1.0"/>
+<text x="30.0" y="218.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" fill="#6b6f76" text-anchor="start" font-weight="400">box B</text>
+<rect x="32.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="68.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="104.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="140.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="176.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="212.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="248.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="284.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<line x1="60.0" y1="166.0" x2="60.0" y2="196.0" stroke="#e8673a" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="115.0" y1="166.0" x2="115.0" y2="196.0" stroke="#e8673a" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="170.0" y1="166.0" x2="170.0" y2="196.0" stroke="#e8673a" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="225.0" y1="166.0" x2="225.0" y2="196.0" stroke="#e8673a" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="280.0" y1="166.0" x2="280.0" y2="196.0" stroke="#e8673a" stroke-width="2.5" stroke-linecap="round"/>
+<text x="170.0" y="312.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#e8673a" text-anchor="middle" font-weight="600">every all-reduce crosses: ~100 per step, twice each</text>
+<text x="495.0" y="32.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" fill="#26282b" text-anchor="middle" font-weight="700">2 × TP8 replicas</text>
+<text x="495.0" y="52.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#6b6f76" text-anchor="middle" font-weight="400">two independent servers</text>
+<rect x="345.0" y="80.0" width="300.0" height="80.0" rx="10" fill="#fff" stroke="#d9d6cf" stroke-width="1.5" opacity="1.0"/>
+<text x="355.0" y="98.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" fill="#6b6f76" text-anchor="start" font-weight="400">box A</text>
+<rect x="357.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="393.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="429.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="465.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="501.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="537.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="573.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="609.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="345.0" y="200.0" width="300.0" height="80.0" rx="10" fill="#fff" stroke="#d9d6cf" stroke-width="1.5" opacity="1.0"/>
+<text x="355.0" y="218.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" fill="#6b6f76" text-anchor="start" font-weight="400">box B</text>
+<rect x="357.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="393.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="429.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="465.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="501.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="537.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="573.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="609.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<text x="495.0" y="312.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#19a974" text-anchor="middle" font-weight="600">nothing crosses per step</text>
+<text x="820.0" y="32.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" fill="#26282b" text-anchor="middle" font-weight="700">PP2 × TP8</text>
+<text x="820.0" y="52.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#6b6f76" text-anchor="middle" font-weight="400">stage 1 in box A, stage 2 in box B</text>
+<rect x="670.0" y="80.0" width="300.0" height="80.0" rx="10" fill="#fff" stroke="#d9d6cf" stroke-width="1.5" opacity="1.0"/>
+<text x="680.0" y="98.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" fill="#6b6f76" text-anchor="start" font-weight="400">box A</text>
+<rect x="682.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="718.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="754.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="790.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="826.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="862.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="898.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="934.0" y="110.0" width="30.0" height="36.0" rx="5" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="670.0" y="200.0" width="300.0" height="80.0" rx="10" fill="#fff" stroke="#d9d6cf" stroke-width="1.5" opacity="1.0"/>
+<text x="680.0" y="218.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" fill="#6b6f76" text-anchor="start" font-weight="400">box B</text>
+<rect x="682.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="718.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="754.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="790.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="826.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="862.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="898.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="934.0" y="230.0" width="30.0" height="36.0" rx="5" fill="#e8673a" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<line x1="820.0" y1="166.0" x2="820.0" y2="196.0" stroke="#e8673a" stroke-width="2.5" stroke-linecap="round" marker-end="url(#a-e8673a)"/>
+<text x="820.0" y="312.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#e8673a" text-anchor="middle" font-weight="600">one activation hand-off per step</text>
+</svg>

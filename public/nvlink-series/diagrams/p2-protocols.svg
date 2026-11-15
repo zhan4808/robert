@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 360" width="980" height="360">
+<defs><marker id="a-26282b" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#26282b"/></marker><marker id="a-6b6f76" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6f76"/></marker><marker id="a-a7abb2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a7abb2"/></marker><marker id="a-2b78d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b78d6"/></marker><marker id="a-19a974" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#19a974"/></marker><marker id="a-e8673a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8673a"/></marker><marker id="a-6b55d6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b55d6"/></marker><marker id="a-17345e" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#17345e"/></marker></defs>
+<rect width="980" height="360" fill="#fcfbf8"/>
+<text x="30.0" y="76.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="18" fill="#2b78d6" text-anchor="start" font-weight="700">LL</text>
+<text x="150.0" y="42.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#6b6f76" text-anchor="start" font-weight="400">every 16 bytes: 8 data + 8 flag</text>
+<rect x="150.0" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="185.2" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<rect x="220.4" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="255.6" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<rect x="290.8" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="326.0" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<rect x="361.2" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="396.4" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<rect x="431.6" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="466.8" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<rect x="502.0" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="537.2" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<rect x="572.4" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="607.6" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<rect x="642.8" y="50.0" width="34.2" height="40.0" rx="2" fill="#2b78d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="678.0" y="50.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<text x="940.0" y="76.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#26282b" text-anchor="end" font-weight="600">50% data</text>
+<text x="30.0" y="176.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="18" fill="#19a974" text-anchor="start" font-weight="700">LL128</text>
+<text x="150.0" y="142.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#6b6f76" text-anchor="start" font-weight="400">every 128 bytes: 120 data + 8 flag</text>
+<rect x="150.0" y="150.0" width="527.0" height="40.0" rx="3" fill="#19a974" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="678.0" y="150.0" width="33.2" height="40.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<text x="940.0" y="176.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#26282b" text-anchor="end" font-weight="600">~94% data</text>
+<text x="30.0" y="276.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="18" fill="#6b55d6" text-anchor="start" font-weight="700">Simple</text>
+<text x="150.0" y="242.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#6b6f76" text-anchor="start" font-weight="400">full payload, then a separate flag</text>
+<rect x="150.0" y="250.0" width="561.2" height="40.0" rx="3" fill="#6b55d6" stroke="none" stroke-width="1.5" opacity="1.0"/>
+<rect x="727.2" y="256.0" width="26.0" height="28.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<text x="740.2" y="306.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" fill="#e8673a" text-anchor="middle" font-weight="400">flag</text>
+<text x="940.0" y="276.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" fill="#26282b" text-anchor="end" font-weight="600">~100% data</text>
+<text x="150.0" y="340.0" font-family="'Geist Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" fill="#6b6f76" text-anchor="start" font-weight="400">← 128 bytes on the wire →</text>
+<rect x="560.0" y="324.0" width="14.0" height="14.0" rx="2" fill="#fbe0d5" stroke="#e8673a" stroke-width="1" opacity="1.0"/>
+<text x="582.0" y="336.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" fill="#6b6f76" text-anchor="start" font-weight="400">flags: receivers poll these instead of a handshake</text>
+</svg>

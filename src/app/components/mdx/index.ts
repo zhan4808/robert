@@ -1,4 +1,5 @@
 import type { MDXComponents } from "mdx/types";
+import { Diagram } from "./diagrams";
 import { Figure, Gallery } from "./figure";
 import { LinkCard } from "./link-card";
 import { Gradient, Video } from "./media";
@@ -29,6 +30,7 @@ export const mdxComponents: MDXComponents = {
     code: Code,
     Section,
     Figure,
+    Diagram,
     Gallery,
     Video,
     Gradient,

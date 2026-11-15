@@ -25,12 +25,6 @@ A serving step is prefill, decode, or a mix of both. The number of all-reduces p
 - **Prefill:** tokens in the step = the chunk budget (`max_num_batched_tokens`). At 8,192 tokens and hidden size 4096, that's 64 MiB per all-reduce. Prefill messages are the large ones.
 - **Mixed steps** carry a prefill chunk plus every running decode token, so their messages sit in between.
 
-<Figure
-  src="/nvlink-series/diagrams/p4-step-timeline.svg"
-  alt="Bar per serving step: steady small decode bars slowly growing, tall prefill spikes, medium mixed steps"
-  caption="A serving session, step by step. Decode messages are small and creep up as requests join; prefill chunks are the spikes. Illustrative."
-/>
-
 That's why a single microbenchmark point can't model a serving run. One session sweeps from kilobytes to tens of megabytes, and the best NCCL setting changes along the way ([part 2](/blog/nccl-defaults-off-nvlink)).
 
 ## What caps the batch: usually the KV cache, and you can predict it
@@ -46,11 +40,7 @@ vLLM prints the KV pool size at startup. In our runs, this estimate matched the 
 - **Past the cap, more concurrency means more queueing, not more throughput.** The throughput curve flattens and latency climbs. If you're benchmarking beyond the cap, you're measuring the queue.
 - **A layout that grows the pool can win at high load even if each step is slower.** Two independent replicas each get their own pool. For MLA models, pipeline parallelism grows the pool and tensor parallelism doesn't ([part 3](/blog/pcie-vs-ethernet-scale-up)).
 
-<Figure
-  src="/nvlink-series/diagrams/p4-kv-cap.svg"
-  alt="Left: running requests follow sent requests up to the KV cap then flatten while sent keeps rising. Right: throughput flattens and latency climbs past the cap"
-  caption="What the KV cap does to a sweep. Past it, extra concurrency waits in a queue: throughput stays flat and latency climbs. Illustrative."
-/>
+<Diagram name="kv-cap" caption="What the KV cap does to a sweep. Past it, extra concurrency waits in a queue: throughput stays flat and latency climbs. Illustrative." />
 
 ## Ten ways a benchmark point lies
 
@@ -61,11 +51,7 @@ Each of these cost us real GPU time. They fall into four groups, roughly in the 
 - **Eager mode invents communication.** Profiling with `--enforce-eager` counts launch gaps as collective time and inflates the step many times over. Use eager runs for message sizes and counts only, and time everything in CUDA-graph mode.
 - **Graph-replayed collectives are invisible to the NCCL profiler.** A replayed graph emits no events. That's why sizes have to come from eager runs.
 
-<Figure
-  src="/nvlink-series/diagrams/p4-eager-vs-graph.svg"
-  alt="Eager timeline with launch gaps and spin time inside each all-reduce, CUDA graph timeline back to back"
-  caption="Why eager-mode profiles overstate communication. Launch gaps become spin time inside the collective; graph replay removes them."
-/>
+<Diagram name="eager-vs-graph" caption="Why eager-mode profiles overstate communication. Launch gaps become spin time inside the collective; graph replay removes them." />
 
 ### The server
 

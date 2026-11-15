@@ -117,7 +117,7 @@ function collectHeadings(tree: Root, headings: Heading[]) {
 }
 
 /**
- * Numbers the figures in document order: each `<Figure>` on its own, and each `<Gallery>` as one figure. The number is
+ * Numbers the figures in document order: each `<Figure>` and `<Diagram>` on its own, and each `<Gallery>` as one figure. The number is
  * set as a `number` attribute, so the components render "Figure N" without any state.
  */
 function rehypeFigureNumbers() {
@@ -131,7 +131,7 @@ function rehypeFigureNumbers() {
                 number(node);
                 return false;
             }
-            if (isJsx(node, "Figure")) number(node);
+            if (isJsx(node, "Figure") || isJsx(node, "Diagram")) number(node);
         });
     };
 }

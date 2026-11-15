@@ -32,6 +32,7 @@
         "rehype-slug": "^6.0.0",
         "remark-gfm": "^4.0.1",
         "remark-math": "^6.0.0",
+        "roughjs": "^4.6.6",
         "server-only": "^0.0.1",
         "shiki": "^3.22.0",
         "tailwind-merge": "^2.5.2",

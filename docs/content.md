@@ -155,6 +155,17 @@ An image with an optional caption; clicking opens the lightbox. `src` is a site 
 Figures are numbered in the order they appear, at build time: the caption reads "Figure 3. Split-K." There is
 nothing to write for the number, and nothing to renumber when one is added.
 
+### Diagram
+
+A drawing rendered into the page as SVG rather than an image: no background, ink in the theme's foreground colour,
+accents that read on both papers, and Excalidraw-style strokes from rough.js. Each one is a component in
+`src/app/components/mdx/diagrams/` (`sketches.tsx` for drawings, `charts.tsx` for data), registered by name in
+`index.tsx`. Diagrams are numbered with the figures.
+
+```mdx
+<Diagram name="ring-allreduce" caption="Ring all-reduce on 4 GPUs." />
+```
+
 ### Gallery
 
 A grid of figures: two across on phones, three from `md` up. The grid counts as one figure ("Figure 4" under it);

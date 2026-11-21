@@ -524,11 +524,14 @@ export class KoiRenderer {
                     // Drawn along the whisker: forward from the mouth and angled out to its side.
                     glyph = lineGlyph(-tx - side * ty * 0.7, -ty + side * tx * 0.7);
                     rgb = shade(mix(palette.bg, palette.fin, 0.9), palette.ink + 0.3);
-                } else if (flag === FLAG_EYE && solid) {
-                    tile = mix(palette.bg, palette.eye, 0.85);
-                    tileAlpha = dim;
-                    glyph = "o";
-                    rgb = mix(palette.bg, palette.white, 0.9);
+                } else if (flag === FLAG_EYE && coverage >= 0.35) {
+                    // A solid dark eye with a bright catchlight, in both themes: the one detail that makes the
+                    // shape read as a fish at a glance, so it never fades with depth as much as the body does.
+                    tile = palette.eye;
+                    tileAlpha = Math.max(dim, 0.85);
+                    glyph = "•";
+                    rgb = [255, 255, 255];
+                    alpha = Math.max(dim, 0.9);
                 } else if (flag === FLAG_FIN) {
                     // Fins are a pale veil of tiles flecked with dots, so they never compete with the body.
                     tile = mix(palette.bg, palette.fin, 0.55);

@@ -68,7 +68,7 @@ export function classify(s: number, a: number, past: number, flare: number, out:
     if (s <= BODY_END && a <= w) {
         const across = a / w;
         out.across = across;
-        if (s > 0.055 && s < 0.1 && across > 0.5 && across < 0.85) out.flag = FLAG_EYE;
+        if (s > 0.05 && s < 0.11 && across > 0.42 && across < 0.88) out.flag = FLAG_EYE;
         else if (s > 0.28 && s < 0.6 && across < 0.14) out.flag = FLAG_DORSAL;
         else out.flag = FLAG_BODY;
         return true;

@@ -61,8 +61,11 @@ export function Figure({ src, alt, caption, invert, sizes, number }: FigureProps
 // A third of the frame from md up (three columns), half the viewport below it.
 const GALLERY_SIZES = "(min-width: 1024px) 18rem, (min-width: 768px) 33vw, 50vw";
 
-/** A grid of <Figure>s: two across on phones, three from md up. The grid is numbered as one figure. */
-export function Gallery({ number, children }: { number?: string; children?: ReactNode }) {
+/**
+ * A grid of <Figure>s: two across on phones, three from md up. The grid is numbered as one figure, but the label only
+ * shows with a `caption`: each photo already carries its own, and a bare "Figure 1" under a photo set reads as noise.
+ */
+export function Gallery({ number, caption, children }: { number?: string; caption?: ReactNode; children?: ReactNode }) {
     const grid = (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {Children.map(children, (child) =>
@@ -72,12 +75,12 @@ export function Gallery({ number, children }: { number?: string; children?: Reac
             )}
         </div>
     );
-    if (!number) return grid;
+    if (!number || !caption) return grid;
     return (
         <figure className="flex flex-col gap-2">
             {grid}
             <figcaption className={`text-small ${MUTED}`}>
-                <FigureLabel number={number} />
+                <FigureLabel number={number}>{caption}</FigureLabel>
             </figcaption>
         </figure>
     );

@@ -196,7 +196,8 @@ export function LatencyChart() {
             <Ticks b={b} ticks={traced.latency_ticks} />
             <Series b={b} pts={traced.latency.one_box} tone="blue" />
             <Series b={b} pts={traced.latency.two_boxes} tone="orange" />
-            <Txt x={px(b, 0.04)} y={py(b, 0.12)} tone="blue" size={12} weight={600}>
+            {/* Under the blue curve's climb, right of the band: at the left edge the two curves sit too close for a label. */}
+            <Txt x={px(b, 0.745)} y={py(b, 0.25)} tone="blue" size={12} weight={600}>
                 8 GPUs, one box
             </Txt>
             <Txt x={px(b, 0.04)} y={py(b, 0.47)} tone="orange" size={12} weight={600}>
@@ -208,7 +209,8 @@ export function LatencyChart() {
 
 /** Part 1: communication share of a decode step at TP4, TP8, TP16. */
 export function ShareChart() {
-    const b: Box = { x0: 50, x1: 540, y0: 20, y1: 230 };
+    // x1 leaves room on the right for the longest end label ("TP16, two boxes over Ethernet") inside the 720 canvas.
+    const b: Box = { x0: 50, x1: 480, y0: 20, y1: 230 };
     const xs = traced.share_labels.map((_, i) => 0.04 + i * 0.184);
     const series: [keyof typeof traced.share, Tone, string][] = [
         ["tp16", "green", "TP16, two boxes over Ethernet"],
@@ -343,7 +345,19 @@ function LineLabel({
     children: ReactNode;
 }) {
     return (
-        <text x={px(b, x)} y={py(b, y / Y_TOP)} fontSize={12.5} fill={TONE[tone]} fontWeight={600} textAnchor="end">
+        // A halo in the page colour keeps the label legible where a neighbouring curve runs through it.
+        <text
+            x={px(b, x)}
+            y={py(b, y / Y_TOP)}
+            fontSize={12.5}
+            fill={TONE[tone]}
+            fontWeight={600}
+            textAnchor="end"
+            stroke="var(--background-color)"
+            strokeWidth={7}
+            strokeLinejoin="round"
+            paintOrder="stroke"
+        >
             {children}
         </text>
     );

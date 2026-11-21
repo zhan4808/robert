@@ -175,8 +175,8 @@ accents that read on both papers, and Excalidraw-style strokes from rough.js. Ea
 
 ### Gallery
 
-A grid of figures: two across on phones, three from `md` up. The grid counts as one figure ("Figure 4" under it);
-the captions on the pictures stay as they are.
+A grid of figures: two across on phones, three from `md` up. The grid counts as one figure, but "Figure N" only
+shows under it when the Gallery has its own `caption`; the captions on the pictures stay as they are.
 
 ```mdx
 <Gallery>

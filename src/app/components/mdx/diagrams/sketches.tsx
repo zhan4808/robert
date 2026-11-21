@@ -183,19 +183,19 @@ export function RingAllReduce() {
     // legend
     const ly = 318;
     [1, 2, 3, 4].forEach((cnt, i) => {
-        s.rect(30 + i * 118, ly - 12, 14, 14, {
+        s.rect(30 + i * 128, ly - 12, 14, 14, {
             tone: "faint",
             width: 1,
             fill: wash("blue", [0, 12, 34, 60, 100][cnt]),
             rough: 0.5,
         });
-        s.text(50 + i * 118, ly, cnt === 4 ? "all 4 summed" : `${cnt} GPU${cnt > 1 ? "s" : ""} summed`, {
+        s.text(50 + i * 128, ly, cnt === 4 ? "all 4 summed" : `${cnt} GPU${cnt > 1 ? "s" : ""} summed`, {
             size: 11,
             tone: "muted",
         });
     });
-    s.rect(510, ly - 12, 14, 14, { tone: "orange", width: 2, rough: 0.5 });
-    s.text(530, ly, "just received", { size: 11, tone: "muted" });
+    s.rect(546, ly - 12, 14, 14, { tone: "orange", width: 2, rough: 0.5 });
+    s.text(566, ly, "just received", { size: 11, tone: "muted" });
     s.text(30, 346, "rows are GPUs, columns are the message's four chunks", { size: 11, tone: "muted" });
     return (
         <Canvas w={W} h={356} title="Ring all-reduce on four GPUs, step by step">
@@ -622,7 +622,7 @@ export function MlaKv() {
         note.forEach((n, i) => s.text(ox, by + 36 + i * 16, n, { size: 12 }));
     });
     return (
-        <Canvas w={W} h={230} title="Why pipeline parallelism grows an MLA KV pool and tensor parallelism does not">
+        <Canvas w={W} h={252} title="Why pipeline parallelism grows an MLA KV pool and tensor parallelism does not">
             {s.els}
         </Canvas>
     );

@@ -196,7 +196,7 @@ function PagerLink({ project, direction }: { project: Project; direction: "back"
         >
             <span className={`text-small ${MUTED}`}>{back ? "previous" : "next"}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
-                {back ? `← ${name}` : `${name} →`}
+                {back ? `←\u00a0${name}` : `${name}\u00a0→`}
             </span>
             <span ref={cardRef} aria-hidden className={HOVER_CARD}>
                 <Thumb

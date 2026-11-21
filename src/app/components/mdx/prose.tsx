@@ -138,7 +138,9 @@ export function Th(props: ComponentProps<"th">) {
 }
 
 export function Td(props: ComponentProps<"td">) {
-    return <td {...props} className={`whitespace-nowrap py-2 pr-4 ${PROSE}`} />;
+    // Cells wrap so a wide table fits the reading column instead of hiding its last column behind a scroll; the
+    // wrapper still scrolls when even the wrapped table is too wide (a phone).
+    return <td {...props} className={`py-2 pr-4 align-top ${PROSE}`} />;
 }
 
 type CodeProps = ComponentProps<"code"> & {
@@ -181,7 +183,9 @@ export function Pre({ children, className, "data-title": title, ...props }: PreP
                     <CopyButton />
                 </div>
             ) : (
-                <div className="absolute right-2 top-2">
+                // Sits above the code with the panel's own fill, so a long first line passes under it instead of
+                // showing through the label.
+                <div className="absolute right-2 top-2 z-10 rounded-chip bg-tile pl-1">
                     <CopyButton />
                 </div>
             )}

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { Entry } from "../../lib/content";
 import type { JournalPost, Project } from "../../lib/content-schema";
 
 /** What a post is, as the index labels it, with the colour of its dot. */
 export const KINDS = {
     technical: { label: "Research", dot: "bg-koi" },
+    project: { label: "Project", dot: "bg-[#8b7f6a] dark:bg-[#b8ab92]" },
     journal: { label: "Life", dot: "bg-[#5b8aa6] dark:bg-[#8fb6cc]" },
 } as const;
+export type Kind = keyof typeof KINDS;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_NAMES = MONTHS.map((m) => m.toLowerCase());
@@ -20,7 +23,7 @@ export function shortDate(date: string) {
     return m[2] ? `${MONTHS[i]} ${m[2]}` : MONTHS[i];
 }
 
-export function KindTag({ kind, className = "" }: { kind: JournalPost["kind"]; className?: string }) {
+export function KindTag({ kind, className = "" }: { kind: Kind; className?: string }) {
     const k = KINDS[kind];
     return (
         <span className={`inline-flex items-center gap-2 text-small text-muted ${className}`}>
@@ -87,4 +90,23 @@ export function ListHeading({ children, action }: { children: ReactNode; action?
             {action}
         </div>
     );
+}
+
+/** One line of the combined index: date, title and what it is. Posts and projects share the same row. */
+export function EntryRow({ entry, bare = false }: { entry: Entry; bare?: boolean }) {
+    const row = (
+        <Link
+            href={entry.href}
+            target={entry.external ? "_blank" : undefined}
+            rel={entry.external ? "noopener noreferrer" : undefined}
+            className="group grid grid-cols-[4rem_1fr_auto] items-baseline gap-x-5 py-2 focus-ring"
+        >
+            <span className="text-small tabular-nums text-muted">{shortDate(entry.date)}</span>
+            <span className="min-w-0 text-[16px] leading-snug">
+                <span className={TITLE}>{entry.title}</span>
+            </span>
+            <KindTag kind={entry.kind} className="max-sm:hidden" />
+        </Link>
+    );
+    return bare ? row : <li>{row}</li>;
 }

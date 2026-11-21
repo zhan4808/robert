@@ -1,21 +1,17 @@
 import Link from "next/link";
-import { getProjects, getVisiblePosts } from "../lib/content";
-import { ListHeading, PostRow, ProjectRow } from "./components/entries";
+import { getEntries } from "../lib/content";
+import { EntryRow, ListHeading } from "./components/entries";
 import FrontPage from "./components/front-page";
 import KoiBanner from "./components/koi-banner";
 import SiteFooter from "./components/site-footer";
 import TopNav from "./components/top-nav";
 
-const RECENT_POSTS = 5;
-const SELECTED_PROJECTS = 3;
+const RECENT = 7;
 
 const MORE = "ink-link text-small text-muted";
 
 export default function Home() {
-    const posts = getVisiblePosts().slice(0, RECENT_POSTS);
-    const projects = getProjects()
-        .filter((p) => !p.hidden)
-        .slice(0, SELECTED_PROJECTS);
+    const entries = getEntries().slice(0, RECENT);
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
@@ -31,31 +27,15 @@ export default function Home() {
                     <ListHeading
                         action={
                             <Link href="/blog" className={MORE}>
-                                All posts
+                                Everything
                             </Link>
                         }
                     >
-                        Writing
+                        Recent
                     </ListHeading>
                     <ul>
-                        {posts.map((post) => (
-                            <PostRow key={post.slug} post={post} />
-                        ))}
-                    </ul>
-                </section>
-                <section>
-                    <ListHeading
-                        action={
-                            <Link href="/projects" className={MORE}>
-                                All projects
-                            </Link>
-                        }
-                    >
-                        Projects
-                    </ListHeading>
-                    <ul>
-                        {projects.map((project) => (
-                            <ProjectRow key={project.slug} project={project} showYear />
+                        {entries.map((entry) => (
+                            <EntryRow key={entry.href} entry={entry} />
                         ))}
                     </ul>
                 </section>

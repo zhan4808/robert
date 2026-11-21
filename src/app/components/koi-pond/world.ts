@@ -147,8 +147,11 @@ const THROW_RADIUS = 34;
 const STARTLE_SPEED = 1100;
 const MAX_PELLETS = 24;
 
-/** How a pond is stocked: koi size relative to the default, and how many. */
-export type Stocking = { scale?: number; count?: number };
+/**
+ * How a pond is stocked: koi size relative to the default, how many, and optionally the pond's outline as a signed
+ * distance in px (negative inside, positive outside), which the koi steer by instead of the canvas rectangle.
+ */
+export type Stocking = { scale?: number; count?: number; outline?: (x: number, y: number) => number };
 
 export class World {
     constructor(private stocking: Stocking = {}) {}
@@ -187,8 +190,8 @@ export class World {
             const length = baseLength * (isYoung ? rand(0.32, 0.45) : rand(0.6, 1));
             const depthMax = isYoung ? 0.72 : 1;
             const heading = rand(0, TAU);
-            const x = rand(W * 0.1, W * 0.9);
-            const y = rand(H * 0.1, H * 0.9);
+            const x = rand(W * 0.25, W * 0.75);
+            const y = rand(H * 0.3, H * 0.7);
             const nodes = new Float32Array(KOI_NODES * 2);
             const seg = length / (KOI_NODES - 1);
             for (let n = 0; n < KOI_NODES; n++) {
@@ -365,7 +368,8 @@ export class World {
         dy += push.y * (chasing || curious ? 0.5 : 1.8);
 
         // Let the body slip off-screen now and then, but always turn back.
-        const over = Math.max(-hx, hx - W, -hy, hy - H);
+        const outline = this.stocking.outline;
+        const over = outline ? outline(hx, hy) + L * 0.15 : Math.max(-hx, hx - W, -hy, hy - H);
         if (over > -L * 0.25) {
             const w = clamp((over + L * 0.25) / (L * 0.5), 0, 1) * 3.5;
             const toX = W / 2 - hx;

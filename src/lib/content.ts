@@ -79,3 +79,59 @@ export function getVisiblePostsByYear(): Map<number, JournalPost[]> {
     }
     return new Map([...byYear.entries()].sort((a, b) => b[0] - a[0]));
 }
+
+/** One line in the combined index: a post or a project, with where it lives. */
+export type Entry = {
+    slug: string;
+    href: string;
+    title: string;
+    date: string;
+    year: number;
+    kind: "technical" | "journal" | "project";
+    external?: boolean;
+};
+
+/** Visible posts and projects together, newest first: the blog index and the home page's list read this. */
+export function getEntries(): Entry[] {
+    const posts: (Entry & { time: number; order: number })[] = getVisiblePosts().map((p) => ({
+        slug: p.slug,
+        href: `/blog/${p.slug}`,
+        title: p.title,
+        date: p.date,
+        year: p.year,
+        kind: p.kind,
+        time: postTime(p),
+        order: p.order,
+    }));
+    const projects = getProjects()
+        .filter((p) => !p.hidden)
+        .map((p) => ({
+            slug: p.slug,
+            href: p.externalUrl ?? `/projects/${p.slug}`,
+            title: p.shortTitle ?? p.title,
+            date: p.date,
+            year: p.year,
+            kind: "project" as const,
+            external: !!p.externalUrl,
+            time: parseContentDate(p.date)?.getTime() ?? Date.UTC(p.year, 0, 1),
+            order: p.order,
+        }));
+    return [...posts, ...projects]
+        .sort((a, b) => b.year - a.year || b.time - a.time || a.order - b.order)
+        .map((e) => ({
+            slug: e.slug,
+            href: e.href,
+            title: e.title,
+            date: e.date,
+            year: e.year,
+            kind: e.kind,
+            external: "external" in e ? e.external : undefined,
+        }));
+}
+
+/** Entries grouped by year, newest year first. */
+export function getEntriesByYear(): [number, Entry[]][] {
+    const byYear = new Map<number, Entry[]>();
+    for (const e of getEntries()) byYear.set(e.year, [...(byYear.get(e.year) ?? []), e]);
+    return [...byYear.entries()].sort((a, b) => b[0] - a[0]);
+}

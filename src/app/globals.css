@@ -84,6 +84,16 @@
     animation-fill-mode: both;
 }
 
+/* The theme switch: the old page stays put and the new one is revealed by a growing circle (top-nav.tsx animates
+   its clip-path), so neither half fades or slides. */
+:root[data-transition="theme"]::view-transition-old(root),
+:root[data-transition="theme"]::view-transition-new(root) {
+    animation: none;
+}
+:root[data-transition="theme"]::view-transition-new(root) {
+    z-index: 1;
+}
+
 /* Opening a project from the strip carries on its sideways motion: the strip drifts left while the project page slides
    in over it from the right. Neither half fades, so the canvas behind never shows through. */
 :root[data-transition="forward"]::view-transition-old(root),

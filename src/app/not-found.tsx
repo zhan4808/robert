@@ -20,12 +20,8 @@ export default function NotFound() {
                     back to the{" "}
                     <Link href="/" className="ink-link">
                         home
-                    </Link>
-                    ,{" "}
-                    <Link href="/projects" className="ink-link">
-                        projects
-                    </Link>
-                    , or the{" "}
+                    </Link>{" "}
+                    or the{" "}
                     <Link href="/blog" className="ink-link">
                         blog
                     </Link>

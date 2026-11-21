@@ -15,12 +15,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     return [
         { url: absoluteUrl("/"), lastModified: buildTime, changeFrequency: "monthly", priority: 1 },
-        {
-            url: absoluteUrl("/projects"),
-            lastModified: newest(projectPages.map((p) => dateOf(p.date))),
-            changeFrequency: "monthly",
-            priority: 0.8,
-        },
         ...projectPages.map((p) => ({
             url: absoluteUrl(`/projects/${p.slug}`),
             lastModified: dateOf(p.date),

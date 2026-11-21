@@ -70,7 +70,7 @@ const DARK: Palette = {
 // Paper page: tiles are pale washes of the skin colour with dark glyphs etched on top.
 const LIGHT: Palette = {
     bg: [246, 243, 236],
-    white: [112, 108, 104],
+    white: [96, 92, 88],
     red: [204, 62, 28],
     black: [36, 33, 40],
     fin: [138, 132, 126],
@@ -79,9 +79,9 @@ const LIGHT: Palette = {
     shadow: [60, 58, 56],
     shadowAlpha: 0.2,
     pellet: [176, 108, 40],
-    alpha: 0.9,
-    depthFloor: 0.55,
-    tile: [0.78, 0.55],
+    alpha: 0.95,
+    depthFloor: 0.62,
+    tile: [0.88, 0.7],
     hi: [
         [138, 24, 22],
         [184, 38, 24],

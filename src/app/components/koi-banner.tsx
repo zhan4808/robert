@@ -1,9 +1,9 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import KoiPond, { type PondStats } from "./koi-pond/koi-pond";
-import { MONO, noise, shorelineMask, tileSize } from "./pond-surface";
+import { MONO, noise, pondMask, tileSize } from "./pond-surface";
 
 type Rgb = [number, number, number];
 const WATER: Record<"light" | "dark", { wash: Rgb; glint: Rgb }> = {
@@ -25,6 +25,12 @@ export default function KoiBanner() {
     const waterRef = useRef<HTMLCanvasElement>(null);
     const [mask, setMask] = useState("");
     const [stats, setStats] = useState<PondStats>({ koi: 0, pellets: 0 });
+    // The koi steer by the pond's outline, read through a ref so a resize reshapes the pond without restocking it.
+    const outlineRef = useRef<(x: number, y: number) => number>(() => -1);
+    const stocking = useMemo(
+        () => ({ scale: 0.8, count: 3, outline: (x: number, y: number) => outlineRef.current(x, y) }),
+        []
+    );
     const isDark = useTheme().resolvedTheme === "dark";
     const themeRef = useRef(isDark);
     useEffect(() => {
@@ -56,9 +62,8 @@ export default function KoiBanner() {
             canvas.width = Math.round(width * dpr);
             canvas.height = Math.round(height * dpr);
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            // The shoreline narrows on small screens, so a phone still gets a pond and not just a bank.
-            const band = Math.min(6, Math.max(3, width / cw / 16));
-            const shore = shorelineMask(width, height, cw, ch, band, 11);
+            const shore = pondMask(width, height, cw, ch);
+            outlineRef.current = shore.outline;
             ({ keep, cols, rows } = shore);
             setMask(shore.url);
             draw(performance.now() / 1000);
@@ -154,7 +159,7 @@ export default function KoiBanner() {
         <figure className="group/banner flex flex-col gap-2">
             <div
                 ref={wrapRef}
-                className="relative h-[clamp(176px,34vw,232px)] w-full cursor-crosshair transition-opacity duration-700 ease-out"
+                className="relative h-[clamp(190px,38vw,250px)] w-full cursor-crosshair"
                 // Hidden until the shoreline is cut, then faded up, so the banner never shows a hard rectangle first.
                 style={
                     mask
@@ -163,17 +168,12 @@ export default function KoiBanner() {
                               WebkitMaskImage: `url(${mask})`,
                               maskSize: "100% 100%",
                               WebkitMaskSize: "100% 100%",
-                              opacity: 1,
                           }
-                        : { opacity: 0 }
+                        : { visibility: "hidden" }
                 }
             >
                 <canvas ref={waterRef} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
-                <KoiPond
-                    onStats={setStats}
-                    stocking={{ scale: 0.95, count: 3 }}
-                    className="absolute inset-0 h-full w-full"
-                />
+                <KoiPond onStats={setStats} stocking={stocking} className="absolute inset-0 h-full w-full" />
             </div>
             {/* The one hint, and only while the cursor is over the water. */}
             <figcaption

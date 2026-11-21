@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
             },
         ];
     },
+    // The projects list is part of the blog's index now; old links land on it, filtered to projects.
+    async redirects() {
+        return [{ source: "/projects", destination: "/blog?filter=projects", permanent: false }];
+    },
     skipTrailingSlashRedirect: true,
 };
 

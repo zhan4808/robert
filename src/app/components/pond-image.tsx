@@ -17,17 +17,77 @@ type Props = {
 };
 
 /*
- * A photo painted onto the page in watercolour, then left under a thin film of water.
+ * A photo drawn in dots before it is drawn in colour.
  *
- * When it scrolls into view, a pale wash blooms outward from a few points, the way pigment spreads across wet paper,
- * with the darker line that collects at a bloom's edge; the photo's detail settles in a beat behind the wash. The
- * frame keeps a deckled paper edge with a faint rim of pooled pigment. Afterwards, moving the cursor across it sends
- * small ripples through the photo, bending it like the surface of the koi pond, and a click drops a larger one.
+ * When it scrolls into view, a loose cloud of ink dots drifts in from around the frame and settles onto a grid,
+ * where together they form an ordered-dither halftone of the photo; a few strays keep drifting at the edges. Once
+ * the halftone has formed it dissolves into the photo itself. Afterwards the cursor is a dot-matrix lens: under it
+ * the photo goes back to dots, with a scatter of loose ones around the rim.
  *
- * Everything happens in one fragment shader. Without WebGL, or with reduced motion, it is the plain photo.
+ * Two WebGL programs: points for the dots in flight, and a quad for the settled photo and the lens. Without WebGL,
+ * or with reduced motion, it's the plain photo.
  */
 
-const VERT = `
+const CELL = 3; // CSS px between dot centres
+const MARGIN = 28; // the canvas reaches this far past the frame, so dots can arrive from outside it
+const SETTLE_START = 1.25; // s: the halftone starts handing over to the photo
+const SETTLE_END = 1.9;
+const LENS = 74; // px radius of the cursor's lens
+
+const DITHER = `
+float bayer2(vec2 a) { a = floor(a); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
+float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
+float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+`;
+
+const POINT_VERT = `
+attribute vec4 aDot; // cell x, cell y, seed 0..1, 1 if the dot belongs to the halftone
+uniform vec2 uRes;
+uniform float uCell;
+uniform float uMargin;
+uniform float uT;
+uniform float uScale;
+uniform vec2 uCenter;
+varying float vAlpha;
+void main() {
+    vec2 target = vec2(uMargin) + (aDot.xy + 0.5) * uCell;
+    float seed = aDot.z;
+    // Each dot starts somewhere out in a ring around its target and spirals in, later the further out it began.
+    float ang = seed * 43.0 + aDot.x * 0.13 - aDot.y * 0.07;
+    vec2 away = normalize(target - uCenter + vec2(0.001));
+    vec2 dir = normalize(away + vec2(cos(ang), sin(ang)) * 0.9);
+    float reach = 40.0 + fract(seed * 7.31) * 150.0;
+    vec2 start = target + dir * reach;
+    float delay = fract(seed * 3.17) * 0.45 + length(target - uCenter) / length(uRes) * 0.35;
+    float p = clamp((uT - delay) / 0.75, 0.0, 1.0);
+    float e = 1.0 - pow(1.0 - p, 3.0);
+    vec2 pos = mix(start, target, e);
+    // A sideways drift that dies out as the dot lands.
+    pos += vec2(sin(uT * 2.0 + seed * 20.0), cos(uT * 1.7 + seed * 13.0)) * 6.0 * (1.0 - e);
+
+    float settle = smoothstep(${SETTLE_START.toFixed(2)}, ${SETTLE_END.toFixed(2)}, uT);
+    if (aDot.w > 0.5) {
+        vAlpha = smoothstep(0.0, 0.25, p) * (1.0 - settle);
+    } else {
+        // A few strays never land: they drift through and fade before the photo arrives.
+        vAlpha = seed < 0.035 ? sin(clamp(uT / 1.4, 0.0, 1.0) * 3.14159) * 0.75 : 0.0;
+        pos = start + dir * uT * 18.0;
+    }
+    gl_Position = vec4((pos / uRes) * 2.0 - 1.0, 0.0, 1.0) * vec4(1.0, -1.0, 1.0, 1.0);
+    gl_PointSize = uCell * 0.62 * uScale;
+}`;
+
+const POINT_FRAG = `
+precision mediump float;
+uniform vec3 uInk;
+varying float vAlpha;
+void main() {
+    if (vAlpha <= 0.002) discard;
+    gl_FragColor = vec4(uInk * vAlpha, vAlpha);
+}`;
+
+const QUAD_VERT = `
 attribute vec2 aPos;
 varying vec2 vUv;
 void main() {
@@ -35,118 +95,97 @@ void main() {
     gl_Position = vec4(aPos, 0.0, 1.0);
 }`;
 
-const MAX_RIPPLES = 8;
-const BLOOM_SECONDS = 2.6;
-const RIPPLE_SECONDS = 2.4;
-
-const FRAG = `
+const QUAD_FRAG = `
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D uTex;
-uniform vec2 uRes;      // canvas size in CSS px
-uniform vec2 uImg;      // photo size in px
-uniform float uScale;   // device pixels per CSS px
-uniform float uT;       // seconds since the bloom began
-uniform float uNow;     // seconds, for ripples
+uniform vec2 uRes;
+uniform vec4 uFrame;   // x, y, w, h of the photo inside the canvas, CSS px
+uniform vec2 uImg;
+uniform float uCell;
+uniform float uSettle; // 0 before the photo arrives, 1 once it has
+uniform vec3 uInk;
 uniform vec3 uPaper;
-uniform float uSeed;
-uniform vec4 uRipples[${MAX_RIPPLES}]; // x, y (px), start time, strength
-
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + uSeed) * 43758.5453); }
-float noise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), u.x), u.y);
-}
-float fbm(vec2 p) {
-    float v = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; }
-    return v;
-}
-
-// Canvas px to photo uv, cropped the way object-fit: cover crops.
-vec2 coverUv(vec2 p) {
-    float s = max(uRes.x / uImg.x, uRes.y / uImg.y);
+uniform vec2 uMouse;
+uniform float uLens;   // lens radius in px, eased in and out
+uniform float uNow;
+uniform float uDark;   // 1 on the dark page: dots mark the light parts instead of the dark ones
+${DITHER}
+vec2 coverUv(vec2 q) {
+    float s = max(uFrame.z / uImg.x, uFrame.w / uImg.y);
     vec2 size = uImg * s;
-    return (p + (size - uRes) * 0.5) / size;
+    return (q + (size - uFrame.zw) * 0.5) / size;
 }
-
-vec3 photo(vec2 p) { return texture2D(uTex, coverUv(clamp(p, vec2(0.5), uRes - 0.5))).rgb; }
-
+float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 void main() {
     vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uRes;
+    vec2 q = p - uFrame.xy;
+    bool inside = q.x >= 0.0 && q.y >= 0.0 && q.x < uFrame.z && q.y < uFrame.w;
 
-    // Ripples: rings that travel outward and fade, bending where the photo is sampled.
-    vec2 bend = vec2(0.0);
-    float sheen = 0.0;
-    for (int i = 0; i < ${MAX_RIPPLES}; i++) {
-        vec4 r = uRipples[i];
-        float age = uNow - r.z;
-        if (r.w <= 0.0 || age < 0.0 || age > ${RIPPLE_SECONDS.toFixed(1)}) continue;
-        vec2 d = p - r.xy;
-        float dist = length(d) + 0.0001;
-        float front = age * 210.0;
-        float band = (dist - front) / 22.0;
-        float wave = sin((dist - front) * 0.16) * exp(-band * band) * exp(-age * 1.7) * r.w;
-        bend += (d / dist) * wave * 6.0;
-        sheen += wave;
+    // The lens: inside it, the photo is shown as the halftone again; around its rim, loose dots come and go.
+    float d = length(p - uMouse);
+    vec2 cell = floor(q / uCell);
+    vec2 local = fract(q / uCell);
+    float rim = uLens * (1.0 + 0.25 * (hash(cell + floor(uNow * 6.0)) - 0.5));
+    float lens = uLens > 0.5 ? 1.0 - smoothstep(rim * 0.82, rim, d) : 0.0;
+    float stray = 0.0;
+    if (uLens > 0.5 && d > rim && d < uLens * 1.45) {
+        stray = step(0.965, hash(cell * 1.7 + floor(uNow * 8.0))) * (1.0 - (d - rim) / (uLens * 0.45));
     }
-    vec2 q = p + bend;
 
-    // The deckled edge: a frame worn ragged by noise, a pixel of feather, and a rim of pooled pigment.
-    float edgeDist = min(min(p.x, uRes.x - p.x), min(p.y, uRes.y - p.y));
-    float ragged = (fbm(p / 70.0) - 0.5) * 16.0 + (noise(p / 6.0) - 0.5) * 3.0;
-    float e = edgeDist + ragged;
-    float frame = smoothstep(5.0, 5.6 + 1.2 / uScale, e);
-    float rim = smoothstep(16.0, 6.0, e) * frame;
-
-    // The bloom: distance from three wet points, warped so it spreads like pigment, not like a circle.
-    float diag = length(uRes);
-    vec2 s1 = uRes * vec2(0.32 + 0.1 * sin(uSeed), 0.42);
-    vec2 s2 = uRes * vec2(0.7, 0.36 + 0.1 * cos(uSeed));
-    vec2 s3 = uRes * vec2(0.52, 0.74);
-    float f = min(min(length(p - s1), length(p - s2) * 1.1), length(p - s3) * 1.2) / diag;
-    f += (fbm(p / 110.0 + uT * 0.04) - 0.5) * 0.32 + (noise(p / 14.0) - 0.5) * 0.03;
-
-    float ease = 1.0 - pow(1.0 - clamp(uT / 2.1, 0.0, 1.0), 3.0);
-    float front = ease * 1.05 - 0.05;
-    float wash = smoothstep(front + 0.015, front - 0.05, f);
-    float lag = clamp((uT - 0.35) / 2.0, 0.0, 1.0);
-    float detailFront = (1.0 - pow(1.0 - lag, 2.4)) * 1.15 - 0.1;
-    float detail = smoothstep(detailFront + 0.02, detailFront - 0.16, f);
-
-    // The wash: a soft, pale, slightly desaturated photo, as the first thin layer of paint.
-    vec3 soft = (photo(q) * 2.0 + photo(q + vec2(5.0, 2.0)) + photo(q - vec2(4.0, 3.0)) + photo(q + vec2(-2.0, 5.0)) + photo(q + vec2(3.0, -5.0))) / 6.0;
-    float lum = dot(soft, vec3(0.299, 0.587, 0.114));
-    vec3 washCol = mix(uPaper, mix(vec3(lum), soft, 0.7), 0.72);
-    washCol *= 0.94 + 0.06 * noise(p / 2.2); // paper grain
-
-    vec3 col = mix(washCol, photo(q), detail);
-    // Pigment gathers along the moving edge of a bloom, and at the frame's edge.
-    float bloomLine = wash * (1.0 - wash) * 4.0 * (1.0 - detail);
-    col *= 1.0 - 0.16 * bloomLine;
-    col *= 1.0 - 0.12 * rim;
-    col += sheen * 0.05;
-
-    float a = wash * frame;
-    gl_FragColor = vec4(col * a, a);
+    vec4 col = vec4(0.0);
+    if (inside) {
+        vec3 photo = texture2D(uTex, coverUv(q)).rgb;
+        col = vec4(photo, 1.0) * uSettle;
+        if (lens > 0.0) {
+            vec3 c = texture2D(uTex, coverUv((cell + 0.5) * uCell)).rgb;
+            float on = uDark > 0.5 ? step(bayer8(cell), lum(c)) : step(lum(c), bayer8(cell));
+            float dotMask = step(abs(local.x - 0.5), 0.31) * step(abs(local.y - 0.5), 0.31);
+            vec3 tone = mix(uPaper, uInk, on * dotMask);
+            col = mix(col, vec4(tone, 1.0) * uSettle, lens);
+        }
+    }
+    if (stray > 0.0) {
+        float dotMask = step(abs(local.x - 0.5), 0.31) * step(abs(local.y - 0.5), 0.31);
+        col = mix(col, vec4(uInk, 1.0), stray * dotMask * uSettle);
+    }
+    gl_FragColor = col;
 }`;
 
-function compile(gl: WebGLRenderingContext, type: number, src: string) {
-    const s = gl.createShader(type);
-    if (!s) return null;
-    gl.shaderSource(s, src);
-    gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        gl.deleteShader(s);
-        return null;
-    }
-    return s;
+function program(gl: WebGLRenderingContext, vert: string, frag: string) {
+    const make = (type: number, src: string) => {
+        const s = gl.createShader(type);
+        if (!s) return null;
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+    };
+    const vs = make(gl.VERTEX_SHADER, vert);
+    const fs = make(gl.FRAGMENT_SHADER, frag);
+    const prog = gl.createProgram();
+    if (!vs || !fs || !prog) return null;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    return gl.getProgramParameter(prog, gl.LINK_STATUS) ? prog : null;
 }
 
-type Ripple = { x: number; y: number; t: number; s: number };
+// 4x4 Bayer thresholds, matching the shader's bayer8 closely enough that the dots land where the lens draws them.
+function bayer8(x: number, y: number) {
+    const b2 = (a: number, b: number) => {
+        a = Math.floor(a);
+        b = Math.floor(b);
+        const v = a * 0.5 + b * b * 0.75;
+        return v - Math.floor(v);
+    };
+    const b4 = (a: number, b: number) => b2(a * 0.5, b * 0.5) * 0.25 + b2(a, b);
+    return b4(x * 0.5, y * 0.5) * 0.25 + b2(x, y);
+}
 
-const PAPER = { light: [0.965, 0.953, 0.925], dark: [0.09, 0.086, 0.078] } as const;
+const COLORS = {
+    light: { ink: [0.145, 0.133, 0.114], paper: [0.965, 0.953, 0.925] },
+    dark: { ink: [0.953, 0.933, 0.902], paper: [0.09, 0.086, 0.078] },
+} as const;
 
 export default function PondImage({ src, alt, ratio, sizes, priority, className, blurDataURL }: Props) {
     const wrapRef = useRef<HTMLDivElement>(null);
@@ -155,10 +194,10 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
     const redrawRef = useRef<() => void>(() => {});
     const [loaded, setLoaded] = useState(false);
     const isDark = useTheme().resolvedTheme === "dark";
-    const paperRef = useRef<readonly number[]>(PAPER.light);
+    const colorsRef = useRef<(typeof COLORS)[keyof typeof COLORS]>(COLORS.light);
 
     useEffect(() => {
-        paperRef.current = isDark ? PAPER.dark : PAPER.light;
+        colorsRef.current = isDark ? COLORS.dark : COLORS.light;
         redrawRef.current();
     }, [isDark]);
 
@@ -177,22 +216,9 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
 
         const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: false, alpha: true });
         if (!gl) return;
-        const vs = compile(gl, gl.VERTEX_SHADER, VERT);
-        const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
-        const prog = gl.createProgram();
-        if (!vs || !fs || !prog) return;
-        gl.attachShader(prog, vs);
-        gl.attachShader(prog, fs);
-        gl.linkProgram(prog);
-        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
-        gl.useProgram(prog);
-
-        const buf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-        const aPos = gl.getAttribLocation(prog, "aPos");
-        gl.enableVertexAttribArray(aPos);
-        gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+        const dots = program(gl, POINT_VERT, POINT_FRAG);
+        const quad = program(gl, QUAD_VERT, QUAD_FRAG);
+        if (!dots || !quad) return;
 
         const tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -206,47 +232,118 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
             return;
         }
 
-        const u = (name: string) => gl.getUniformLocation(prog, name);
-        const uRes = u("uRes");
-        const uScale = u("uScale");
-        const uT = u("uT");
-        const uNow = u("uNow");
-        const uPaper = u("uPaper");
-        const uRipples = u("uRipples");
-        gl.uniform2f(u("uImg"), img.naturalWidth, img.naturalHeight);
-        gl.uniform1f(u("uSeed"), (img.naturalWidth * 7 + img.naturalHeight * 13) % 97);
+        const quadBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        const dotBuf = gl.createBuffer();
+        let dotCount = 0;
 
-        let bloomAt = -1;
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+        let W = 0;
+        let H = 0;
+        let dpr = 1;
+        let shownAt = -1;
         let raf = 0;
-        const ripples: Ripple[] = [];
-        const rippleData = new Float32Array(MAX_RIPPLES * 4);
+        const mouse = { x: -1e4, y: -1e4, over: false, lens: 0 };
         const clock = () => performance.now() / 1000;
 
-        const size = () => {
+        // The halftone, worked out once per size: one dot per cell, kept where the photo is darker than the dither.
+        const layout = () => {
             const rect = wrap.getBoundingClientRect();
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width = Math.max(1, Math.round(rect.width * dpr));
-            canvas.height = Math.max(1, Math.round(rect.height * dpr));
+            W = rect.width;
+            H = rect.height;
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round((W + MARGIN * 2) * dpr);
+            canvas.height = Math.round((H + MARGIN * 2) * dpr);
             gl.viewport(0, 0, canvas.width, canvas.height);
-            gl.uniform2f(uRes, rect.width, rect.height);
-            gl.uniform1f(uScale, dpr);
+            const cols = Math.max(1, Math.floor(W / CELL));
+            const rows = Math.max(1, Math.floor(H / CELL));
+            const off = document.createElement("canvas");
+            off.width = cols;
+            off.height = rows;
+            const o = off.getContext("2d", { willReadFrequently: true });
+            if (!o) return;
+            const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+            const sw = W / s;
+            const sh = H / s;
+            o.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, cols, rows);
+            let px: Uint8ClampedArray;
+            try {
+                px = o.getImageData(0, 0, cols, rows).data;
+            } catch {
+                return;
+            }
+            const dark = colorsRef.current === COLORS.dark;
+            const data = new Float32Array(cols * rows * 4);
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const i = r * cols + c;
+                    const l = (0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2]) / 255;
+                    const seed = Math.abs(Math.sin(c * 12.9898 + r * 78.233) * 43758.5453) % 1;
+                    const b = bayer8(c, r);
+                    data.set([c, r, seed, (dark ? l > b : l < b) ? 1 : 0], i * 4);
+                }
+            }
+            gl.bindBuffer(gl.ARRAY_BUFFER, dotBuf);
+            gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+            dotCount = cols * rows;
         };
 
         const draw = () => {
             const now = clock();
-            const t = bloomAt < 0 ? 0 : Math.max(0, now - bloomAt);
-            while (ripples.length && now - ripples[0].t > RIPPLE_SECONDS) ripples.shift();
-            gl.uniform1f(uT, t);
-            gl.uniform1f(uNow, now);
-            gl.uniform3f(uPaper, paperRef.current[0], paperRef.current[1], paperRef.current[2]);
-            rippleData.fill(0);
-            ripples.forEach((r, i) => rippleData.set([r.x, r.y, r.t, r.s], i * 4));
-            gl.uniform4fv(uRipples, rippleData);
+            const t = shownAt < 0 ? 0 : now - shownAt;
+            const settle = shownAt < 0 ? 0 : Math.min(1, Math.max(0, (t - SETTLE_START) / (SETTLE_END - SETTLE_START)));
+            const eased = settle * settle * (3 - 2 * settle);
+            const { ink, paper } = colorsRef.current;
+            const cw = W + MARGIN * 2;
+            const chh = H + MARGIN * 2;
+            mouse.lens += ((mouse.over && settle >= 1 ? LENS : 0) - mouse.lens) * 0.18;
+
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            // Keep going while the bloom is still spreading or a ripple is still moving.
-            return (bloomAt >= 0 && now - bloomAt < BLOOM_SECONDS) || ripples.length > 0;
+
+            if (eased > 0) {
+                gl.useProgram(quad);
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+                const a = gl.getAttribLocation(quad, "aPos");
+                gl.enableVertexAttribArray(a);
+                gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+                const u = (n: string) => gl.getUniformLocation(quad, n);
+                gl.uniform2f(u("uRes"), cw, chh);
+                gl.uniform4f(u("uFrame"), MARGIN, MARGIN, W, H);
+                gl.uniform2f(u("uImg"), img.naturalWidth, img.naturalHeight);
+                gl.uniform1f(u("uCell"), CELL);
+                gl.uniform1f(u("uSettle"), eased);
+                gl.uniform3f(u("uInk"), ink[0], ink[1], ink[2]);
+                gl.uniform3f(u("uPaper"), paper[0], paper[1], paper[2]);
+                gl.uniform2f(u("uMouse"), mouse.x + MARGIN, mouse.y + MARGIN);
+                gl.uniform1f(u("uLens"), mouse.lens);
+                gl.uniform1f(u("uNow"), now);
+                gl.uniform1f(u("uDark"), colorsRef.current === COLORS.dark ? 1 : 0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                gl.disableVertexAttribArray(a);
+            }
+            if (shownAt >= 0 && settle < 1) {
+                gl.useProgram(dots);
+                gl.bindBuffer(gl.ARRAY_BUFFER, dotBuf);
+                const a = gl.getAttribLocation(dots, "aDot");
+                gl.enableVertexAttribArray(a);
+                gl.vertexAttribPointer(a, 4, gl.FLOAT, false, 0, 0);
+                const u = (n: string) => gl.getUniformLocation(dots, n);
+                gl.uniform2f(u("uRes"), cw, chh);
+                gl.uniform1f(u("uCell"), CELL);
+                gl.uniform1f(u("uMargin"), MARGIN);
+                gl.uniform1f(u("uT"), t);
+                gl.uniform1f(u("uScale"), dpr);
+                gl.uniform2f(u("uCenter"), cw / 2, chh / 2);
+                gl.uniform3f(u("uInk"), ink[0], ink[1], ink[2]);
+                gl.drawArrays(gl.POINTS, 0, dotCount);
+                gl.disableVertexAttribArray(a);
+            }
+            // Keep animating while the dots are still settling or the lens is open or easing shut.
+            return (shownAt >= 0 && settle < 1) || mouse.over || mouse.lens > 0.5;
         };
 
         const frame = () => {
@@ -255,61 +352,51 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
         const wake = () => {
             if (!raf) raf = requestAnimationFrame(frame);
         };
-        redrawRef.current = () => draw();
+        redrawRef.current = () => {
+            layout();
+            draw();
+        };
 
-        size();
+        layout();
         draw();
-        // The shader is drawing now; the <img> underneath steps back (it stays for alt text and as the fallback).
         img.style.opacity = "0";
 
         const io = new IntersectionObserver(
             ([entry]) => {
-                if (!entry.isIntersecting || bloomAt >= 0) return;
-                bloomAt = clock() + 0.1;
+                if (!entry.isIntersecting || shownAt >= 0) return;
+                shownAt = clock() + 0.05;
                 wake();
             },
             { threshold: 0.3 }
         );
         io.observe(wrap);
 
-        let lastDrop = { x: -1e4, y: -1e4, t: 0 };
-        const drop = (x: number, y: number, s: number) => {
-            ripples.push({ x, y, t: clock(), s });
-            if (ripples.length > MAX_RIPPLES) ripples.shift();
+        const onMove = (e: PointerEvent) => {
+            if (e.pointerType === "touch") return;
+            const rect = wrap.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+            mouse.over = true;
             wake();
         };
-        const local = (e: PointerEvent) => {
-            const rect = wrap.getBoundingClientRect();
-            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        };
-        // A ripple trails the cursor every so often, spaced out so the surface stays calm enough to see.
-        const onMove = (e: PointerEvent) => {
-            if (bloomAt < 0 || e.pointerType === "touch") return;
-            const { x, y } = local(e);
-            const now = clock();
-            if (Math.hypot(x - lastDrop.x, y - lastDrop.y) < 46 || now - lastDrop.t < 0.14) return;
-            lastDrop = { x, y, t: now };
-            drop(x, y, 0.45);
-        };
-        const onDown = (e: PointerEvent) => {
-            if (bloomAt < 0) return;
-            const { x, y } = local(e);
-            drop(x, y, 1);
+        const onLeave = () => {
+            mouse.over = false;
+            wake();
         };
         const ro = new ResizeObserver(() => {
-            size();
+            layout();
             draw();
         });
         ro.observe(wrap);
         wrap.addEventListener("pointermove", onMove, { passive: true });
-        wrap.addEventListener("pointerdown", onDown, { passive: true });
+        wrap.addEventListener("pointerleave", onLeave);
 
         return () => {
             cancelAnimationFrame(raf);
             io.disconnect();
             ro.disconnect();
             wrap.removeEventListener("pointermove", onMove);
-            wrap.removeEventListener("pointerdown", onDown);
+            wrap.removeEventListener("pointerleave", onLeave);
             redrawRef.current = () => {};
             gl.getExtension("WEBGL_lose_context")?.loseContext();
             img.style.opacity = "";
@@ -330,7 +417,12 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
                 onLoad={() => setLoaded(true)}
                 className="object-cover"
             />
-            <canvas ref={canvasRef} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
+            <canvas
+                ref={canvasRef}
+                aria-hidden
+                className="pointer-events-none absolute h-[calc(100%+56px)] w-[calc(100%+56px)]"
+                style={{ left: -MARGIN, top: -MARGIN }}
+            />
         </div>
     );
 }

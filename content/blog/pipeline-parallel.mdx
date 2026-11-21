@@ -5,6 +5,7 @@ date: February 2026
 year: 2026
 order: 3
 kind: technical
+hidden: true
 ---
 
 At some point a model stops fitting in a single GPU's memory, and you have to split it across several. BLOOM, Huggingface's 175B parameter Transformer, needs \~350GB just to store its weights in bfloat16, and an A100 80GB holds roughly a quarter of that. Training it on 384 GPUs meant spreading different layers across machines, a technique called model partitioning or pipeline parallelism.

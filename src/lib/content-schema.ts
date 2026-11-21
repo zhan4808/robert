@@ -64,6 +64,8 @@ export const trackSchema = z
 export const postFrontmatterSchema = z
     .object({
         title: nonEmpty,
+        /** A short name (about 40 characters) for lists, such as a series' part list; the full title heads the post. */
+        shortTitle: nonEmpty.max(48).optional(),
         subtitle: nonEmpty,
         /** Written for people: "October 2025" or "July 31, 2025". */
         date: nonEmpty,
@@ -72,7 +74,7 @@ export const postFrontmatterSchema = z
         year: z.number().int(),
         /** Where it sits among the posts; lower comes first. */
         order: z.number().int(),
-        /** Hidden posts still build at their URL (with noindex) but stay out of the list, the feed, and the sitemap. */
+        /** Hidden posts get no page in production (they still render in `next dev`) and stay out of every list. */
         hidden: z.boolean().optional(),
         /** A journal entry (the default) or a technical write-up; shown as a small label beside the date. */
         kind: z.enum(["journal", "technical"]).default("journal"),

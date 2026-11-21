@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import AudioPlayer from "../../components/audio-player";
 import { TableOfContents } from "../../components/mdx/toc";
 import Link from "next/link";
-import { getPost, getPosts, getVisiblePosts } from "../../../lib/content";
+import { getPost, getPosts, getVisiblePosts, hasPostPage } from "../../../lib/content";
 import type { JournalPost, JournalTrack } from "../../../lib/content-schema";
 import { imageMeta } from "../../../lib/images";
 import { renderMdx } from "../../../lib/mdx";
@@ -17,8 +17,11 @@ const HAIRLINE = "border-hairline";
 
 export const dynamicParams = false;
 
+// Hidden posts are left out in production, so their URLs 404 like any unknown slug.
 export function generateStaticParams() {
-    return getPosts().map((post) => ({ slug: post.slug }));
+    return getPosts()
+        .filter(hasPostPage)
+        .map((post) => ({ slug: post.slug }));
 }
 
 type Props = { params: Promise<{ slug: string }> };
@@ -26,9 +29,9 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const post = getPosts().find((entry) => entry.slug === slug);
-    if (!post) return {};
+    if (!post || !hasPostPage(post)) notFound();
     const path = `/blog/${post.slug}`;
-    // Cards are only drawn for visible posts, so a hidden one shares the site-wide card rather than a broken link.
+    // In dev a hidden post still renders; cards are only drawn for visible posts, so it shares the site-wide card.
     return pageMetadata({
         title: post.title,
         description: post.subtitle,
@@ -63,10 +66,10 @@ const pagerPost = (post: JournalPost): PagerPost => ({
 export default async function Page({ params }: Props) {
     const { slug } = await params;
     const doc = getPost(slug);
-    if (!doc) notFound();
+    if (!doc || !hasPostPage(doc.meta)) notFound();
     const post = doc.meta;
 
-    // Previous and next step through the visible posts in order; hidden posts still open by URL.
+    // Previous and next step through the visible posts in order; a hidden draft (dev only) gets neither.
     const visible = getVisiblePosts();
     const at = visible.findIndex((p) => p.slug === slug);
     const newer = at > 0 ? visible[at - 1] : undefined;

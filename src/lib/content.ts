@@ -63,6 +63,12 @@ export const getPosts = (): JournalPost[] => postDocuments().map((doc) => doc.me
 export const getPost = (slug: string): Document<JournalPost> | undefined =>
     postDocuments().find((doc) => doc.meta.slug === slug);
 
+/**
+ * Whether a post gets a page in this build. Hidden posts render under `next dev`, so drafts can be read locally,
+ * and get no page in production, like hidden projects.
+ */
+export const hasPostPage = (post: JournalPost): boolean => !post.hidden || process.env.NODE_ENV !== "production";
+
 const postTime = (post: JournalPost) => parseContentDate(post.date)?.getTime() ?? Date.UTC(post.year, 0, 1);
 
 /** The posts that show in the list, the feed, and the sitemap: newest first, `order` settling posts on one date. */

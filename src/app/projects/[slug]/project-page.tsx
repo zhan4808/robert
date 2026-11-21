@@ -26,6 +26,16 @@ const IMAGE_QUALITY = 90;
 const MEDIA =
     "block aspect-video h-auto w-full rounded-card bg-black shadow-[0_0_0_1px_color-mix(in_srgb,var(--foreground-color)_8%,transparent)]";
 
+/**
+ * The line under the title: `subtitle` when set, otherwise the description if it is a single sentence. A longer
+ * description is left out, since the lede paragraph below says the same thing.
+ */
+const subtitleOf = (project: Project): string | undefined => {
+    if (project.subtitle) return project.subtitle;
+    const text = project.description.trim();
+    return /[.!?]\s+\S/.test(text) ? undefined : text;
+};
+
 /** Shows the hostname for an outside link, or a label for a file on this site. */
 const linkLabel = (href: string) => {
     if (/^https?:/.test(href)) return new URL(href).hostname.replace(/^www\./, "");
@@ -72,6 +82,7 @@ export default function ProjectPage({
 
     const link = primaryLink(project);
     const hero = project.hero;
+    const subtitle = subtitleOf(project);
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
@@ -88,9 +99,11 @@ export default function ProjectPage({
                     <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">
                         {project.title}
                     </h1>
-                    <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
-                        {project.description}
-                    </p>
+                    {subtitle && (
+                        <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
+                            {subtitle}
+                        </p>
+                    )}
                     <p
                         className={`mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hairline pb-5 text-small ${MUTED}`}
                     >

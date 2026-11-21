@@ -23,6 +23,8 @@ export const projectFrontmatterSchema = z
         /** Short name for tiles, pagers, and hover cards; the full title heads the page. */
         shortTitle: nonEmpty.optional(),
         description: nonEmpty,
+        /** The italic line under the title. Without it the description stands in, when it is one sentence. */
+        subtitle: nonEmpty.optional(),
         longDescription: nonEmpty,
         /** Written for people: "2026", "October 2025", or "January 21, 2026". */
         date: nonEmpty,

@@ -14,9 +14,19 @@ interface ImageLightboxProps {
     meta?: ImageMeta;
     /** How wide the thumbnail renders, for the srcset; defaults to the full write-up frame. */
     sizes?: string;
+    /** Classes for the surface behind the thumbnail (the button that opens the lightbox). */
+    frameClassName?: string;
 }
 
-export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONTENT_IMAGE_SIZES }: ImageLightboxProps) {
+export function ImageLightbox({
+    src,
+    alt,
+    caption,
+    className,
+    meta,
+    sizes = CONTENT_IMAGE_SIZES,
+    frameClassName,
+}: ImageLightboxProps) {
     const [open, setOpen] = useState(false);
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -143,7 +153,7 @@ export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONT
                 <button
                     type="button"
                     onClick={openLightbox}
-                    className="cursor-zoom-in focus-ring rounded-card overflow-hidden"
+                    className={`cursor-zoom-in focus-ring rounded-card overflow-hidden${frameClassName ? ` ${frameClassName}` : ""}`}
                     aria-label="Expand image"
                 >
                     {meta ? (

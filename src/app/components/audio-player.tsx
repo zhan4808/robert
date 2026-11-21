@@ -40,7 +40,7 @@ export default function AudioPlayer({ track, art }: { track: JournalTrack; art?:
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={`${track.title} on Spotify`}
-                            className={`ink-link shrink-0 font-geistMono text-caption ${MUTED}`}
+                            className={`ink-link shrink-0 text-small ${MUTED}`}
                         >
                             spotify ↗
                         </a>
@@ -181,7 +181,7 @@ function Player({ track, art, src }: { track: JournalTrack; art?: ImageMeta; src
             <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-baseline justify-between gap-4">
                     <Title track={track} />
-                    <span className={`shrink-0 font-geistMono text-caption tabular-nums ${MUTED}`}>{time}</span>
+                    <span className={`shrink-0 text-small tabular-nums ${MUTED}`}>{time}</span>
                 </div>
                 {status !== "error" && (
                     <div

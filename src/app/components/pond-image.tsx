@@ -4,7 +4,6 @@ import Image, { type StaticImageData } from "next/image";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils";
-import { lineGlyph, MONO, noise, shorelineMask, tileSize, TILE_GLYPHS } from "./pond-surface";
 
 type Props = {
     src: string | StaticImageData;
@@ -14,34 +13,153 @@ type Props = {
     sizes?: string;
     priority?: boolean;
     className?: string;
-    /** Tiles of shoreline at the edge; 0 for a straight edge. */
-    shore?: number;
     blurDataURL?: string;
 };
 
-// How fast the surfacing ripple spreads, in px/s, and how wide its ring of glyphs is.
-const RIPPLE_SPEED = 520;
-const RING = 26;
-// The cursor turns the surface back into tiles within this radius; they settle again at this rate per second.
-const STIR_RADIUS = 52;
-const SETTLE = 2.2;
-
-/**
- * A photo that surfaces from the pond. It first appears as the tiles the koi are drawn with, each tile the photo's
- * colour at that spot with a glyph etched by its brightness; when it scrolls into view a ripple spreads across it
- * and the photo comes up through the water behind the ring. Moving the cursor over it stirs the surface back into
- * tiles for a moment. The frame ends in the same shoreline of scattered tiles as the koi banner.
+/*
+ * A photo painted onto the page in watercolour, then left under a thin film of water.
+ *
+ * When it scrolls into view, a pale wash blooms outward from a few points, the way pigment spreads across wet paper,
+ * with the darker line that collects at a bloom's edge; the photo's detail settles in a beat behind the wash. The
+ * frame keeps a deckled paper edge with a faint rim of pooled pigment. Afterwards, moving the cursor across it sends
+ * small ripples through the photo, bending it like the surface of the koi pond, and a click drops a larger one.
+ *
+ * Everything happens in one fragment shader. Without WebGL, or with reduced motion, it is the plain photo.
  */
-export default function PondImage({ src, alt, ratio, sizes, priority, className, shore = 3, blurDataURL }: Props) {
+
+const VERT = `
+attribute vec2 aPos;
+varying vec2 vUv;
+void main() {
+    vUv = aPos * 0.5 + 0.5;
+    gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+
+const MAX_RIPPLES = 8;
+const BLOOM_SECONDS = 2.6;
+const RIPPLE_SECONDS = 2.4;
+
+const FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform vec2 uRes;      // canvas size in CSS px
+uniform vec2 uImg;      // photo size in px
+uniform float uScale;   // device pixels per CSS px
+uniform float uT;       // seconds since the bloom began
+uniform float uNow;     // seconds, for ripples
+uniform vec3 uPaper;
+uniform float uSeed;
+uniform vec4 uRipples[${MAX_RIPPLES}]; // x, y (px), start time, strength
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + uSeed) * 43758.5453); }
+float noise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), u.x), u.y);
+}
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; }
+    return v;
+}
+
+// Canvas px to photo uv, cropped the way object-fit: cover crops.
+vec2 coverUv(vec2 p) {
+    float s = max(uRes.x / uImg.x, uRes.y / uImg.y);
+    vec2 size = uImg * s;
+    return (p + (size - uRes) * 0.5) / size;
+}
+
+vec3 photo(vec2 p) { return texture2D(uTex, coverUv(clamp(p, vec2(0.5), uRes - 0.5))).rgb; }
+
+void main() {
+    vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uRes;
+
+    // Ripples: rings that travel outward and fade, bending where the photo is sampled.
+    vec2 bend = vec2(0.0);
+    float sheen = 0.0;
+    for (int i = 0; i < ${MAX_RIPPLES}; i++) {
+        vec4 r = uRipples[i];
+        float age = uNow - r.z;
+        if (r.w <= 0.0 || age < 0.0 || age > ${RIPPLE_SECONDS.toFixed(1)}) continue;
+        vec2 d = p - r.xy;
+        float dist = length(d) + 0.0001;
+        float front = age * 210.0;
+        float band = (dist - front) / 22.0;
+        float wave = sin((dist - front) * 0.16) * exp(-band * band) * exp(-age * 1.7) * r.w;
+        bend += (d / dist) * wave * 6.0;
+        sheen += wave;
+    }
+    vec2 q = p + bend;
+
+    // The deckled edge: a frame worn ragged by noise, a pixel of feather, and a rim of pooled pigment.
+    float edgeDist = min(min(p.x, uRes.x - p.x), min(p.y, uRes.y - p.y));
+    float ragged = (fbm(p / 70.0) - 0.5) * 16.0 + (noise(p / 6.0) - 0.5) * 3.0;
+    float e = edgeDist + ragged;
+    float frame = smoothstep(5.0, 5.6 + 1.2 / uScale, e);
+    float rim = smoothstep(16.0, 6.0, e) * frame;
+
+    // The bloom: distance from three wet points, warped so it spreads like pigment, not like a circle.
+    float diag = length(uRes);
+    vec2 s1 = uRes * vec2(0.32 + 0.1 * sin(uSeed), 0.42);
+    vec2 s2 = uRes * vec2(0.7, 0.36 + 0.1 * cos(uSeed));
+    vec2 s3 = uRes * vec2(0.52, 0.74);
+    float f = min(min(length(p - s1), length(p - s2) * 1.1), length(p - s3) * 1.2) / diag;
+    f += (fbm(p / 110.0 + uT * 0.04) - 0.5) * 0.32 + (noise(p / 14.0) - 0.5) * 0.03;
+
+    float ease = 1.0 - pow(1.0 - clamp(uT / 2.1, 0.0, 1.0), 3.0);
+    float front = ease * 1.05 - 0.05;
+    float wash = smoothstep(front + 0.015, front - 0.05, f);
+    float lag = clamp((uT - 0.35) / 2.0, 0.0, 1.0);
+    float detailFront = (1.0 - pow(1.0 - lag, 2.4)) * 1.15 - 0.1;
+    float detail = smoothstep(detailFront + 0.02, detailFront - 0.16, f);
+
+    // The wash: a soft, pale, slightly desaturated photo, as the first thin layer of paint.
+    vec3 soft = (photo(q) * 2.0 + photo(q + vec2(5.0, 2.0)) + photo(q - vec2(4.0, 3.0)) + photo(q + vec2(-2.0, 5.0)) + photo(q + vec2(3.0, -5.0))) / 6.0;
+    float lum = dot(soft, vec3(0.299, 0.587, 0.114));
+    vec3 washCol = mix(uPaper, mix(vec3(lum), soft, 0.7), 0.72);
+    washCol *= 0.94 + 0.06 * noise(p / 2.2); // paper grain
+
+    vec3 col = mix(washCol, photo(q), detail);
+    // Pigment gathers along the moving edge of a bloom, and at the frame's edge.
+    float bloomLine = wash * (1.0 - wash) * 4.0 * (1.0 - detail);
+    col *= 1.0 - 0.16 * bloomLine;
+    col *= 1.0 - 0.12 * rim;
+    col += sheen * 0.05;
+
+    float a = wash * frame;
+    gl_FragColor = vec4(col * a, a);
+}`;
+
+function compile(gl: WebGLRenderingContext, type: number, src: string) {
+    const s = gl.createShader(type);
+    if (!s) return null;
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        gl.deleteShader(s);
+        return null;
+    }
+    return s;
+}
+
+type Ripple = { x: number; y: number; t: number; s: number };
+
+const PAPER = { light: [0.965, 0.953, 0.925], dark: [0.09, 0.086, 0.078] } as const;
+
+export default function PondImage({ src, alt, ratio, sizes, priority, className, blurDataURL }: Props) {
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
-    const [mask, setMask] = useState("");
+    const redrawRef = useRef<() => void>(() => {});
     const [loaded, setLoaded] = useState(false);
     const isDark = useTheme().resolvedTheme === "dark";
-    const darkRef = useRef(isDark);
+    const paperRef = useRef<readonly number[]>(PAPER.light);
+
     useEffect(() => {
-        darkRef.current = isDark;
+        paperRef.current = isDark ? PAPER.dark : PAPER.light;
+        redrawRef.current();
     }, [isDark]);
 
     // A cached photo can finish loading before hydration attaches onLoad.
@@ -54,216 +172,152 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
         const wrap = wrapRef.current;
         const canvas = canvasRef.current;
         const img = imgRef.current;
-        const ctx = canvas?.getContext("2d");
-        if (!wrap || !canvas || !img || !ctx || !loaded) return;
-        const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (!wrap || !canvas || !img || !loaded) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-        let W = 0;
-        let H = 0;
-        let cw = 8;
-        let ch = 10;
-        let cols = 0;
-        let rows = 0;
-        let colors = new Uint8ClampedArray(0);
-        let lum = new Float32Array(0);
-        // Cells the surfacing ripple hasn't reached yet (1), and how stirred each cell is by the cursor (0..1).
-        let under = new Uint8Array(0);
-        let stirred = new Float32Array(0);
-        let raf = 0;
-        let last = 0;
-        let revealAt = -1;
-        let origin = { x: 0, y: 0 };
-        const stir = { x: 0, y: 0, active: false };
+        const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: false, alpha: true });
+        if (!gl) return;
+        const vs = compile(gl, gl.VERTEX_SHADER, VERT);
+        const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
+        const prog = gl.createProgram();
+        if (!vs || !fs || !prog) return;
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+        gl.useProgram(prog);
 
-        const sample = () => {
-            const rect = wrap.getBoundingClientRect();
-            W = rect.width;
-            H = rect.height;
-            if (W < 1 || H < 1) return false;
-            ({ cw, ch } = tileSize(Math.max(W, 500)));
-            cols = Math.ceil(W / cw);
-            rows = Math.ceil(H / ch);
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width = Math.round(W * dpr);
-            canvas.height = Math.round(H * dpr);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            // Average the photo per tile by drawing it, cropped as object-cover crops it, at one pixel per tile.
-            const off = document.createElement("canvas");
-            off.width = cols;
-            off.height = rows;
-            const octx = off.getContext("2d", { willReadFrequently: true });
-            if (!octx) return false;
-            const iw = img.naturalWidth;
-            const ih = img.naturalHeight;
-            const scale = Math.max((cols * cw) / iw, (rows * ch) / ih);
-            const sw = (cols * cw) / scale;
-            const sh = (rows * ch) / scale;
-            octx.imageSmoothingQuality = "high";
-            octx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, cols, rows);
-            try {
-                colors = octx.getImageData(0, 0, cols, rows).data;
-            } catch {
-                return false;
-            }
-            lum = new Float32Array(cols * rows);
-            for (let i = 0; i < cols * rows; i++) {
-                lum[i] = (0.2126 * colors[i * 4] + 0.7152 * colors[i * 4 + 1] + 0.0722 * colors[i * 4 + 2]) / 255;
-            }
-            if (under.length !== cols * rows) {
-                under = new Uint8Array(cols * rows).fill(revealAt < 0 && !still ? 1 : 0);
-                stirred = new Float32Array(cols * rows);
-            }
-            if (shore > 0) setMask(shorelineMask(W, H, cw, ch, shore, 5).url);
-            return true;
-        };
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        const aPos = gl.getAttribLocation(prog, "aPos");
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-        const draw = (t: number) => {
-            ctx.clearRect(0, 0, W, H);
-            const paper = darkRef.current ? [23, 22, 20] : [246, 243, 236];
-            const ink = darkRef.current ? [243, 238, 230] : [37, 34, 29];
-            ctx.font = `600 ${Math.round(ch * 0.7)}px ${MONO}`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            const radius = revealAt < 0 ? -1 : Math.max(0, t - revealAt) * RIPPLE_SPEED;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const i = r * cols + c;
-                    const cx = c * cw + cw / 2;
-                    const cy = r * ch + ch / 2;
-                    let ring = 0;
-                    if (radius >= 0) {
-                        // The front wanders a little, so the ring reads as water, not a compass circle.
-                        const d = Math.hypot(cx - origin.x, cy - origin.y) + (noise(c * 0.2, r * 0.25, 9) - 0.5) * 30;
-                        if (d < radius - RING) under[i] = 0;
-                        ring = Math.max(0, 1 - Math.abs(d - radius + RING / 2) / (RING / 2));
-                    }
-                    const a = under[i] ? 1 : stirred[i];
-                    if (a > 0.02) {
-                        const R = colors[i * 4];
-                        const G = colors[i * 4 + 1];
-                        const B = colors[i * 4 + 2];
-                        // The tile: the photo's colour, a touch washed toward the paper so the etched glyph reads.
-                        ctx.globalAlpha = a;
-                        ctx.fillStyle = `rgb(${(R * 0.86 + paper[0] * 0.14) | 0},${(G * 0.86 + paper[1] * 0.14) | 0},${(B * 0.86 + paper[2] * 0.14) | 0})`;
-                        ctx.fillRect(c * cw, r * ch, cw, ch);
-                        const g =
-                            TILE_GLYPHS[
-                                Math.min(TILE_GLYPHS.length - 1, Math.floor((1 - lum[i]) * TILE_GLYPHS.length))
-                            ];
-                        if (g !== " ") {
-                            const k = lum[i] > 0.55 ? 0.55 : 1.45;
-                            ctx.globalAlpha = a * 0.55;
-                            ctx.fillStyle = `rgb(${Math.min(255, R * k) | 0},${Math.min(255, G * k) | 0},${Math.min(255, B * k) | 0})`;
-                            ctx.fillText(g, cx, cy + 0.5);
-                        }
-                    }
-                    if (ring > 0.05) {
-                        ctx.globalAlpha = ring * 0.7;
-                        ctx.fillStyle = `rgb(${ink[0]},${ink[1]},${ink[2]})`;
-                        ctx.fillText(lineGlyph(cx - origin.x, cy - origin.y), cx, cy + 0.5);
-                    }
-                }
-            }
-            ctx.globalAlpha = 1;
-            // Done once the ring has left the frame; before the reveal starts there is nothing to animate.
-            return revealAt < 0 || radius > Math.hypot(W, H) + RING * 2;
-        };
-
-        const frame = (now: number) => {
-            const t = now / 1000;
-            const dt = last ? Math.min(0.05, t - last) : 0;
-            last = t;
-            let busy = false;
-            // Stirred tiles settle back into the photo.
-            for (let i = 0; i < stirred.length; i++) {
-                if (stirred[i] > 0) {
-                    stirred[i] = Math.max(0, stirred[i] - dt * SETTLE);
-                    busy = true;
-                }
-            }
-            if (stir.active) {
-                busy = true;
-                for (let r = 0; r < rows; r++) {
-                    for (let c = 0; c < cols; c++) {
-                        const d = Math.hypot(c * cw + cw / 2 - stir.x, r * ch + ch / 2 - stir.y);
-                        if (d < STIR_RADIUS) {
-                            const i = r * cols + c;
-                            stirred[i] = Math.max(stirred[i], 0.85 * (1 - d / STIR_RADIUS) ** 0.6);
-                        }
-                    }
-                }
-                stir.active = false;
-            }
-            const rippleDone = draw(t);
-            if (busy || !rippleDone) raf = requestAnimationFrame(frame);
-            else raf = 0;
-        };
-
-        const wake = () => {
-            if (!raf) {
-                last = 0;
-                raf = requestAnimationFrame(frame);
-            }
-        };
-
-        if (!sample()) return;
-        if (still) {
-            draw(0);
-        } else {
-            draw(performance.now() / 1000);
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        try {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        } catch {
+            return;
         }
+
+        const u = (name: string) => gl.getUniformLocation(prog, name);
+        const uRes = u("uRes");
+        const uScale = u("uScale");
+        const uT = u("uT");
+        const uNow = u("uNow");
+        const uPaper = u("uPaper");
+        const uRipples = u("uRipples");
+        gl.uniform2f(u("uImg"), img.naturalWidth, img.naturalHeight);
+        gl.uniform1f(u("uSeed"), (img.naturalWidth * 7 + img.naturalHeight * 13) % 97);
+
+        let bloomAt = -1;
+        let raf = 0;
+        const ripples: Ripple[] = [];
+        const rippleData = new Float32Array(MAX_RIPPLES * 4);
+        const clock = () => performance.now() / 1000;
+
+        const size = () => {
+            const rect = wrap.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.max(1, Math.round(rect.width * dpr));
+            canvas.height = Math.max(1, Math.round(rect.height * dpr));
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.uniform2f(uRes, rect.width, rect.height);
+            gl.uniform1f(uScale, dpr);
+        };
+
+        const draw = () => {
+            const now = clock();
+            const t = bloomAt < 0 ? 0 : Math.max(0, now - bloomAt);
+            while (ripples.length && now - ripples[0].t > RIPPLE_SECONDS) ripples.shift();
+            gl.uniform1f(uT, t);
+            gl.uniform1f(uNow, now);
+            gl.uniform3f(uPaper, paperRef.current[0], paperRef.current[1], paperRef.current[2]);
+            rippleData.fill(0);
+            ripples.forEach((r, i) => rippleData.set([r.x, r.y, r.t, r.s], i * 4));
+            gl.uniform4fv(uRipples, rippleData);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            // Keep going while the bloom is still spreading or a ripple is still moving.
+            return (bloomAt >= 0 && now - bloomAt < BLOOM_SECONDS) || ripples.length > 0;
+        };
+
+        const frame = () => {
+            raf = draw() ? requestAnimationFrame(frame) : 0;
+        };
+        const wake = () => {
+            if (!raf) raf = requestAnimationFrame(frame);
+        };
+        redrawRef.current = () => draw();
+
+        size();
+        draw();
+        // The shader is drawing now; the <img> underneath steps back (it stays for alt text and as the fallback).
+        img.style.opacity = "0";
 
         const io = new IntersectionObserver(
             ([entry]) => {
-                if (!entry.isIntersecting || revealAt >= 0 || still) return;
-                origin = { x: W * (0.3 + noise(cols, rows, 1) * 0.4), y: H * (0.35 + noise(rows, cols, 2) * 0.3) };
-                revealAt = performance.now() / 1000 + 0.15;
+                if (!entry.isIntersecting || bloomAt >= 0) return;
+                bloomAt = clock() + 0.1;
                 wake();
-                io.disconnect();
             },
-            { threshold: 0.35 }
+            { threshold: 0.3 }
         );
         io.observe(wrap);
 
-        const onMove = (e: PointerEvent) => {
-            if (revealAt < 0 || still || e.pointerType === "touch") return;
-            const rect = wrap.getBoundingClientRect();
-            stir.x = e.clientX - rect.left;
-            stir.y = e.clientY - rect.top;
-            stir.active = true;
+        let lastDrop = { x: -1e4, y: -1e4, t: 0 };
+        const drop = (x: number, y: number, s: number) => {
+            ripples.push({ x, y, t: clock(), s });
+            if (ripples.length > MAX_RIPPLES) ripples.shift();
             wake();
         };
+        const local = (e: PointerEvent) => {
+            const rect = wrap.getBoundingClientRect();
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        };
+        // A ripple trails the cursor every so often, spaced out so the surface stays calm enough to see.
+        const onMove = (e: PointerEvent) => {
+            if (bloomAt < 0 || e.pointerType === "touch") return;
+            const { x, y } = local(e);
+            const now = clock();
+            if (Math.hypot(x - lastDrop.x, y - lastDrop.y) < 46 || now - lastDrop.t < 0.14) return;
+            lastDrop = { x, y, t: now };
+            drop(x, y, 0.45);
+        };
+        const onDown = (e: PointerEvent) => {
+            if (bloomAt < 0) return;
+            const { x, y } = local(e);
+            drop(x, y, 1);
+        };
         const ro = new ResizeObserver(() => {
-            if (sample()) {
-                draw(performance.now() / 1000);
-                wake();
-            }
+            size();
+            draw();
         });
         ro.observe(wrap);
         wrap.addEventListener("pointermove", onMove, { passive: true });
+        wrap.addEventListener("pointerdown", onDown, { passive: true });
+
         return () => {
             cancelAnimationFrame(raf);
             io.disconnect();
             ro.disconnect();
             wrap.removeEventListener("pointermove", onMove);
+            wrap.removeEventListener("pointerdown", onDown);
+            redrawRef.current = () => {};
+            gl.getExtension("WEBGL_lose_context")?.loseContext();
+            img.style.opacity = "";
         };
-    }, [loaded, shore]);
-
-    const maskStyle = mask
-        ? {
-              maskImage: `url(${mask})`,
-              WebkitMaskImage: `url(${mask})`,
-              maskSize: "100% 100%",
-              WebkitMaskSize: "100% 100%",
-          }
-        : undefined;
+    }, [loaded]);
 
     return (
-        <div
-            ref={wrapRef}
-            className={cn("relative w-full overflow-hidden", className)}
-            style={{ aspectRatio: ratio, ...maskStyle }}
-        >
+        <div ref={wrapRef} className={cn("relative w-full", className)} style={{ aspectRatio: ratio }}>
             <Image
                 ref={imgRef}
                 src={src}

@@ -44,7 +44,7 @@ function EraSection({ era }: { era: Era }) {
     return (
         <article aria-labelledby={`era-${era.id}`} className="flex flex-col gap-6 border-t border-hairline pt-6">
             <header className="flex flex-col gap-3">
-                <div className="flex items-baseline justify-between gap-6 font-geistMono text-caption tabular-nums">
+                <div className="flex items-baseline justify-between gap-6 text-small tabular-nums">
                     <h2 id={`era-${era.id}`} className="lowercase">
                         {era.id} <span className="opacity-40">·</span> <span className={MUTED}>{era.span}</span>
                     </h2>
@@ -58,7 +58,7 @@ function EraSection({ era }: { era: Era }) {
                     </a>
                 </div>
                 <p className="font-geistSans text-body leading-compact [text-wrap:pretty]">{era.description}</p>
-                <p className={`font-geistMono text-caption ${MUTED}`}>{era.stack}</p>
+                <p className={`text-small ${MUTED}`}>{era.stack}</p>
             </header>
 
             <div className="flex flex-col gap-3">

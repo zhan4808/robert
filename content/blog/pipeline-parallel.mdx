@@ -7,15 +7,15 @@ order: 3
 kind: technical
 ---
 
-At some point, a model stops fitting in a single GPU's memory and you have to split it across multiple GPUs. BLOOM, Huggingface's 175B parameter Transformer, requires \~350GB just to store weights in bfloat16. A100 80GB GPUs hold roughly a quarter of that. Training on 384 GPUs required spreading different layers across machines — a technique called model partitioning or pipeline parallelism.
+At some point a model stops fitting in a single GPU's memory, and you have to split it across several. BLOOM, Huggingface's 175B parameter Transformer, needs \~350GB just to store its weights in bfloat16, and an A100 80GB holds roughly a quarter of that. Training it on 384 GPUs meant spreading different layers across machines, a technique called model partitioning or pipeline parallelism.
 
-The naive version of this is embarrassingly bad at GPU utilization. If GPU2 can't start until GPU1 finishes, you've essentially serialized your compute across machines that are supposed to run in parallel. This post walks through three approaches — naive, GPipe, and PipeDream — and explains the concrete tradeoffs between GPU utilization, memory consumption, and mathematical equivalence to single-GPU training. Along the way I'll highlight the parts that didn't fully click for me until I traced through the actual scheduling logic.
+The naive version uses GPUs very poorly. If GPU2 can't start until GPU1 finishes, you've serialized compute across machines that are supposed to run in parallel. This post walks through three approaches (naive, GPipe, and PipeDream) and the tradeoffs between GPU utilization, memory use, and mathematical equivalence to single-GPU training. I'll also point out the parts that didn't click for me until I traced through the scheduling logic by hand.
 
 ## Naive Model Parallelism
 
-The most straightforward implementation: split the model layers into contiguous groups, assign each group to a GPU, and run training one minibatch at a time. For a 4-layer model split across 2 GPUs: GPU1 runs layers L1–L2, produces the intermediate activation tensor, and MPI-sends it to GPU2. GPU2 runs L3–L4, computes the loss, and begins the backward pass. At the L2→L3 boundary in the backward direction, GPU2 sends its input gradients back to GPU1, which finishes backprop. Gradient updates happen locally on each GPU.
+The most straightforward implementation splits the model's layers into contiguous groups, assigns each group to a GPU, and trains one minibatch at a time. Take a 4-layer model split across 2 GPUs. GPU1 runs layers L1–L2, produces the intermediate activation tensor, and MPI-sends it to GPU2. GPU2 runs L3–L4, computes the loss, and starts the backward pass. At the L2→L3 boundary going backward, GPU2 sends its input gradients to GPU1, which finishes backprop. Each GPU applies its own gradient updates locally.
 
-This approach is bit-exact with single-GPU training — same math, same numerics. The communication is point-to-point (MPI.Send/MPI.Recv), not collective, so there's no need for AllReduce or broadcast primitives. Simple and correct. But watch the pebble graph below and you'll immediately see the problem:
+This is bit-exact with single-GPU training, with the same math and the same numerics. Communication is point-to-point (MPI.Send/MPI.Recv), so there's no need for collectives like AllReduce or broadcast. The problem shows up as soon as you watch the pebble graph below:
 
 <Figure
   src="/pipeline-parallel/PP_pebble_graph.gif"
@@ -23,17 +23,17 @@ This approach is bit-exact with single-GPU training — same math, same numerics
   caption="Naive model parallelism: GPU1 runs forward and waits while GPU2 runs backward. One GPU is always idle."
 />
 
-Three problems are immediately visible:
+A few things go wrong:
 
-- GPU utilization is 1/n: at any given moment, exactly one GPU is computing and the rest are idle. With 8 pipeline stages, each GPU is productive only 12.5% of the time.
-- Communication and computation don't overlap: while the activation tensor is in flight over the network, no GPU does useful work. The interconnect stall is dead time.
-- Memory blowup on early stages: GPU1 must cache all forward-pass activations for the entire minibatch until the backward pass reaches it — potentially gigabytes of intermediate tensors kept alive for the full forward+backward duration.
+- GPU utilization is 1/n. At any moment exactly one GPU is computing and the rest are idle, so with 8 pipeline stages each GPU does useful work only 12.5% of the time.
+- Communication and computation don't overlap. While the activation tensor is crossing the network, no GPU is doing anything useful.
+- Early stages use a lot of memory. GPU1 has to cache the forward activations for the entire minibatch until the backward pass reaches it, which can mean gigabytes of intermediate tensors held for the whole forward and backward pass.
 
 ## GPipe: Microbatches and Gradient Accumulation
 
-GPipe's core idea: split each minibatch into m equal-sized microbatches, process them sequentially through the pipeline, and accumulate gradients before applying the optimizer step. The math is exact: the gradient of a sum is the sum of the gradients, so summing microbatch gradients gives you the same gradient estimate as processing the full minibatch at once. This is called gradient accumulation, and it's mathematically bit-equivalent to single-GPU training.
+GPipe splits each minibatch into m equal-sized microbatches, sends them through the pipeline one after another, and accumulates gradients before the optimizer step. The math is exact. The gradient of a sum is the sum of the gradients, so adding up the microbatch gradients gives the same result as processing the full minibatch at once. This is gradient accumulation, and it's mathematically bit-equivalent to single-GPU training.
 
-The key win: while GPU2 is running the forward pass for microbatch 2, GPU1 can already start the forward pass for microbatch 3. Multiple microbatches are in flight simultaneously, keeping more GPUs busy at once.
+What this buys you is overlap. While GPU2 runs the forward pass for microbatch 2, GPU1 can start the forward pass for microbatch 3. With several microbatches in flight, more GPUs are busy at the same time.
 
 ### GPipe: Interleaving and Its Limits
 
@@ -43,17 +43,17 @@ The key win: while GPU2 is running the forward pass for microbatch 2, GPU1 can a
   caption="GPipe with interleaving: dependency arrows show which microbatch results each GPU is waiting on."
 />
 
-In practice, the interleaving of communication and computation is limited. A GPU can't start processing microbatch i until the previous stage has finished and transmitted its output. If all stages take the same time, you get a clean pipeline — but you still get startup and teardown overhead where some GPUs are idle. These idle slots are called pipeline bubbles.
+In practice the overlap is limited. A GPU can't start on microbatch i until the previous stage has finished it and sent the output. If every stage takes the same time the pipeline runs cleanly, but there's still startup and teardown time when some GPUs have nothing to do. These idle slots are called pipeline bubbles.
 
 ### GPipe: Pipeline Bubbles
 
-A bubble is idle time in the pipeline caused by a data dependency that hasn't resolved yet. GPU4 can't run forward pass for microbatch 1 until GPU3 has finished it and sent the activation. Similarly in the backward pass, each stage has to wait for the next stage to send back its input gradient. The fraction of time wasted in bubbles is a function of pipeline depth n (number of GPU stages) and number of microbatches m:
+A bubble is idle time caused by a data dependency that hasn't been satisfied yet. GPU4 can't run the forward pass for microbatch 1 until GPU3 has finished it and sent the activation. In the backward pass, likewise, each stage waits for the next stage to send back its input gradient. The fraction of time lost to bubbles depends on the pipeline depth n (number of GPU stages) and the number of microbatches m:
 
 $$
 \text{bubble fraction} = 1 - \frac{m}{m + n - 1}
 $$
 
-As m → ∞, the bubble fraction → 0. In practice, m ≈ 4n is a common target (bubble fraction ≈ 20%). The tradeoff: larger m means larger total batch size, which requires learning rate scaling (linear scaling rule) and increases the amount of activation memory you're caching. There's no free lunch — you're trading memory pressure for utilization.
+As m → ∞, the bubble fraction → 0. In practice m ≈ 4n is a common target (bubble fraction ≈ 20%). The catch is that a larger m means a larger total batch size, which requires learning rate scaling (linear scaling rule) and increases the activation memory you have to cache. You're trading memory for utilization.
 
 <Figure
   src="/pipeline-parallel/Gpipe_bubbles.webp"
@@ -71,9 +71,9 @@ As m → ∞, the bubble fraction → 0. In practice, m ≈ 4n is a common targe
 
 ### GPipe: Memory and Gradient Checkpointing
 
-The memory problem in GPipe is stark: all m microbatch activations are in flight simultaneously during the all-forward phase. Each GPU must cache activations from the time a microbatch was forwarded until the corresponding backward reaches it. For m=8 microbatches on a 4-GPU pipeline, GPU1 holds 8 microbatches worth of activations simultaneously — that's 8× the activation memory of a single-GPU run.
+GPipe's memory problem is severe. During the all-forward phase, the activations for all m microbatches are live at once. Each GPU has to keep a microbatch's activations from its forward pass until the matching backward pass reaches it. With m=8 microbatches on a 4-GPU pipeline, GPU1 holds 8 microbatches' worth of activations at the same time, 8× the activation memory of a single-GPU run.
 
-GPipe's solution: gradient checkpointing (also called activation recomputation). Instead of caching all intermediate activations, cache only the inputs at pipeline-stage boundaries and recompute activations on the fly during the backward pass. This trades compute for memory. Without gradient checkpointing, peak memory per GPU is O(batchsize × layers_per_gpu). With it:
+GPipe handles this with gradient checkpointing (also called activation recomputation). Instead of caching every intermediate activation, it caches only the inputs at pipeline-stage boundaries and recomputes the activations during the backward pass, trading compute for memory. Without gradient checkpointing, peak memory per GPU is O(batchsize × layers_per_gpu). With it:
 
 $$
 O\left(\text{batchsize} + \frac{\#\text{total layers}}{\#\text{GPUs}} \cdot \frac{\text{batchsize}}{\#\text{microbatches}}\right)
@@ -86,11 +86,11 @@ $$
   invert
 />
 
-The 33% compute overhead from recomputation is usually worth it for large models — it's often the only way to fit a model in GPU memory at all. PyTorch's `torch.utils.checkpoint.checkpoint()` and Megatron-LM's activation recomputation are both GPipe-style gradient checkpointing. If you've used either, you've used this idea.
+For large models the 33% compute overhead from recomputation is usually worth paying, since it's often the only way to fit the model in GPU memory at all. PyTorch's `torch.utils.checkpoint.checkpoint()` and Megatron-LM's activation recomputation are both GPipe-style gradient checkpointing, so if you've used either, you've used this idea.
 
 ## PipeDream: 1F1B and Earlier Backward Passes
 
-PipeDream's key insight: you don't have to wait until all microbatches have been forwarded before starting any backward passes. As soon as the last stage completes the forward pass for microbatch 1, it can immediately start the backward pass for microbatch 1 — even while earlier stages are still processing microbatches 2, 3, 4... This is the 1F1B (one forward, one backward) pattern: in steady state, each GPU alternates between a forward pass for a new microbatch and a backward pass for an older one.
+PipeDream's observation is that you don't have to forward every microbatch before starting any backward passes. As soon as the last stage finishes the forward pass for microbatch 1, it can start the backward pass for microbatch 1, even while earlier stages are still working on microbatches 2, 3, 4... This is the 1F1B (one forward, one backward) pattern. In steady state, each GPU alternates between a forward pass for a new microbatch and a backward pass for an older one.
 
 <Figure
   src="/pipeline-parallel/PipeDream_schedule.webp"
@@ -98,13 +98,13 @@ PipeDream's key insight: you don't have to wait until all microbatches have been
   caption="PipeDream 1F1B schedule: blue = forward, green = backward. Numbered by microbatch ID."
 />
 
-The memory benefit is substantial. In GPipe, all m microbatches are in flight during the all-forward phase, so you need activation memory proportional to m. In PipeDream's steady state, GPU1 starts a backward as soon as it finishes a forward — so at most n microbatches are in flight simultaneously (where n is pipeline depth). For both algorithms, activation memory without gradient checkpointing is:
+This saves a lot of memory. In GPipe all m microbatches are in flight during the all-forward phase, so activation memory grows with m. In PipeDream's steady state GPU1 starts a backward as soon as it finishes a forward, so at most n microbatches (the pipeline depth) are in flight at once. For both algorithms, activation memory without gradient checkpointing is:
 
 $$
 O\left(\#\text{max microbatches in flight} \cdot \text{microbatch-size} \cdot \frac{\#\text{total layers}}{\#\text{GPUs}}\right)
 $$
 
-The max-microbatches-in-flight term is where GPipe and PipeDream differ: GPipe's all-forward phase puts all m microbatches in flight; PipeDream's 1F1B schedule keeps at most n in flight (the pipeline depth). Look at GPU1 in the diagram during steady state — it alternates F and B, never starting a new forward without completing a backward first.
+The two algorithms differ only in the max-microbatches-in-flight term. GPipe's all-forward phase puts all m microbatches in flight, while PipeDream's 1F1B schedule keeps at most n (the pipeline depth). You can see it in GPU1's row of the diagram: in steady state it alternates F and B and never starts a new forward without finishing a backward first.
 
 <Figure
   src="/pipeline-parallel/Pipedream_steady_state.webp"
@@ -112,27 +112,27 @@ The max-microbatches-in-flight term is where GPipe and PipeDream differ: GPipe's
   caption="PipeDream steady state: GPU1 alternates 1F1B after the warmup phase, keeping at most n microbatches in flight."
 />
 
-In the example above (4 GPUs, 8 microbatches): PipeDream has at most 4 microbatches in flight, GPipe has 8. PipeDream halves the activation memory overhead. The bubble fraction is identical between the two algorithms — that's determined by the pipeline structure (n stages, m microbatches), not by when backwards start. You can verify this visually: take the PipeDream schedule and slide all the backward passes to the right (consolidating them after all forwards complete) and you recover GPipe. Same total time, different activation memory profile.
+In the example above (4 GPUs, 8 microbatches), PipeDream has at most 4 microbatches in flight and GPipe has 8, so PipeDream halves the activation memory overhead. The bubble fraction is the same for both, because it's set by the pipeline structure (n stages, m microbatches) rather than by when the backward passes start. You can check this visually. Take the PipeDream schedule, slide all the backward passes to the right until they come after the last forward, and you get GPipe. The total time is the same; only the activation memory profile changes.
 
 ### Communication Volume: Pipeline vs Data Parallelism
 
-For a model with dense layers of hidden dimension N, each pipeline stage boundary sends activations of size (microbatch_size × N) forward and gradients of the same size backward. Total pipeline communication per minibatch: (n-1) × 2 × batchsize × N floats — it scales with pipeline depth and activation size, not parameter count. Data parallelism (Ring AllReduce) transfers roughly 2 × (total_params / n_gpus) floats per step — scales with model size, not activations. For very large models with small activations, pipeline parallelism can be cheaper to communicate. For models with large activations (vision, long-context language models), it can be more expensive. The other critical difference: data-parallel AllReduce overlaps with the backward pass naturally; pipeline-parallel point-to-point transfers are on the critical path and harder to hide.
+For a model with dense layers of hidden dimension N, each pipeline stage boundary sends activations of size (microbatch_size × N) forward and gradients of the same size backward. Total pipeline communication per minibatch is (n-1) × 2 × batchsize × N floats, which scales with pipeline depth and activation size rather than parameter count. Data parallelism (Ring AllReduce) transfers roughly 2 × (total_params / n_gpus) floats per step, which scales with model size rather than activations. So for very large models with small activations, pipeline parallelism can need less communication, and for models with large activations (vision, long-context language models) it can need more. There's one more difference that matters a lot: data-parallel AllReduce overlaps naturally with the backward pass, while pipeline-parallel point-to-point transfers sit on the critical path and are harder to hide.
 
 ## Combining Pipeline and Data Parallelism
 
-Pipeline and data parallelism are orthogonal — you can use both simultaneously. In a combined setup, you run multiple pipeline *replicas* (data parallelism across replicas) where each replica is itself a pipeline (pipeline parallelism across stages). The constraint: your effective batch size is (microbatch_size × n_microbatches × n_data_parallel_replicas), so you need a large enough batch to keep both dimensions busy without gradient noise from tiny microbatches.
+Pipeline and data parallelism are orthogonal, so you can use both at once. In a combined setup you run several pipeline *replicas* (data parallelism across replicas), and each replica is itself a pipeline (pipeline parallelism across stages). Your effective batch size becomes (microbatch_size × n_microbatches × n_data_parallel_replicas), so the batch has to be large enough to keep both dimensions busy without tiny, noisy microbatches.
 
 <Figure
   src="/pipeline-parallel/DP_and_PP.webp"
   alt="Illustration of orthogonal communication partners in combined data and pipeline parallelism"
-  caption="Combined DP + PP: each GPU participates in two communicators — one for pipeline neighbors, one for data-parallel peers."
+  caption="Combined DP + PP: each GPU participates in two communicators: one for pipeline neighbors, one for data-parallel peers."
 />
 
-The implementation uses MPI Communicators — subgroups of GPUs that only communicate within the group. Each GPU belongs to two: one for its pipeline stage peers (all GPUs with the same layer slice, for AllReduce), and one for its pipeline neighbors (the stages before and after, for point-to-point activations and gradients). These communicators partition the GPU cluster into a 2D grid: pipeline depth × data-parallel width. DeepSpeed, Megatron-LM, and FairScale all implement this pattern. In practice, large training runs often use a 3rd dimension — tensor parallelism within each layer — giving a 3D parallelism grid: pipeline × data × tensor.
+The implementation uses MPI Communicators, which are subgroups of GPUs that only talk within the group. Each GPU belongs to two. One holds its pipeline stage peers (all GPUs with the same layer slice, for AllReduce), and the other holds its pipeline neighbors (the stages before and after, for point-to-point activations and gradients). Together they partition the cluster into a 2D grid of pipeline depth × data-parallel width. DeepSpeed, Megatron-LM, and FairScale all implement this pattern. Large training runs often add a 3rd dimension, tensor parallelism within each layer, for a 3D grid of pipeline × data × tensor.
 
 ## Implementation: GPipe in Python
 
-Unlike data parallelism (which requires AllReduce — a collective operation requiring coordination among all workers), pipeline parallelism uses only point-to-point sends and receives between adjacent stages. This means each GPU can follow a simple, static schedule without global synchronization. DeepSpeed's pipeline engine uses exactly this design: one worker per GPU, executing a sequence of commands determined before the minibatch starts.
+Data parallelism needs AllReduce, a collective that requires every worker to coordinate. Pipeline parallelism only uses point-to-point sends and receives between adjacent stages, so each GPU can follow a simple, static schedule with no global synchronization. DeepSpeed's pipeline engine is built this way: one worker per GPU, each running a sequence of commands fixed before the minibatch starts.
 
 ```python
 def minibatch_steps(self):
@@ -153,7 +153,7 @@ def minibatch_steps(self):
     yield [OptimizerStep()]
 ```
 
-This is the GPipe schedule: all forwards first, then all backwards in reverse order. The comment at peak memory is key — between the last FWD and the first BWD, every microbatch's activations are live simultaneously. For the forward pass of each microbatch:
+This is the GPipe schedule: all forwards first, then all backwards in reverse order. Note the comment about peak memory. Between the last FWD and the first BWD, every microbatch's activations are live at once. Here's the forward pass for one microbatch:
 
 ```python
 def steps_FWD_microbatch(self, microbatch_id):
@@ -173,7 +173,7 @@ def steps_FWD_microbatch(self, microbatch_id):
     return cmds
 ```
 
-Load input (or receive activations), run the forward pass, send activations to the next stage. Clean and self-contained. The backward pass is symmetric but runs in reverse — the last stage has the loss, so it loads targets instead of receiving gradients. A notable detail: the `BackwardGradAllReduce` on the first microbatch (processed last in backward order) overlaps the gradient AllReduce with the actual backward computation, hiding some of the data-parallel communication cost:
+Each stage loads input (or receives activations), runs the forward pass, and sends activations to the next stage. The backward pass mirrors this in reverse. The last stage has the loss, so it loads targets instead of receiving gradients. One detail to notice is the `BackwardGradAllReduce` on the first microbatch (which is processed last in backward order). It overlaps the gradient AllReduce with the backward computation and hides some of the data-parallel communication cost:
 
 ```python
 def steps_BWD_microbatch(self, microbatch_id):
@@ -197,7 +197,7 @@ def steps_BWD_microbatch(self, microbatch_id):
     yield cmds
 ```
 
-The `BackwardGradAcc` vs `BackwardGradAllReduce` distinction is subtle but important. For all but the last microbatch (in backward order), we accumulate gradients locally without synchronizing with other data-parallel replicas. Only on the last backward do we AllReduce — and by launching it as a background NCCL operation overlapping with the final backprop, we hide part of the network round-trip latency.
+The difference between `BackwardGradAcc` and `BackwardGradAllReduce` is easy to miss. For every microbatch except the last one in backward order, gradients are accumulated locally with no synchronization across data-parallel replicas. The AllReduce happens only on the last backward, and launching it as a background NCCL operation alongside the final backprop hides part of the network round-trip latency.
 
 ## Hardware Context: Interconnects and Scaling
 
@@ -208,7 +208,7 @@ The `BackwardGradAcc` vs `BackwardGradAllReduce` distinction is subtle but impor
   invert
 />
 
-The bandwidth numbers matter a lot for pipeline parallelism design. NVLink bandwidth within a node is \~900GB/s bidirectional — fast enough that intra-node pipeline stages are almost never bandwidth-limited. Cross-node InfiniBand is 25–200Gbps depending on generation — easily 10-100× slower. A good rule of thumb: place pipeline stage boundaries at intra-node boundaries where possible, and use pipeline parallelism to handle the inter-node communication that you can't avoid.
+Bandwidth shapes how you lay out a pipeline. NVLink within a node is \~900GB/s bidirectional, fast enough that intra-node pipeline stages are almost never bandwidth-limited. Cross-node InfiniBand is 25–200Gbps depending on the generation, easily 10-100× slower. My rule of thumb is to put pipeline stage boundaries at intra-node boundaries where possible, and to use pipeline parallelism for the inter-node communication you can't avoid.
 
 <Figure
   src="/pipeline-parallel/strong-vs-weak-scaling.webp"
@@ -217,15 +217,15 @@ The bandwidth numbers matter a lot for pipeline parallelism design. NVLink bandw
   invert
 />
 
-Pipeline parallelism is a form of weak scaling for model size: each GPU holds a fixed number of layers, and you scale up the total parameter count by adding more GPUs to the pipeline. Bubble overhead is independent of model size (it's determined by pipeline depth and microbatch count). This is why pipeline parallelism is a first-class citizen in the infrastructure of LLM training — adding more layers doesn't increase utilization loss.
+Pipeline parallelism is a form of weak scaling for model size. Each GPU holds a fixed number of layers, and you grow the total parameter count by adding GPUs to the pipeline. Bubble overhead doesn't depend on model size, only on pipeline depth and microbatch count. That's a big part of why pipeline parallelism is standard in LLM training infrastructure: adding layers doesn't add utilization loss.
 
 ## Conclusion
 
-Pipeline parallelism is ultimately about scheduling. Given that a model must be split across GPUs, the question is: in what order do you run forward and backward passes across microbatches to maximize utilization and minimize memory? Naive MP gives you correctness but terrible utilization. GPipe restores utilization with microbatches but blows up activation memory. PipeDream halves the activation memory with 1F1B while maintaining the same bubble fraction. None of these choices are free — every improvement comes with a cost somewhere else.
+In the end, pipeline parallelism is a scheduling problem. Once the model is split across GPUs, you have to decide in what order to run forward and backward passes across microbatches to get high utilization without running out of memory. Naive MP is correct but leaves most GPUs idle. GPipe recovers utilization with microbatches at the cost of much more activation memory. PipeDream's 1F1B halves that activation memory and keeps the same bubble fraction. Each improvement costs something somewhere else.
 
-What I find most interesting about this space is the interaction between pipeline depth and batch size. Deep pipelines (more stages) have higher bubble overhead unless you increase microbatch count, which increases batch size, which requires learning rate scaling. At some point you're constrained by convergence — very large batches don't generalize as well without careful warmup and decay schedules. The scheduling algorithm and the optimization algorithm aren't actually independent. Modern large-scale training infrastructure (Megatron-LM, DeepSpeed, FairScale) has to co-design both.
+The part I find most interesting is how pipeline depth interacts with batch size. Deeper pipelines (more stages) have more bubble overhead unless you add microbatches. More microbatches mean a bigger batch, and a bigger batch means rescaling the learning rate. Eventually convergence becomes the limit, because very large batches don't generalize as well without careful warmup and decay schedules. So the scheduling algorithm and the optimizer aren't independent, and large-scale training frameworks (Megatron-LM, DeepSpeed, FairScale) have to design them together.
 
-If you're building or debugging a multi-GPU training setup, the most common failure mode I've seen is incorrect gradient accumulation — treating microbatch gradients as independent updates instead of accumulating them before the optimizer step. Always validate against single-GPU training numerics before debugging performance. Correctness first, then throughput.
+If you're building or debugging a multi-GPU training setup, the most common bug I've seen is broken gradient accumulation, where microbatch gradients get applied as independent updates instead of being summed before the optimizer step. I always check numerics against single-GPU training before looking at performance.
 
 <LinkCard
   href="https://siboehm.com/articles/22/pipeline-parallel-training"

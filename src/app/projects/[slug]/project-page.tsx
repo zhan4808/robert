@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import SiteFooter from "../../components/site-footer";
 import TopNav from "../../components/top-nav";
@@ -76,14 +76,13 @@ export default function ProjectPage({
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
             <TopNav />
-            <motion.main
-                // The view transition already brings the page in when it comes from the strip.
-                initial={arrivedSliding ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
+            <main
                 id="main"
                 tabIndex={-1}
-                className={`${FRAME} px-6 pt-14 font-geistSans outline-none sm:pt-20`}
+                // A slide from a neighbouring project already brings the page in; otherwise it fades up.
+                className={`${FRAME} px-6 pt-14 font-geistSans outline-none sm:pt-20 ${
+                    arrivedSliding ? "" : "animate-page-in motion-reduce:animate-none"
+                }`}
             >
                 <header>
                     <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">
@@ -95,13 +94,11 @@ export default function ProjectPage({
                     <p
                         className={`mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hairline pb-5 text-small ${MUTED}`}
                     >
-                        <span className="font-geistMono text-caption">{project.date}</span>
+                        <span className="text-small">{project.date}</span>
                         {project.updated && (
-                            <span className="font-geistMono text-caption">
-                                updated {formatIsoDate(project.updated)}
-                            </span>
+                            <span className="text-small">updated {formatIsoDate(project.updated)}</span>
                         )}
-                        <span className="font-geistMono text-caption">{minutes} min read</span>
+                        <span className="text-small">{minutes} min read</span>
                         {project.paperUrl && <InlineLink href={project.paperUrl}>paper</InlineLink>}
                         {project.githubUrl && <InlineLink href={project.githubUrl}>code</InlineLink>}
                         {project.liveUrl && (
@@ -162,7 +159,7 @@ export default function ProjectPage({
                         <PagerLink project={next} direction="forward" />
                     </nav>
                 )}
-            </motion.main>
+            </main>
             <SiteFooter />
         </div>
     );
@@ -192,7 +189,7 @@ function PagerLink({ project, direction }: { project: Project; direction: "back"
             onFocus={onFocus}
             className={`group relative flex flex-col gap-1 focus-ring ${back ? "items-start" : "items-end text-right"}`}
         >
-            <span className={`font-geistMono text-caption ${MUTED}`}>{back ? "previous" : "next"}</span>
+            <span className={`text-small ${MUTED}`}>{back ? "previous" : "next"}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
                 {back ? `← ${name}` : `${name} →`}
             </span>
@@ -204,7 +201,7 @@ function PagerLink({ project, direction }: { project: Project; direction: "back"
                 />
                 <span className="mt-2 flex items-baseline gap-2 px-1">
                     <span className="text-small">{name}</span>
-                    <span className={`font-geistMono text-label ${MUTED}`}>{project.date}</span>
+                    <span className={`text-small ${MUTED}`}>{project.date}</span>
                 </span>
                 <span className={`mt-0.5 block px-1 pb-1 text-meta leading-[1.45] ${MUTED}`}>
                     {project.description}
@@ -231,7 +228,7 @@ export function Thumb({
     const tile = "bg-tile";
     if (!project.thumb) {
         return (
-            <span className={`${className} ${tile} flex items-end p-4 font-geistMono text-meta ${MUTED}`}>
+            <span className={`${className} ${tile} flex items-end p-4 text-small ${MUTED}`}>
                 {nameOf(project).toLowerCase()}
             </span>
         );

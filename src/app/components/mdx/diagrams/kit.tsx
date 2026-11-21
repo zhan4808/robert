@@ -118,7 +118,8 @@ export class Sketch {
                 key={this.key++}
                 x={x}
                 y={y}
-                fontSize={o.size ?? 13}
+                // Labels are written for the 720-unit canvas; this lifts them a step so they read at 14px or more on the page.
+                fontSize={Math.round((o.size ?? 13) * 1.14 * 10) / 10}
                 fill={TONE[o.tone ?? "ink"]}
                 textAnchor={o.anchor ?? "start"}
                 fontWeight={o.weight ?? 400}

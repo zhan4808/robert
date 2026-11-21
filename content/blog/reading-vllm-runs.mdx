@@ -1,6 +1,6 @@
 ---
 title: "Reading a Multi-GPU vLLM Run Without Fooling Yourself"
-subtitle: "what a step sends, what caps your batch, and how benchmark points lie"
+subtitle: "what a step sends, what caps your batch, and how benchmark numbers lie"
 date: November 15, 2026
 year: 2026
 order: -1
@@ -9,27 +9,17 @@ series: LLM inference without NVLink
 part: 4
 ---
 
-The first three parts of this series leaned on hundreds of vLLM runs across 4, 8 and 16 GPUs. Many of those runs were wrong the first time. This is the field guide I wish I'd had at the start: how to read what a run is doing, and how to tell a real number from an artifact.
-
-<Note title="summary">
-
-- All-reduce size depends on what's in the step: kilobytes for decode at low load, tens of megabytes for prefill.
-- At high load, the batch is usually capped by KV-cache capacity, and you can predict the cap from a number vLLM prints at startup.
-- Most wrong numbers come from a short list of traps. There's a checklist at the end.
-
-</Note>
+The first three parts of this series leaned on hundreds of vLLM runs across 4, 8 and 16 GPUs, and a lot of those runs were wrong the first time. This is the field guide I wish I'd had at the start: how to read what a run is actually doing, and how to tell a real number from an artifact.
 
 ## What one step sends
 
-A serving step is prefill, decode, or a mix of both. The number of all-reduces per step is fixed by the model (around a hundred for the MoE models we ran). Their size depends on what's in the step:
+A serving step is prefill, decode, or a mix of the two. The number of all-reduces per step is fixed by the model (around a hundred for the MoE models we ran), but their size depends on what's in the step.
 
-- **Decode:** tokens in the step = running requests. Each message is running requests × hidden size × 2 bytes in bf16. Small at low load, megabytes at high load.
-- **Prefill:** tokens in the step = the chunk budget (`max_num_batched_tokens`). At 8,192 tokens and hidden size 4096, that's 64 MiB per all-reduce. Prefill messages are the large ones.
-- **Mixed steps** carry a prefill chunk plus every running decode token, so their messages sit in between.
+In a decode step, the tokens in the step are just the running requests, so each message is running requests × hidden size × 2 bytes in bf16: tiny at low load, a few megabytes at high load. In a prefill step, the tokens are the chunk budget (`max_num_batched_tokens`); at 8,192 tokens and hidden size 4096 that's 64 MiB per all-reduce. Mixed steps carry a prefill chunk plus every running decode token, so they land in between.
 
-That's why a single microbenchmark point can't model a serving run. One session sweeps from kilobytes to tens of megabytes, and the best NCCL setting changes along the way ([part 2](/blog/nccl-defaults-off-nvlink)).
+That's why no single microbenchmark point can stand in for a serving run. One session sweeps from kilobytes to tens of megabytes, and the best NCCL setting changes along the way, as [part 2](/blog/nccl-defaults-off-nvlink) showed.
 
-## What caps the batch: usually the KV cache, and you can predict it
+## What caps the batch
 
 At high concurrency, the number of requests actually running is often far below the number you sent. The usual cause is KV-cache capacity, not compute and not the scheduler. Every running request holds cache for all of its tokens, input and output, so the arithmetic is simple:
 
@@ -37,67 +27,59 @@ $$
 \text{max running requests} \approx \frac{\text{KV pool tokens}}{\text{tokens per request (input + output)}}
 $$
 
-vLLM prints the KV pool size at startup. In our runs, this estimate matched the served batch within a few percent across three layouts. Two consequences follow:
+vLLM prints the KV pool size at startup, and in our runs this estimate matched the served batch to within a few percent across three layouts.
 
-- **Past the cap, more concurrency means more queueing, not more throughput.** The throughput curve flattens and latency climbs. If you're benchmarking beyond the cap, you're measuring the queue.
-- **A layout that grows the pool can win at high load even if each step is slower.** Two independent replicas each get their own pool. For MLA models, pipeline parallelism grows the pool and tensor parallelism doesn't ([part 3](/blog/pcie-vs-ethernet-scale-up)).
+<Diagram name="kv-cap" caption="What the KV-cache cap does to a sweep. Past it, extra concurrency waits in a queue: throughput stays flat and latency climbs. Illustrative." />
 
-<Diagram name="kv-cap" caption="What the KV cap does to a sweep. Past it, extra concurrency waits in a queue: throughput stays flat and latency climbs. Illustrative." />
+Two things follow. Past the cap, more concurrency means more queueing, not more throughput, so if you're benchmarking beyond it you're measuring the queue. And a layout that grows the pool can win at high load even if each step is slower: two independent replicas each get their own pool, and for MLA models pipeline parallelism grows the pool while tensor parallelism doesn't ([part 3](/blog/pcie-vs-ethernet-scale-up)).
 
-## Ten ways a benchmark point lies
+## Ten ways a number lies
 
-Each of these cost us real GPU time. They fall into four groups, roughly in the order you'll meet them.
+Each of these cost us real GPU time. Roughly in the order you'll run into them:
 
 ### The profiler
 
-- **Eager mode invents communication.** Profiling with `--enforce-eager` counts launch gaps as collective time and inflates the step many times over. Use eager runs for message sizes and counts only, and time everything in CUDA-graph mode.
-- **Graph-replayed collectives are invisible to the NCCL profiler.** A replayed graph emits no events. That's why sizes have to come from eager runs.
+Eager mode invents communication. Profiling with `--enforce-eager` counts the gaps between kernel launches as collective time and inflates the step many times over. Use eager runs for message sizes and counts only, and time everything in CUDA-graph mode.
 
-<Diagram name="eager-vs-graph" caption="Why eager-mode profiles overstate communication. Launch gaps become spin time inside the collective; graph replay removes them." />
+<Diagram name="eager-vs-graph" caption="Why eager-mode profiles overstate communication: launch gaps turn into spin time inside the collective, and graph replay removes them." />
+
+The catch is that graph-replayed collectives are invisible to the NCCL profiler, because a replayed graph emits no events. That's the reason sizes have to come from eager runs in the first place.
 
 ### The server
 
-- **vLLM v1 doesn't log preemptions.** A deck of ours said “zero preemptions” until `/metrics` showed thousands. Read `vllm:num_preemptions_total`, and for anything cache-related, watch the prefix-cache hit rate.
-- **Prefix caching plus a fixed seed inflates low-concurrency points.** Repeated prompts hit the cache. Pass `--no-enable-prefix-caching` for synthetic sweeps.
-- **Autotune caches can deadlock multi-rank startup.** If one rank finds a cached kernel tuning while the others start tuning and wait on each other, startup hangs. Give each multi-host run a fresh autotune cache, or turn autotuning off.
+vLLM v1 doesn't log preemptions. A slide deck of ours said "zero preemptions" right up until `/metrics` showed thousands; read `vllm:num_preemptions_total`, and for anything cache-related, watch the prefix-cache hit rate too.
+
+Prefix caching plus a fixed random seed inflates low-concurrency points, because repeated prompts hit the cache. Pass `--no-enable-prefix-caching` for synthetic sweeps.
+
+Autotune caches can deadlock multi-rank startup. If one rank finds a cached kernel tuning while the others start tuning and wait on each other, startup just hangs. Give each multi-host run a fresh autotune cache, or turn autotuning off.
 
 ### The client and your scripts
 
-- **Open-file limits fail requests silently.** An ssh session often inherits a limit of 1,024 open files. At high concurrency the benchmark client fails most of its requests and still prints a plausible throughput. Raise the limit (`ulimit -n 65536`), and always check failed and completed counts against the number of prompts.
-- **A run that finishes much faster than its twin probably crashed.** Check the logs before you celebrate.
-- **`pgrep -f` matches itself.** Inside `ssh host '...'` or `bash -c '...'`, the wrapper's own command line contains the pattern, so wait loops never end and `pkill` kills its own shell. Bracket one character: `'vllm serv[e]'`.
+Open-file limits fail requests silently. An ssh session often inherits a limit of 1,024 open files, and at high concurrency the benchmark client fails most of its requests and still prints a plausible throughput. Raise the limit (`ulimit -n 65536`) and always check failed and completed counts against the number of prompts.
+
+A run that finishes much faster than its twin probably crashed. Check the logs before celebrating.
+
+And `pgrep -f` matches itself. Inside `ssh host '...'` or `bash -c '...'`, the wrapper's own command line contains the pattern, so wait loops never end and `pkill` kills its own shell. Bracket one character: `'vllm serv[e]'`.
 
 ### The machine
 
-- **Clocks and power caps move results.** A power cap throttled prefill far more than decode. Record clock and power state with every result.
-- **Shared machines contaminate results.** Someone else's job on the same GPUs or NICs will quietly change your numbers. Check for other processes before every run, not just the first.
+Clocks and power caps move results; one power cap throttled prefill far more than decode, so record clock and power state with every result. And shared machines contaminate results: someone else's job on the same GPUs or NICs will quietly change your numbers, so check for other processes before every run, not just the first.
 
-## Profiling overhead is real but small
+## Profiling overhead is real, but small
 
 Nsight Systems added a fraction of a millisecond per step. That's noticeable at one request, where a step is short, and negligible at high load. Compare profiled steps with profiled steps, and quote client-side throughput from unprofiled runs.
 
-## A checklist before you trust a point
+## Before you trust a number
 
 - Graph mode, with the profiler off for the throughput number
-- Failed = 0, and completed = prompts sent
-- Running requests compared with the KV-cap estimate: are you measuring the queue?
+- Zero failed requests, and completed equals prompts sent
+- Running requests checked against the KV-cap estimate
 - Prefix caching off for synthetic prompts
 - Clock and power state recorded
 - NCCL's algorithm and protocol picks logged (`NCCL_DEBUG_SUBSYS=TUNING`)
-- Cross-host: more than one launch per setting
+- More than one launch per setting, if any rank crosses hosts
 - Nobody else on the machines
 
-That's the end of the series. The short version of all four parts: without NVLink, communication cost is mostly fixed per-call latency, NCCL's defaults don't know your fabric, the fabric should decide your layout, and none of it means anything until you've checked the measurement.
+That's the series. If I had to compress all four parts into a sentence: without NVLink, communication cost is mostly fixed per-call latency, NCCL's defaults don't know your fabric, the fabric should decide your layout, and none of it means anything until you've checked the measurement.
 
 *Thanks to Helia Naeimi, Chris Petersen and Haoyuan Xu at Astera Labs.*
-
-<Note title="series">
-
-LLM inference without NVLink:
-
-- [1. Where the all-reduce time goes](/blog/tp-without-nvlink)
-- [2. NCCL's defaults are tuned for NVLink. Off it, they pick wrong.](/blog/nccl-defaults-off-nvlink)
-- [3. PCIe vs Ethernet scale-up: when each one wins](/blog/pcie-vs-ethernet-scale-up)
-- **4. Reading a multi-GPU vLLM run without fooling yourself** (this post)
-
-</Note>

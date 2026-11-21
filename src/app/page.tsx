@@ -9,7 +9,7 @@ import TopNav from "./components/top-nav";
 const RECENT_POSTS = 5;
 const SELECTED_PROJECTS = 3;
 
-const MORE = "ink-link font-geistMono text-caption text-muted";
+const MORE = "ink-link text-small text-muted";
 
 export default function Home() {
     const posts = getVisiblePosts().slice(0, RECENT_POSTS);
@@ -31,11 +31,11 @@ export default function Home() {
                     <ListHeading
                         action={
                             <Link href="/blog" className={MORE}>
-                                all posts
+                                All posts
                             </Link>
                         }
                     >
-                        writing
+                        Writing
                     </ListHeading>
                     <ul>
                         {posts.map((post) => (
@@ -47,11 +47,11 @@ export default function Home() {
                     <ListHeading
                         action={
                             <Link href="/projects" className={MORE}>
-                                all projects
+                                All projects
                             </Link>
                         }
                     >
-                        projects
+                        Projects
                     </ListHeading>
                     <ul>
                         {projects.map((project) => (

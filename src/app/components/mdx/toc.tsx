@@ -24,8 +24,8 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
                     <a
                         href={`#${heading.id}`}
                         aria-current={heading.id === active ? "location" : undefined}
-                        className={`-ml-px block border-l-2 py-1 font-geistMono leading-normal focus-ring transition-colors hover:text-foreground focus-visible:text-foreground ${
-                            heading.depth === 3 ? "pl-6 text-label" : "pl-3 text-caption"
+                        className={`-ml-px block border-l-2 py-1 leading-snug focus-ring transition-colors hover:text-foreground focus-visible:text-foreground ${
+                            heading.depth === 3 ? "pl-6 text-[13px]" : "pl-3 text-small"
                         } ${heading.id === active ? "border-koi text-foreground" : `border-transparent ${MUTED}`}`}
                     >
                         {heading.text}
@@ -43,14 +43,14 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
                 className="fixed top-32 hidden w-[11rem] max-h-[calc(100vh-12rem)] overflow-y-auto min-[1120px]:block"
                 style={{ right: "calc(50% + 21rem + 1.5rem)" }}
             >
-                <p className={`mb-3 font-geistMono text-caption ${MUTED}`}>contents</p>
+                <p className={`mb-3 text-small ${MUTED}`}>Contents</p>
                 {list}
             </nav>
             <details className="group mb-10 min-[1120px]:hidden">
                 <summary
-                    className={`w-fit cursor-pointer list-none font-geistMono text-caption focus-ring transition-colors hover:text-foreground focus-visible:text-foreground [&::-webkit-details-marker]:hidden ${MUTED}`}
+                    className={`w-fit cursor-pointer list-none text-small focus-ring transition-colors hover:text-foreground focus-visible:text-foreground [&::-webkit-details-marker]:hidden ${MUTED}`}
                 >
-                    contents <span className="inline-block transition-transform group-open:rotate-90">→</span>
+                    Contents <span className="inline-block transition-transform group-open:rotate-90">→</span>
                 </summary>
                 <div className="mt-3">{list}</div>
             </details>

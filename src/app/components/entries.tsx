@@ -1,10 +1,11 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { JournalPost, Project } from "../../lib/content-schema";
 
 /** What a post is, as the index labels it, with the colour of its dot. */
 export const KINDS = {
-    technical: { label: "research", dot: "bg-koi" },
-    journal: { label: "life", dot: "bg-[#5b8aa6] dark:bg-[#8fb6cc]" },
+    technical: { label: "Research", dot: "bg-koi" },
+    journal: { label: "Life", dot: "bg-[#5b8aa6] dark:bg-[#8fb6cc]" },
 } as const;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -22,33 +23,33 @@ export function shortDate(date: string) {
 export function KindTag({ kind, className = "" }: { kind: JournalPost["kind"]; className?: string }) {
     const k = KINDS[kind];
     return (
-        <span className={`inline-flex items-center gap-1.5 font-geistMono text-label text-muted ${className}`}>
-            <span aria-hidden className={`h-[5px] w-[5px] rounded-full ${k.dot}`} />
+        <span className={`inline-flex items-center gap-2 text-small text-muted ${className}`}>
+            <span aria-hidden className={`h-[6px] w-[6px] rounded-full ${k.dot}`} />
             {k.label}
         </span>
     );
 }
 
+const TITLE =
+    "underline decoration-transparent decoration-1 underline-offset-[5px] transition-colors duration-150 group-hover:decoration-koi group-focus-visible:decoration-koi";
+
 /**
- * One line of a list: date, title, and the kind on the right. The title firms its underline on hover; nothing else
- * moves.
+ * One line of a list: date, title, and (on the blog index) the kind on the right. The title firms its underline on
+ * hover; nothing else moves.
  */
-export function PostRow({ post, bare = false }: { post: JournalPost; bare?: boolean }) {
+export function PostRow({ post, bare = false, tag = false }: { post: JournalPost; bare?: boolean; tag?: boolean }) {
     const row = (
         <Link
             href={`/blog/${post.slug}`}
-            className="group grid grid-cols-[3.75rem_1fr_auto] items-baseline gap-x-4 py-[7px] focus-ring"
+            className={`group grid items-baseline gap-x-5 py-2 focus-ring ${
+                tag ? "grid-cols-[4rem_1fr_auto]" : "grid-cols-[4rem_1fr]"
+            }`}
         >
-            <span className="font-geistMono text-caption tabular-nums text-muted">{shortDate(post.date)}</span>
-            <span className="min-w-0 text-body leading-snug">
-                <span className="underline decoration-transparent decoration-1 underline-offset-[5px] transition-colors duration-150 group-hover:decoration-koi group-focus-visible:decoration-koi">
-                    {post.title}
-                </span>
-                {post.part && (
-                    <span className="ml-2 font-geistMono text-label tabular-nums text-muted">{post.part}/4</span>
-                )}
+            <span className="text-small tabular-nums text-muted">{shortDate(post.date)}</span>
+            <span className="min-w-0 text-[16px] leading-snug">
+                <span className={TITLE}>{post.title}</span>
             </span>
-            <KindTag kind={post.kind} className="max-sm:hidden" />
+            {tag && <KindTag kind={post.kind} className="max-sm:hidden" />}
         </Link>
     );
     return bare ? row : <li>{row}</li>;
@@ -64,30 +65,25 @@ export function ProjectRow({ project, showYear = false }: { project: Project; sh
                 href={href}
                 target={external ? "_blank" : undefined}
                 rel={external ? "noopener noreferrer" : undefined}
-                className="group flex flex-col gap-0.5 py-2 focus-ring"
+                className="group flex flex-col gap-1 py-2.5 focus-ring"
             >
                 <span className="flex items-baseline gap-3">
-                    <span className="text-body leading-snug underline decoration-transparent decoration-1 underline-offset-[5px] transition-colors duration-150 group-hover:decoration-koi group-focus-visible:decoration-koi">
-                        {project.shortTitle ?? project.title}
-                    </span>
+                    <span className={`text-[16px] leading-snug ${TITLE}`}>{project.shortTitle ?? project.title}</span>
                     {(showYear || project.date !== String(project.year)) && (
-                        <span className="ml-auto shrink-0 font-geistMono text-label tabular-nums text-muted">
-                            {project.date}
-                        </span>
+                        <span className="ml-auto shrink-0 text-small tabular-nums text-muted">{project.date}</span>
                     )}
                 </span>
-                <span className="text-small leading-relaxed text-muted [text-wrap:pretty]">{project.description}</span>
+                <span className="text-[15px] leading-relaxed text-muted [text-wrap:pretty]">{project.description}</span>
             </Link>
         </li>
     );
 }
 
-/** A small mono heading over a list, with a hairline running out to the right. */
-export function ListHeading({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+/** A section heading over a list on the home page, with a quiet link to the rest on the right. */
+export function ListHeading({ children, action }: { children: ReactNode; action?: ReactNode }) {
     return (
-        <div className="mb-2 flex items-center gap-3 font-geistMono text-caption text-muted">
-            <h2>{children}</h2>
-            <span aria-hidden className="h-px flex-1 bg-hairline" />
+        <div className="mb-3 flex items-baseline justify-between border-b border-hairline pb-3">
+            <h2 className="font-serif text-[22px] font-normal leading-none">{children}</h2>
             {action}
         </div>
     );

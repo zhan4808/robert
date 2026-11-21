@@ -9,86 +9,58 @@ series: LLM inference without NVLink
 part: 3
 ---
 
-Parts [1](/blog/tp-without-nvlink) and [2](/blog/nccl-defaults-off-nvlink) were about what a single all-reduce costs when GPUs have no NVLink. This part zooms out to the decision people actually make. You have 16 GPUs in two boxes. Do you join the boxes with RoCE Ethernet or with a PCIe switch fabric, and how do you lay the model out on top?
+The first two parts were about what a single all-reduce costs when GPUs have no NVLink. This one zooms out to the decision people actually face: you have 16 GPUs in two boxes. Do you join the boxes with RoCE Ethernet or with a PCIe switch fabric, and how should you lay the model out on top?
 
-We had both setups side by side. One was two 8-GPU boxes over 400G RoCE through a single Ethernet switch. The other was a rack with the same GPU model, where the boxes share a PCIe switch fabric.
+We had both setups side by side. One was the pair of 8-GPU boxes from before, joined by 400G RoCE through an Ethernet switch. The other was a rack with the same GPU model, where the boxes share a PCIe switch fabric instead.
 
-<Diagram name="two-fabrics" caption="The two setups. Inside a box they are the same; only the hop through the middle differs, and the Ethernet hop has many more steps in it." />
+<Diagram name="two-fabrics" caption="The two setups. Inside a box they're the same; only the hop through the middle differs, and the Ethernet hop has a lot more in it." />
 
-<Note title="summary">
+## Inside one box, nothing changes
 
-- Inside one box, the two racks behave identically. Every difference comes from the hop between boxes.
-- At decode sizes, a cross-box hop on the PCIe fabric costs a small fraction of an Ethernet crossing, and a 16-GPU decode step makes around a hundred all-reduces that each cross twice.
-- Over Ethernet, keep each tensor-parallel group inside a box and add boxes as replicas. Over a PCIe fabric, one 16-GPU tensor-parallel group is a real option.
-- For long-context MLA models, KV-cache capacity matters more than the fabric. Grow it with pipeline parallelism.
+Per-call all-reduce latency on 8 local GPUs matched on both racks at every size. That's what you'd hope, since inside a box both are the same GPUs on the same kind of PCIe switch. Any difference between them comes from the hop between boxes.
 
-</Note>
+One caveat. End-to-end throughput did differ between the two racks' single boxes, and we traced it to the serving harness rather than the hardware: one ran vLLM's async scheduling and the other didn't. We never got to rerun them aligned, so I'd treat any cross-rack throughput comparison with care.
 
-## Inside one box, the two are identical
+## Across boxes, PCIe is much cheaper per call
 
-Per-call all-reduce latency on 8 local GPUs matched on both racks, at every size. That's what you'd expect: inside a box, both racks are the same GPUs on the same kind of PCIe switch. Any difference between the racks comes from the cross-box path.
+As NCCL sees it, a cross-box hop over the PCIe fabric costs a small fraction of an Ethernet crossing. At large message sizes the two converge, for the same reason as in part 1: each GPU's own PCIe link is the bottleneck either way. The whole difference lives in the decode range.
 
-One caveat. End-to-end throughput did differ between the two racks' single boxes. We traced that to the serving harness, not the hardware: one ran vLLM's async scheduling and the other didn't. The aligned rerun never happened, so treat cross-rack throughput comparisons with care.
+It's part 1's startup term again, with a much smaller fixed cost for the steps that leave the box. And it compounds: a 16-GPU tensor-parallel decode step makes around a hundred all-reduces, and each one crosses between the boxes twice.
 
-## Across boxes, PCIe is far cheaper per call at decode sizes
+## What that means for layouts
 
-As NCCL sees it, a cross-box hop on the PCIe fabric cost a small fraction of an Ethernet crossing. At large message sizes the two converged, for the same reason as in part 1: each GPU's own PCIe link is the bottleneck either way. The whole difference lives in the decode range.
-
-This is part 1's startup term again, with a much smaller α for the steps that leave the box. And it compounds. A 16-GPU tensor-parallel decode step makes around a hundred all-reduces, and each one crosses between the boxes twice.
-
-## What that does to layouts
-
-<Diagram name="layouts" caption="Three ways to use 16 GPUs in two boxes, and what each sends between them per step." />
+<Diagram name="layouts" caption="Three ways to use 16 GPUs in two boxes, and what each one sends between the boxes on every step." />
 
 | Question | PCIe switch fabric | RoCE Ethernet |
 | --- | --- | --- |
 | Split one TP group across two boxes? | Cost was within noise | Clear throughput loss at every load we ran (stock NCCL) |
 | TP16 vs one 8-GPU box | TP16 pulls ahead from medium concurrency | TP16 trails one box until that box runs out of KV cache |
-| TP16 vs two independent TP8 replicas | Not measured head to head. TP16 gave the best per-user rate in the agentic run | Two replicas win at every concurrency |
+| TP16 vs two independent TP8 replicas | Not measured head to head; TP16 gave the best per-user rate in the agentic run | Two replicas win at every concurrency |
 | Communication share of a 16-GPU decode step | A modest slice | Comparable to compute at medium load |
 | Prefill-heavy traffic | Little difference | Little difference |
 
-The rule of thumb: **over Ethernet, keep each tensor-parallel group inside one box and add boxes as replicas. Over a PCIe fabric, a 16-GPU tensor-parallel group is a real option**, and it buys per-request latency that replicas can't.
+The rule of thumb that falls out is simple. Over Ethernet, keep each tensor-parallel group inside one box and add boxes as replicas. Over a PCIe fabric, a 16-GPU tensor-parallel group is a real option, and it buys per-request latency that replicas can't.
 
-## When the network stops mattering: KV-bound agentic traffic
+## When the network stops mattering
 
-We also replayed an agentic coding trace: very long contexts and heavy prefix reuse. There the limit was KV-cache capacity, not communication, and the two fabrics landed at parity on the same layout.
+We also replayed an agentic coding trace: very long contexts, lots of prefix reuse. There the limit was KV-cache capacity, not communication, and the two fabrics landed at parity on the same layout.
 
-The layout itself turned out to be the interesting part. In MLA models (DeepSeek-style attention, here GLM-5.2), the compressed latent KV cache is replicated on every tensor-parallel rank. So doubling TP doesn't grow the cache pool. Pipeline parallelism does, because each stage holds the cache for its own layers only. For long-context MLA serving across 16 GPUs, PP2 × TP8 beat TP16, and by more than any fabric difference.
+The layout turned out to be the interesting part. In MLA models (DeepSeek-style attention, here GLM-5.2), the compressed KV cache is replicated on every tensor-parallel rank, so doubling TP doesn't grow the cache pool. Pipeline parallelism does, because each stage only holds the cache for its own layers. For long-context MLA serving across 16 GPUs, PP2 × TP8 beat TP16, and by more than any difference between the fabrics.
 
-<Diagram name="mla-kv" caption="Why pipeline parallelism grows an MLA model's KV pool and tensor parallelism doesn't. Same memory per GPU, twice the tokens." />
+<Diagram name="mla-kv" caption="Why pipeline parallelism grows an MLA model's KV pool and tensor parallelism doesn't: the same memory per GPU holds twice the tokens." />
 
-Two more things we learned the hard way here:
-
-- Every layout collapsed once the working set of contexts outgrew the cache. Prefix-cache hit rate fell off a cliff, and time to first token went with it.
-- A CPU memory tier under two-node TP16 served almost none of the misses. It didn't help.
+Two more things we learned the hard way on that trace. Every layout fell apart once the working set of contexts outgrew the cache: the prefix-cache hit rate fell off a cliff, and time to first token went with it. And a CPU memory tier under two-node TP16 served almost none of the misses, so it didn't help.
 
 ## Where Ethernet's cost actually lives
 
-It's tempting to read all this as “Ethernet is slow.” The wire wasn't. The fabric ran near line rate, and the switch hop was a small part of each crossing. The cost sits in two places: the host-side path (NCCL's proxy thread, the NIC's PCIe side, turning GPU writes into RDMA), and NCCL's protocol choice, which part 2 fixed in software.
+It's tempting to read all of this as "Ethernet is slow." The wire wasn't. The fabric ran near line rate and the switch hop was a small part of each crossing. The cost sits in two places: the host-side path (NCCL's proxy thread, the NIC's side of PCIe, turning GPU writes into RDMA), and NCCL's protocol choice, which part 2 fixed in software.
 
-After that fix, TP16 over Ethernet improved a lot at high load. It still trailed two independent replicas, though, and nothing changed at low load, where fixed latency is everything.
+After that fix, TP16 over Ethernet got a lot better at high load. It still trailed two independent replicas, though, and nothing changed at low load, where fixed latency is everything. Which leaves an open question for hardware: how much of the remaining crossing cost can move out of software and into the fabric?
 
-That leaves an open question for hardware: how much of the remaining crossing cost can move out of software and into the fabric?
+## If you're choosing
 
-## Decision guide
+For latency-sensitive decode on 16 or more GPUs, a PCIe fabric lets you run one big tensor-parallel group; on Ethernet, don't. For throughput at high concurrency on Ethernet, run independent replicas, plus a tuned NCCL rule for anything that has to cross boxes. For long-context MLA models, grow the KV pool with pipeline parallelism before you grow TP, and treat the fabric as secondary. For prefill-heavy batch work, either fabric is fine, and the money is better spent elsewhere.
 
-1. **Latency-sensitive decode on 16+ GPUs:** a PCIe fabric lets you run one big TP group. On Ethernet, don't.
-2. **Throughput at high concurrency on Ethernet:** independent replicas, plus a tuned NCCL rule (part 2) for anything that has to cross boxes.
-3. **Long-context MLA models:** grow the KV pool with pipeline parallelism before you grow TP. The fabric is secondary.
-4. **Prefill-heavy batch work:** either fabric. Spend the money elsewhere.
+Every conclusion in this series came from hundreds of serving runs, and plenty of them were wrong the first time. [Part 4](/blog/reading-vllm-runs) is about reading a run without fooling yourself.
 
-**Next:** every conclusion in this series came from hundreds of serving runs, and plenty of them were wrong the first time. Part 4 is the field guide to reading a run without fooling yourself. [Read part 4.](/blog/reading-vllm-runs)
-
-*Thanks to Helia Naeimi, Chris Petersen and Haoyuan Xu at Astera Labs. Shared with permission, with absolute numbers omitted.*
-
-<Note title="series">
-
-LLM inference without NVLink:
-
-- [1. Where the all-reduce time goes](/blog/tp-without-nvlink)
-- [2. NCCL's defaults are tuned for NVLink. Off it, they pick wrong.](/blog/nccl-defaults-off-nvlink)
-- **3. PCIe vs Ethernet scale-up: when each one wins** (this post)
-- [4. Reading a multi-GPU vLLM run without fooling yourself](/blog/reading-vllm-runs)
-
-</Note>
+*Thanks to Helia Naeimi, Chris Petersen and Haoyuan Xu at Astera Labs. Shared with permission, with absolute numbers left out.*

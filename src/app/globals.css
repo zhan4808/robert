@@ -238,3 +238,16 @@
 .katex {
     font-size: 1.05em;
 }
+
+/*
+ * Figures in a write-up run wider than the text, Distill-style: 4.5rem past the column on each side from lg up, so
+ * diagrams and charts get room to read while the caption stays aligned with the prose.
+ */
+@media (min-width: 1024px) {
+    [data-wide] {
+        margin-inline: -4.5rem;
+    }
+    [data-wide] figcaption {
+        padding-inline: 4.5rem;
+    }
+}

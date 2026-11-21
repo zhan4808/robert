@@ -34,8 +34,8 @@ export const ERAS: Era[] = [
         id: "v6",
         span: "nov 2026 – now",
         description:
-            "A reading column on warm paper: a serif for titles, the koi pond cut down to a banner with a shoreline of scattered tiles, photos that surface from the same tiles through a ripple, and hand-drawn diagrams drawn into the page.",
-        stack: "next 16 · react 19 · tailwind 3 · newsreader · geist · rough.js · mdx",
+            "A reading column on warm paper: a serif for titles, the koi pond cut down to a banner with a shoreline of scattered tiles, photos that bloom in like watercolour and ripple under the cursor, and hand-drawn diagrams that run wider than the text.",
+        stack: "next 16 · react 19 · tailwind 3 · webgl · rough.js · mdx",
         inner: "a write-up",
     },
     {

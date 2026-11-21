@@ -48,9 +48,7 @@ export default function Gallery() {
             <main id="main" tabIndex={-1} className="mx-auto w-full max-w-column px-6 pt-14 outline-none sm:pt-20">
                 <header className="mb-10">
                     <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title">Photos</h1>
-                    <p className="mt-2 font-serif text-[19px] italic text-muted">
-                        the spaces between. Each one surfaces as you reach it.
-                    </p>
+                    <p className="mt-2 font-serif text-[19px] italic text-muted">the spaces between.</p>
                 </header>
 
                 <section aria-label="Photos" className="grid gap-x-5 gap-y-10 sm:grid-cols-2">
@@ -72,10 +70,9 @@ export default function Gallery() {
                                                 ratio={work.src.width / work.src.height}
                                                 sizes="(min-width: 640px) 21rem, 100vw"
                                                 priority={i < 2}
-                                                shore={2}
                                             />
                                         </button>
-                                        <figcaption className="mt-2.5 flex items-baseline justify-between gap-3 font-geistMono text-caption">
+                                        <figcaption className="mt-2.5 flex items-baseline justify-between gap-3 text-small">
                                             <span className="truncate">{work.title}</span>
                                             <span className="shrink-0 tabular-nums text-muted">{details(work)}</span>
                                         </figcaption>

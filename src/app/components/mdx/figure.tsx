@@ -20,7 +20,7 @@ export interface FigureProps {
 function FigureLabel({ number, children }: { number: string; children?: ReactNode }) {
     return (
         <>
-            <span className="text-foreground">
+            <span className="font-medium text-foreground">
                 Figure {number}
                 {children ? "." : ""}
             </span>
@@ -32,14 +32,16 @@ function FigureLabel({ number, children }: { number: string; children?: ReactNod
 /** An image in the write-up, with an optional caption; clicking opens it in the lightbox. */
 export function Figure({ src, alt, caption, invert, sizes, number }: FigureProps) {
     return (
-        <ImageLightbox
-            src={src}
-            alt={alt}
-            caption={number ? <FigureLabel number={number}>{caption}</FigureLabel> : caption}
-            className={invert ? "invert" : undefined}
-            meta={imageMeta(src)}
-            sizes={sizes}
-        />
+        <div data-wide={sizes ? undefined : true} className={sizes ? undefined : "my-2"}>
+            <ImageLightbox
+                src={src}
+                alt={alt}
+                caption={number ? <FigureLabel number={number}>{caption}</FigureLabel> : caption}
+                className={invert ? "invert" : undefined}
+                meta={imageMeta(src)}
+                sizes={sizes}
+            />
+        </div>
     );
 }
 
@@ -61,7 +63,7 @@ export function Gallery({ number, children }: { number?: string; children?: Reac
     return (
         <figure className="flex flex-col gap-2">
             {grid}
-            <figcaption className={`font-geistMono text-caption ${MUTED}`}>
+            <figcaption className={`text-small ${MUTED}`}>
                 <FigureLabel number={number} />
             </figcaption>
         </figure>

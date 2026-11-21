@@ -34,7 +34,7 @@ function Txt({
         <text
             x={x}
             y={y}
-            fontSize={size}
+            fontSize={size * 1.14}
             fill={TONE[tone]}
             textAnchor={anchor}
             fontWeight={weight}

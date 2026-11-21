@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { PANEL } from "./styles";
 
 /**
  * A callout: a hairline panel with a marker down its left edge and a mono label, "note" unless the title says
@@ -7,8 +6,8 @@ import { PANEL } from "./styles";
  */
 export function Note({ title = "note", children }: { title?: string; children?: ReactNode }) {
     return (
-        <aside className={`${PANEL} flex flex-col gap-3 border-l-2 border-l-muted py-4 pl-5 pr-4`}>
-            <p className="font-geistMono text-caption lowercase text-foreground">{title}</p>
+        <aside className="flex flex-col gap-2 rounded-card bg-tile px-5 py-4">
+            <p className="text-small font-medium text-foreground first-letter:uppercase">{title}</p>
             <div className="flex flex-col gap-3">{children}</div>
         </aside>
     );

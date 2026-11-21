@@ -21,7 +21,7 @@ export default function ProjectsRoute() {
                 <div className="flex flex-col gap-9">
                     {[...years.entries()].map(([year, list]) => (
                         <section key={year}>
-                            <h2 className="mb-1 border-b border-hairline pb-2 font-geistMono text-caption tabular-nums text-muted">
+                            <h2 className="mb-2 border-b border-hairline pb-2 font-serif text-[20px] tabular-nums">
                                 {year}
                             </h2>
                             <ul className="flex flex-col gap-1">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AudioPlayer from "../../components/audio-player";
 import { TableOfContents } from "../../components/mdx/toc";
+import Link from "next/link";
 import { getPost, getPosts, getVisiblePosts } from "../../../lib/content";
 import type { JournalPost, JournalTrack } from "../../../lib/content-schema";
 import { imageMeta } from "../../../lib/images";
@@ -10,7 +11,6 @@ import { pageMetadata } from "../../../lib/metadata";
 import { readingMinutes } from "../../../lib/reading-time";
 import { formatIsoDate, parseContentDate } from "../../../lib/site";
 import PostPage, { PostCoverBand, PostPager, type Band, type PagerPost } from "./post-page";
-import { KindTag } from "../../components/entries";
 
 const MUTED = "text-muted";
 const HAIRLINE = "border-hairline";
@@ -80,33 +80,39 @@ export default async function Page({ params }: Props) {
                 <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">
                     {post.title}
                 </h1>
-                <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
+                <p className="mt-3 font-serif text-[20px] italic leading-snug text-muted [text-wrap:pretty]">
                     {post.subtitle}
                 </p>
-                <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 whitespace-pre-wrap border-b border-hairline pb-5 font-geistMono text-caption tabular-nums text-muted">
-                    <span>
-                        {[
-                            post.date,
-                            post.updated && `updated ${formatIsoDate(post.updated)}`,
-                            `${readingMinutes(doc.body)} min`,
-                            post.series && post.part && `part ${post.part} of ${post.series}`,
-                        ]
-                            .filter(Boolean)
-                            .join("  ·  ")}
-                    </span>
-                    <KindTag kind={post.kind} className="ml-auto" />
+                <p className="mt-4 text-[15px] tabular-nums text-muted">
+                    {[
+                        post.date,
+                        post.updated && `updated ${formatIsoDate(post.updated)}`,
+                        `${readingMinutes(doc.body)} min read`,
+                    ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    {post.series && post.part && (
+                        <>
+                            {" · "}
+                            <span className="text-foreground/80">
+                                Part {post.part} of <em className="font-serif text-[16px]">{post.series}</em>
+                            </span>
+                        </>
+                    )}
                 </p>
                 {bandOf(post) && <PostCoverBand band={bandOf(post)!} />}
             </header>
 
             {post.tracks.length > 0 && <Listening tracks={post.tracks} />}
 
-            <div className="mt-10">
+            <div className="mt-10 border-t border-hairline pt-10">
                 <TableOfContents headings={headings} />
                 <div className="flex flex-col gap-5">{content}</div>
             </div>
 
-            {(newer || older) && (
+            {post.series && <SeriesNav series={post.series} current={post.slug} />}
+
+            {!post.series && (newer || older) && (
                 <nav
                     aria-label="More posts"
                     className={`mt-20 flex items-start justify-between gap-6 border-t ${HAIRLINE} pt-6`}
@@ -123,7 +129,7 @@ export default async function Page({ params }: Props) {
 function Listening({ tracks }: { tracks: JournalTrack[] }) {
     return (
         <section aria-label="Listening" className={`mt-12 flex flex-col gap-4 border-t ${HAIRLINE} pt-6`}>
-            <p className={`font-geistMono text-meta ${MUTED}`}>listening</p>
+            <p className={`text-small ${MUTED}`}>listening</p>
             <ul className="flex flex-col gap-5">
                 {tracks.map((track) => (
                     <AudioPlayer
@@ -134,5 +140,35 @@ function Listening({ tracks }: { tracks: JournalTrack[] }) {
                 ))}
             </ul>
         </section>
+    );
+}
+
+/** Every part of a series, in order, with this one marked; written once here instead of in each post. */
+function SeriesNav({ series, current }: { series: string; current: string }) {
+    const parts = getPosts()
+        .filter((p) => p.series === series && !p.hidden)
+        .sort((a, b) => (a.part ?? 0) - (b.part ?? 0));
+    return (
+        <aside aria-label="Series" className="mt-16 rounded-card bg-tile px-6 py-5">
+            <p className="text-small text-muted">
+                A {parts.length}-part series: <em className="font-serif text-[16px] text-foreground">{series}</em>
+            </p>
+            <ol className="mt-3 flex flex-col gap-1.5">
+                {parts.map((p) => (
+                    <li key={p.slug} className="grid grid-cols-[1.5rem_1fr] text-[15px] leading-snug">
+                        <span className="tabular-nums text-muted">{p.part}</span>
+                        {p.slug === current ? (
+                            <span className="text-foreground">
+                                {p.title} <span className="text-muted">· you are here</span>
+                            </span>
+                        ) : (
+                            <Link href={`/blog/${p.slug}`} className="ink-link text-prose">
+                                {p.title}
+                            </Link>
+                        )}
+                    </li>
+                ))}
+            </ol>
+        </aside>
     );
 }

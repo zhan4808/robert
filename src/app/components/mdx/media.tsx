@@ -5,7 +5,7 @@ export function Video({ src, caption }: { src: string; caption?: string }) {
     return (
         <figure className="flex flex-col gap-2">
             <video src={src} controls playsInline className="w-full rounded-card bg-black" />
-            {caption && <figcaption className={`font-geistMono text-caption ${MUTED}`}>{caption}</figcaption>}
+            {caption && <figcaption className={`text-small ${MUTED}`}>{caption}</figcaption>}
         </figure>
     );
 }

@@ -42,7 +42,7 @@ export function PostCover({
         return <span className={`${frame} bg-gradient-to-br ${post.coverGradient}`} />;
     }
     return (
-        <span className={`${frame} flex items-end p-3 font-geistMono text-meta text-muted`}>
+        <span className={`${frame} flex items-end p-3 text-small text-muted`}>
             {post.title.trim().charAt(0).toLowerCase()}
         </span>
     );

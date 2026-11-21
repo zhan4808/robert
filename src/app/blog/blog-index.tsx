@@ -21,7 +21,7 @@ export default function BlogIndex({ years }: { years: [number, JournalPost[]][] 
 
     return (
         <>
-            <div role="group" aria-label="Filter posts" className="flex gap-4 font-geistMono text-caption">
+            <div role="group" aria-label="Filter posts" className="flex gap-4 text-small">
                 {FILTERS.map((f) => {
                     const on = f === filter;
                     return (
@@ -40,7 +40,7 @@ export default function BlogIndex({ years }: { years: [number, JournalPost[]][] 
                                     f === "all" ? "bg-foreground" : KINDS[f].dot
                                 } ${on ? "opacity-100" : "opacity-40"}`}
                             />
-                            {f === "all" ? "all" : KINDS[f].label}
+                            {f === "all" ? "All" : KINDS[f].label}
                         </button>
                     );
                 })}
@@ -57,7 +57,7 @@ export default function BlogIndex({ years }: { years: [number, JournalPost[]][] 
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <h2 className="mb-1 border-b border-hairline pb-2 font-geistMono text-caption tabular-nums text-muted">
+                            <h2 className="mb-2 border-b border-hairline pb-2 font-serif text-[20px] tabular-nums">
                                 {year}
                             </h2>
                             <ul>
@@ -71,7 +71,7 @@ export default function BlogIndex({ years }: { years: [number, JournalPost[]][] 
                                             exit={{ opacity: 0 }}
                                             transition={{ duration: 0.18 }}
                                         >
-                                            <PostRow post={post} bare />
+                                            <PostRow post={post} bare tag />
                                         </motion.li>
                                     ))}
                                 </AnimatePresence>

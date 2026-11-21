@@ -166,7 +166,7 @@ export function ImageLightbox({ src, alt, caption, className, meta, sizes = CONT
                         <img src={src} alt={alt} className={thumbClassName} />
                     )}
                 </button>
-                {caption && <figcaption className="font-geistMono text-caption text-muted">{caption}</figcaption>}
+                {caption && <figcaption className="text-small text-muted">{caption}</figcaption>}
             </figure>
 
             {/* Lightbox overlay */}

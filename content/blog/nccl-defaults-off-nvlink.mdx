@@ -1,6 +1,6 @@
 ---
 title: "NCCL's Defaults Are Tuned for NVLink. Off It, They Pick Wrong."
-subtitle: "a three-row rules file fixed the protocol choice across Ethernet"
+subtitle: "a three-line rules file fixed the protocol choice across Ethernet"
 date: November 15, 2026
 year: 2026
 order: -3
@@ -9,92 +9,63 @@ series: LLM inference without NVLink
 part: 2
 ---
 
-[Part 1](/blog/tp-without-nvlink) showed that on GPUs without NVLink, most all-reduce time is fixed per-call cost, and that crossing Ethernet adds more of it. This part is about the setting that moved that cost the most: which algorithm and protocol NCCL runs at each message size.
+In [part 1](/blog/tp-without-nvlink) I found that on GPUs without NVLink, most all-reduce time is a fixed cost paid on every call, and that crossing Ethernet adds more of it. This post is about the setting that moved that cost more than anything else I tried: which algorithm and protocol NCCL runs at each message size.
 
-Across two PCIe boxes on Ethernet, NCCL's defaults kept the slowest reasonable protocol in exactly the size range decode lives in. Fixing it took a rules file three lines long.
+Across two PCIe boxes on Ethernet, NCCL's defaults kept the slowest reasonable protocol in exactly the size range decode lives in. The fix ended up being a rules file three lines long.
 
-<Note title="summary">
+## Two choices on every call
 
-- NCCL picks an algorithm and protocol from a built-in cost model with generic link numbers. Nothing measures your fabric.
-- Inside one PCIe box the defaults are about right. Across Ethernet, NCCL stays on Ring/LL far too long.
-- The best setting depends on message size: Tree/LL for small, Ring/LL128 in the middle, Ring/Simple for large. A size-based rule matched the best forced setting at every load, and it was the biggest win of the project.
-- NCCL disables LL128 on PCIe for a reason. Check correctness before you force it on.
+Every collective NCCL runs comes down to two settings. The algorithm decides the route data takes between GPUs. The protocol decides how each piece of data is packaged, and how the receiver finds out it has arrived.
 
-</Note>
+The two algorithms that matter here are Ring and Tree. Ring is the loop from part 1: 2(N−1) steps, and the best use of bandwidth. Tree reduces data up a tree and broadcasts the result back down. Across two boxes, it crosses the slow link far fewer times in a row than Ring does, which matters when each crossing has a high fixed cost. (NCCL has newer algorithms too, but they need NVLink.)
 
-## Two choices NCCL makes on every call
+<Diagram name="ring-vs-tree" caption="Every Ring step is gated by the slowest link, the Ethernet hop. Tree crosses it once on the way up and once on the way down." />
 
-Every collective NCCL runs has two settings. The **algorithm** decides the route data takes between GPUs. The **protocol** decides how each piece of data is packaged and how the receiver learns it has arrived.
+There are three protocols, and they trade fixed cost against efficiency. LL ("low latency") sends 8 bytes of data alongside 8 bytes of flags in every 16; the receiver just polls the flags, so there's no separate handshake, but half of every write is bookkeeping. LL128 packs 120 bytes of data into each 128-byte line, which only works if the hardware guarantees that a 128-byte write lands all at once, so NCCL only turns it on where it trusts that, which in practice means NVLink. Simple sends full payloads and synchronises with separate flags: the best bandwidth and the highest fixed cost.
 
-The algorithms that matter here are Ring and Tree. Ring is the loop from part 1: 2(N−1) steps, with the best use of bandwidth. Tree reduces data up a tree of nodes and broadcasts the result back down. Across two boxes, it crosses the slow link fewer times in series than Ring does, which matters when each crossing's latency dominates. NCCL has newer algorithms too, but they need NVLink.
+<Diagram name="protocols" caption="What each protocol puts on the wire in one 128-byte window. The flags are how a receiver knows the data has landed." />
 
-<Diagram name="ring-vs-tree" caption="Ring vs Tree across two boxes. Every ring step is gated by the slow hop; Tree crosses it once on the way up and once on the way down." />
+In terms of part 1's model, LL has a small α and a poor B, Simple has a large α and a good B, and LL128 sits in between. Small messages want LL and large ones want Simple. Everything depends on where you switch.
 
-The three protocols trade fixed cost against efficiency:
+## How NCCL picks
 
-- **LL** (low latency) sends 8 bytes of data with 8 bytes of flags in every 16. Receivers poll the flags, so there's no separate handshake. Startup is low, but half of every write is control, so throughput is low too.
-- **LL128** packs 120 data bytes into each 128-byte line. It needs the hardware to guarantee that 128-byte writes arrive whole, so NCCL only enables it where it trusts that. In practice, that means NVLink.
-- **Simple** sends full payloads and synchronises with fewer, separate flags. Highest bandwidth, highest fixed cost.
-
-<Diagram name="protocols" caption="What each protocol puts on the wire, per 128 bytes. The flags are how the receiver knows data has landed." />
-
-In the terms of part 1's model: LL has a small α and a poor B, Simple has a large α and a good B, and LL128 sits in between. Small messages want LL, large messages want Simple. Everything hinges on where you switch.
-
-## How NCCL picks, and why it can be wrong
-
-For every call, NCCL estimates how long each algorithm would take under each protocol, then picks the cheapest. The estimates come from built-in per-hop latency and bandwidth values for each link type: NVLink, PCIe, network. You can watch it decide:
+For each call, NCCL estimates how long every algorithm would take under every protocol and picks the cheapest. The estimates come from built-in latency and bandwidth numbers for each kind of link: NVLink, PCIe, network. You can watch it decide:
 
 ```bash
 NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=TUNING <your command>
 ```
 
-Those built-in values are generic. Nothing measures your fabric. If your hop latencies or achieved bandwidths differ from what NCCL assumes, the switch points land in the wrong places.
+The catch is that those numbers are generic. Nothing measures your fabric. If your hop latencies or achieved bandwidths differ from what NCCL assumes, the switch points land in the wrong places.
 
-<Note title="reading nccl-tests output">
+(One sanity note for reading nccl-tests output: it reports an algorithm bandwidth, bytes over time, and a bus bandwidth, which multiplies that by 2(N−1)/N to account for the ring's traffic. Bus bandwidth is the one you can compare across GPU counts.)
 
-nccl-tests reports two bandwidths. Algorithm bandwidth is bytes over time. Bus bandwidth is algorithm bandwidth times 2(N−1)/N for all-reduce, which corrects for the ring's traffic. Bus bandwidth is the one you can compare across GPU counts.
+## Inside one box, it's about right
 
-</Note>
+On 8 GPUs in one PCIe box, NCCL moves from Ring/LL to Ring/Simple close to where the measured curves actually cross, and LL128 never wins even when forced. If you only ever use one box, the defaults are fine.
 
-## Finding 1: inside one box, NCCL's switch point is about right
+## Across Ethernet, it stays on LL far too long
 
-On 8 GPUs in one PCIe box, NCCL moves from Ring/LL to Ring/Simple close to where the measured curves actually cross. LL128, when forced, never wins there. If you only ever run one box, the defaults are fine.
+Across two boxes NCCL keeps Ring/LL well into the megabyte range, because its cost model assumes LL moves data over the network several times faster than it actually did. So in the band where high-concurrency decode messages live, the default ends up being the slowest reasonable choice by a wide margin.
 
-## Finding 2: across Ethernet, NCCL stays on LL far too long
+<Diagram name="chart-forced" caption="16 GPUs across two boxes over Ethernet, nccl-tests with each algorithm and protocol forced, log-log. Lower is better; NCCL's default is dashed." />
 
-Across two boxes, NCCL keeps Ring/LL well into the megabyte range. Its cost model assumes LL moves data over the network several times faster than it actually did. So in the band where high-concurrency decode messages live, the default is the slowest reasonable choice, by a wide margin.
+Read the chart left to right and follow whichever line is lowest, and you get three regions. For small messages it's Tree/LL, because Tree crosses the slow link fewer times; the default does use Tree, but only for the very smallest sizes. Through the middle it's Ring/LL128, which NCCL disables on these GPUs because the path between them is PCIe; forced on, it was the fastest setting in that band. For large messages everything converges on the GPU's own PCIe link and Ring/Simple wins. The bump in the dashed line is the moment the default finally gives up on LL.
 
-<Diagram name="chart-forced" caption="16 GPUs across two boxes over Ethernet, nccl-tests with each algorithm and protocol forced, log-log. Dashed: NCCL's default. Lower is better." />
+There was one more oddity. Run the same Ring/LL benchmark across the two boxes several times and the results fall into two clusters: same fixed cost, different throughput. One box-to-box hop's LL sender runs at roughly half rate, and it stays that way for the life of the process. Ring/Simple on the same NICs doesn't do this. I never isolated the cause, but it's two more reasons to keep LL out of the middle band: a single launch can mislead you badly, and avoiding LL avoids the lottery.
 
-Read Figure 3 left to right and follow whichever line is lowest. There are three regions, each with a different winner:
+## A rule by size, not one override
 
-1. **Small messages: Tree/LL.** Tree crosses the slow link fewer times in series. NCCL's default does use Tree, but only for the very smallest sizes. It moves to Ring/LL too early.
-2. **The middle: Ring/LL128.** NCCL disables LL128 on these GPUs because the path between them is PCIe, not NVLink. Forced on, it was the fastest setting through the middle band across Ethernet.
-3. **Large messages: Ring/Simple.** Here everything converges on the GPU's own PCIe link, and the full-payload protocol wins.
+Benchmarks are one thing and serving is another, so I forced each of the seven algorithm-protocol pairs inside vLLM (TP16 across two boxes) and measured decode steps from 1 to 512 concurrent requests. Every load had a different winner: the default at one request, Tree/LL at low load, Tree/LL128 in between, Ring/LL128 at high load.
 
-The bump in the dashed default line is the moment NCCL finally gives up on LL.
+That's not random. Decode message size tracks concurrency, so those winners line up with the size regions from nccl-tests. The fix is a rule by size rather than one global override: Tree/LL for small messages, Ring/LL128 in the middle, Ring/Simple for large.
 
-## Finding 3: Ring/LL across two boxes has two speeds
+<Diagram name="size-rule" caption="NCCL's default across Ethernet against the size rule. The difference sits right where decode messages live; the boundaries depend on your fabric." />
 
-Run the same Ring/LL benchmark across the two boxes several times and the results fall into two clusters. The fixed cost is the same; the throughput differs. One box-to-box hop's LL sender runs at roughly half rate, and it stays that way for the life of the process. Ring/Simple on the same NICs doesn't do this. I never isolated the cause.
+With that rule in place, every load matched the best forced setting. At one request nothing changes. At high concurrency the decode step got dramatically shorter, and throughput rose by a similar factor. Per-call time inside vLLM also matched nccl-tests for the same forced setting, for Simple and LL128 at every size. LL at megabyte sizes ran slower inside the server than in the benchmark, which is one more reason to keep it out of that band.
 
-Two consequences. A single launch can mislead you badly. And a rule that avoids LL in the middle band also avoids the lottery.
+## Doing this on your own fabric
 
-## Finding 4: no single setting wins at every load, but a size rule does
-
-Benchmarks are one thing; serving is another. So I forced each of the seven algorithm-protocol pairs inside vLLM (TP16 across two boxes) and measured decode steps from 1 to 512 concurrent requests. Every load had a different winner: the default at one request, Tree/LL at low load, Tree/LL128 in between, Ring/LL128 at high load.
-
-That's not random. Decode message size tracks concurrency, so those winners line up with the size regions from Figure 3. The fix is therefore a rule by size, not one global override: Tree/LL for small messages, Ring/LL128 in the middle, Ring/Simple for large.
-
-<Diagram name="size-rule" caption="NCCL's default across Ethernet against the size rule. The difference sits right where decode messages live. Boundaries depend on your fabric." />
-
-With that rule, every load matched the best forced setting. At one request nothing changes. At high concurrency the decode step got dramatically shorter, and throughput rose by a similar factor.
-
-Per-call time inside vLLM also matched nccl-tests for the same forced setting, for Simple and LL128 at every size. LL at megabyte sizes ran slower inside the server than in the benchmark, which is one more reason to keep it out of that band.
-
-## Applying this to your own fabric
-
-NCCL can load a tuner plugin that overrides algorithm, protocol and channel count per collective and size range. I started from NVIDIA's example plugin, which reads rules from a CSV-style file:
+NCCL can load a tuner plugin that overrides the algorithm, protocol and channel count per collective and size range. I started from NVIDIA's example plugin, which reads its rules from a CSV-style file:
 
 ```csv
 collective,min_bytes,max_bytes,algorithm,protocol,channels,nNodes,nRanks
@@ -103,7 +74,7 @@ allreduce,<b>,<c>,ring,ll128,<ch>,2,16
 allreduce,<c>,4294967295,ring,simple,<ch>,2,16
 ```
 
-The boundaries `<a>`, `<b>` and `<c>` are specific to your fabric. Find them with a sweep like this one, which runs on any multi-node box you can rent:
+The boundaries `<a>`, `<b>` and `<c>` are specific to your hardware. You can find them with a sweep like this one on any multi-node box:
 
 ```bash
 for algo in Ring Tree; do
@@ -115,13 +86,13 @@ for algo in Ring Tree; do
 done
 ```
 
-If any of your ranks cross a network, run each setting more than once (see Finding 3). Then, when you wire up the plugin, three things will bite you:
+Run each setting more than once if any of your ranks cross a network. Then, when you wire up the plugin, three things will bite you.
 
-1. **The example plugin has a bug.** For any collective that matches no rule, it sets the channel count to 1, which silently puts small all-reduces on a single channel. Patch it to leave unmatched collectives alone.
-2. **The plugin can't select a protocol NCCL has ruled out.** LL128 is disabled on PCIe paths, so you have to allow it as well. Scope that to all-reduce, or NCCL's own model will start picking LL128 for other collectives too.
-3. **Plain `NCCL_ALGO=Tree` breaks vLLM startup,** because all-gather has no Tree implementation. If you're experimenting without a plugin, use the scoped form, `NCCL_ALGO=allreduce:tree`.
+First, the example plugin has a bug: for any collective that matches no rule, it sets the channel count to 1, which silently puts small all-reduces on a single channel. Patch it to leave unmatched collectives alone.
 
-Put together, the environment looks like this:
+Second, the plugin can't pick a protocol NCCL has already ruled out, and LL128 is disabled on PCIe paths, so you have to allow it as well. Scope that to all-reduce, or NCCL's own model will start using LL128 for other collectives too.
+
+Third, a plain `NCCL_ALGO=Tree` breaks vLLM startup, because all-gather has no Tree implementation. If you're experimenting without a plugin, use the scoped form, `NCCL_ALGO=allreduce:tree`. Put together, the environment looks like this:
 
 ```bash
 NCCL_PROTO=allreduce:LL,LL128,Simple
@@ -129,28 +100,14 @@ NCCL_TUNER_PLUGIN=/path/to/libnccl-tuner.so
 NCCL_TUNER_CONFIG_FILE=/path/to/rules.conf
 ```
 
-## Is forcing LL128 safe off NVLink?
+## Is forcing LL128 safe without NVLink?
 
-LL128 relies on 128-byte writes arriving whole, and that's exactly why NCCL turns it off on PCIe. So before shipping it, I checked results, not just timings: well over a hundred thousand compared all-reduces across sizes with LL128 forced, with zero wrong values, plus a comparison of generated text under load that showed no corruption. That's evidence for this fabric, not a guarantee for yours. Check your own.
+LL128 relies on 128-byte writes arriving whole, which is exactly why NCCL turns it off on PCIe. So before shipping it I checked results, not just timings: well over a hundred thousand compared all-reduces across sizes with LL128 forced and zero wrong values, plus a comparison of generated text under load that showed no corruption. That's evidence for this fabric, not a guarantee for yours, so check your own.
 
-One trap in that check: nccl-tests' `-c N` compares N all-reduces per size *after* the timed loop. It doesn't check every timed iteration. My first “one-hour soak” compared far fewer results than I thought. Set `-c` high and count what was actually compared.
+One trap in that check: nccl-tests' `-c N` compares N all-reduces per size *after* the timed loop, not every timed iteration. My first "one-hour soak" compared far fewer results than I thought it had. Set `-c` high and count what was actually compared.
 
-## Two things that didn't help
+Two other things I tried didn't help. Symmetric kernels (`-R 2` in nccl-tests, NCCL 2.27 and later) never engaged, because they need an NVLink clique and PCIe peer-to-peer isn't one; the small gain at large sizes came from buffer registration. More channels and cross-NIC rings spread large messages over two NICs per host but did nothing at decode sizes.
 
-- **Symmetric kernels** (`-R 2` in nccl-tests, NCCL 2.27 and later) never engaged. They need an NVLink or multi-node NVLink clique, and PCIe peer-to-peer isn't one. The small gain from `-R 2` at large sizes came from buffer registration.
-- **More channels and cross-NIC rings** spread large messages over two NICs per host, but did nothing at decode sizes.
+Next, in [part 3](/blog/pcie-vs-ethernet-scale-up): the same GPUs joined by a PCIe switch fabric instead of Ethernet, and how the fabric should change the way you lay out a model.
 
-**Next:** the same GPUs joined by a PCIe switch fabric instead of Ethernet, and how the fabric should change the way you lay out a model. [Read part 3.](/blog/pcie-vs-ethernet-scale-up)
-
-*Thanks to Helia Naeimi, Chris Petersen and Haoyuan Xu at Astera Labs. Shared with permission, with absolute numbers and exact thresholds omitted.*
-
-<Note title="series">
-
-LLM inference without NVLink:
-
-- [1. Where the all-reduce time goes](/blog/tp-without-nvlink)
-- **2. NCCL's defaults are tuned for NVLink. Off it, they pick wrong.** (this post)
-- [3. PCIe vs Ethernet scale-up: when each one wins](/blog/pcie-vs-ethernet-scale-up)
-- [4. Reading a multi-GPU vLLM run without fooling yourself](/blog/reading-vllm-runs)
-
-</Note>
+*Thanks to Helia Naeimi, Chris Petersen and Haoyuan Xu at Astera Labs. Shared with permission, with absolute numbers and exact thresholds left out.*

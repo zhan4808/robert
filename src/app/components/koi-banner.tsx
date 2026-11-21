@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import KoiPond, { type PondStats } from "./koi-pond/koi-pond";
@@ -152,7 +151,7 @@ export default function KoiBanner() {
     }, []);
 
     return (
-        <figure className="flex flex-col gap-2">
+        <figure className="group/banner flex flex-col gap-2">
             <div
                 ref={wrapRef}
                 className="relative h-[clamp(176px,34vw,232px)] w-full cursor-crosshair transition-opacity duration-700 ease-out"
@@ -176,23 +175,12 @@ export default function KoiBanner() {
                     className="absolute inset-0 h-full w-full"
                 />
             </div>
-            <figcaption aria-hidden className="flex justify-between font-geistMono text-label tabular-nums text-muted">
-                <span>{stats.koi > 0 ? `${stats.koi} koi` : " "}</span>
-                <span>
-                    <span className="[@media(pointer:coarse)]:hidden">click</span>
-                    <span className="hidden [@media(pointer:coarse)]:inline">tap</span> the water to feed them
-                    {stats.pellets > 0 && (
-                        <motion.span
-                            key={stats.pellets}
-                            initial={{ color: "var(--koi-color)" }}
-                            animate={{ color: "var(--muted-color)" }}
-                            transition={{ duration: 0.8 }}
-                        >
-                            {" "}
-                            · {stats.pellets} pellets
-                        </motion.span>
-                    )}
-                </span>
+            {/* The one hint, and only while the cursor is over the water. */}
+            <figcaption
+                aria-hidden
+                className="text-right text-small text-muted opacity-0 transition-opacity duration-300 group-hover/banner:opacity-100 [@media(pointer:coarse)]:opacity-100"
+            >
+                {stats.pellets > 0 ? "the koi have noticed" : "click the water to feed the koi"}
             </figcaption>
         </figure>
     );

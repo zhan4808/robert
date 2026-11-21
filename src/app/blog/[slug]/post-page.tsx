@@ -76,7 +76,7 @@ export function PostPager({ post, direction }: { post: PagerPost; direction: "ba
             onFocus={onFocus}
             className={`group relative flex flex-col gap-1 focus-ring ${back ? "items-start" : "items-end text-right"}`}
         >
-            <span className={`font-geistMono text-caption ${MUTED}`}>{back ? "previous" : "next"}</span>
+            <span className={`text-small ${MUTED}`}>{back ? "previous" : "next"}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
                 {back ? `← ${post.title}` : `${post.title} →`}
             </span>
@@ -84,7 +84,7 @@ export function PostPager({ post, direction }: { post: PagerPost; direction: "ba
                 <PostCover post={post} meta={post.coverMeta} sizes="17rem" className="w-full" />
                 <span className="mt-2 flex items-baseline gap-2 px-1">
                     <span className="text-small">{post.title}</span>
-                    <span className={`font-geistMono text-label ${MUTED}`}>{post.date}</span>
+                    <span className={`text-small ${MUTED}`}>{post.date}</span>
                 </span>
                 <span className={`mt-0.5 block px-1 pb-1 text-meta leading-[1.45] ${MUTED}`}>{post.subtitle}</span>
             </span>

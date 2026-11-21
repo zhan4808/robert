@@ -7,11 +7,11 @@ order: 1
 kind: technical
 ---
 
-SGEMM is probably the single most important computational kernel in modern deep learning — if you could only profile one operation in a transformer, it would be this one. I wanted to understand from first principles why GPUs are so good at it, and what it actually takes to close the gap with cuBLAS. This is my attempt to work through that iteratively, going from a naive kernel to something that hits \~94% of cuBLAS on an A6000.
+SGEMM is probably the most important kernel in modern deep learning. If you could only profile one operation in a transformer, this would be the one. I wanted to understand from first principles why GPUs are so good at it, and what it takes to close the gap with cuBLAS. This post is my attempt to work through that one step at a time, starting from a naive kernel and ending at \~94% of cuBLAS on an A6000.
 
-The thing I find fascinating about this exercise is that the gap between the naive implementation and cuBLAS is about 75x in raw throughput. Almost none of that gap comes from algorithmic cleverness — it's all about understanding the memory hierarchy and feeding the compute units correctly. The math is simple; the hard part is data movement.
+What I like about this exercise is that the naive implementation is about 75x slower than cuBLAS, and almost none of that gap is algorithmic. It comes from understanding the memory hierarchy and keeping the compute units fed. The math is simple. Moving the data is the hard part.
 
-Before diving in: CUDA organizes computation into a three-level hierarchy. A kernel launch creates a grid of blocks, each block contains up to 1024 threads, and threads within the same block share a fast on-chip scratchpad called shared memory (SMEM). This hierarchy exists primarily to map cleanly onto GPU hardware — blocks map to streaming multiprocessors (SMs), and threads within a block share SMEM.
+First, some background. CUDA organizes computation into a three-level hierarchy. A kernel launch creates a grid of blocks, each block contains up to 1024 threads, and threads within the same block share a fast on-chip scratchpad called shared memory (SMEM). The hierarchy exists mostly so it can map onto the hardware: blocks run on streaming multiprocessors (SMs), and threads within a block share that SM's SMEM.
 
 The blockDim variable is a 3D integer vector specifying how many threads live in each block dimension. Combined with gridDim (the number of blocks), this determines the full thread layout:
 
@@ -22,11 +22,11 @@ The blockDim variable is a 3D integer vector specifying how many threads live in
   invert
 />
 
-One important mental model shift: the thread hierarchy is primarily a correctness tool, not a performance one. For performance, you have to think in terms of warps — groups of 32 threads that execute in lockstep on the hardware. The block/grid structure tells you who can communicate; the warp structure tells you what the hardware actually schedules.
+It took me a while to internalize that the thread hierarchy is mostly about correctness. For performance you have to think in warps, which are groups of 32 threads that execute in lockstep. The block/grid structure tells you who can communicate. The warp structure tells you what the hardware schedules.
 
 ## Kernel 1: Naive Implementation
 
-The simplest possible kernel: assign each thread one output element in C, then loop over the K dimension accumulating the dot product. Dead simple, and predictably slow. Each thread independently reads a full row of A and full column of B, with essentially no data reuse.
+The simplest kernel assigns each thread one output element of C and loops over the K dimension to accumulate the dot product. As you'd expect, it's slow. Each thread reads a full row of A and a full column of B on its own, and there's almost no data reuse between threads.
 
 <Figure
   src="/cuda-mmm/naive-kernel.webp"
@@ -51,9 +51,9 @@ __global__ void sgemm_naive(int M, int N, int K, float alpha, const float *A,
 }
 ```
 
-CUDA kernels are written from a single-thread perspective — you write what one thread does, and the runtime stamps out N copies of that logic across the grid. The blockIdx and threadIdx builtins tell each thread where it sits. The math for your global index is always the same pattern: blockIdx \* blockDim + threadIdx.
+CUDA kernels are written from the point of view of a single thread. You describe what one thread does, and the runtime stamps out N copies of it across the grid. The blockIdx and threadIdx builtins tell each thread where it sits, and the global index always follows the same pattern: blockIdx \* blockDim + threadIdx.
 
-One subtlety worth flagging: if the matrix dimension isn't cleanly divisible by BLOCKSIZE, you need to launch extra blocks to cover the remainder. Those blocks will have some inactive threads (tile quantization). It's a small overhead for large matrices, but matters at small sizes — which is part of why cuBLAS switches kernels depending on matrix dimensions.
+If the matrix dimension isn't divisible by BLOCKSIZE, you have to launch extra blocks to cover the remainder, and some of their threads sit idle (tile quantization). The overhead is small for large matrices but shows up at small sizes, which is part of why cuBLAS picks different kernels depending on the matrix dimensions.
 
 <Figure
   src="/cuda-mmm/Tile_quantization.webp"
@@ -64,13 +64,13 @@ One subtlety worth flagging: if the matrix dimension isn't cleanly divisible by 
 
 ### Napkin Math: How Fast Can This Be?
 
-Before profiling, let's bound the problem. For two 4092² matrices, the GEMM requires 2×4092³ ≈ 137 GFLOPs. The minimum GMEM transfer is 268MB (3 matrices × 4092² × 4B). On an A6000 with 30 TFLOPs/s compute and 768 GB/s bandwidth, compute takes \~4.5ms and memory takes \~0.34ms. The kernel is \~13x more compute-intensive than memory-intensive — so it should be compute-bound once we stop wasting memory bandwidth. cuBLAS itself loads about 500MB during the computation (not the theoretical minimum), which is the target to beat.
+Before profiling anything, I wanted a bound. For two 4092² matrices, the GEMM requires 2×4092³ ≈ 137 GFLOPs. The minimum GMEM transfer is 268MB (3 matrices × 4092² × 4B). On an A6000 with 30 TFLOPs/s of compute and 768 GB/s of bandwidth, the compute takes \~4.5ms and the memory traffic takes \~0.34ms. Since compute dominates by \~13x, the kernel should be compute-bound once we stop wasting bandwidth. cuBLAS itself loads about 500MB during the computation (more than the theoretical minimum), and that's the number to beat.
 
-I find this ratio really useful to keep in mind as we go through each optimization. The question to ask at each step is: are we closer to being compute-bound, or are we still hemorrhaging bandwidth? The roofline model makes this explicit.
+I kept this ratio in mind through every optimization. At each step the question is whether we've moved closer to being compute-bound or are still wasting bandwidth. The roofline model makes that explicit.
 
 ### Why the Naive Kernel is Terrible
 
-Two threads in the same block with threadIds (0,0) and (0,1) load the same column of B but different rows of A. With no caching, each thread loads 2×4092 floats, so 4092² threads produce 548GB of memory traffic for a 268MB problem — a 2× overshoot even in theory, and in practice much worse because there's no data reuse at all across threads.
+Two threads in the same block with threadIds (0,0) and (0,1) load the same column of B but different rows of A. With no caching, each thread loads 2×4092 floats, so 4092² threads produce 548GB of memory traffic for a 268MB problem. That's a 2× overshoot even in theory, and much worse in practice because threads share nothing.
 
 <Figure
   src="/cuda-mmm/naive_kernel_mem_access.webp"
@@ -79,13 +79,13 @@ Two threads in the same block with threadIds (0,0) and (0,1) load the same colum
   invert
 />
 
-Result: \~300 GFLOPs on an A6000. For context, that's about what a well-tuned 2015 Haswell CPU achieves. A GPU with 100× the memory bandwidth is performing at CPU level because we're completely ignoring its access pattern requirements.
+Result: \~300 GFLOPs on an A6000. For context, a well-tuned 2015 Haswell CPU gets about that. A GPU with 100× the memory bandwidth performs like a CPU because we're ignoring how it wants memory to be accessed.
 
 ## Kernel 2: Global Memory Coalescing
 
-The key GPU concept here is the warp. Threads within a block are grouped into warps of 32, and a warp is the actual unit of execution on the hardware — all 32 threads in a warp execute the same instruction simultaneously (SIMT). The warp scheduler is what actually dispatches instructions to the CUDA cores.
+This kernel is about warps. Threads within a block are grouped into warps of 32, and the warp is the unit of execution on the hardware: all 32 threads execute the same instruction at the same time (SIMT). The warp scheduler is what dispatches instructions to the CUDA cores.
 
-Warps are formed from consecutive threadIds: threadId = threadIdx.x + blockDim.x\*(threadIdx.y + blockDim.y\*threadIdx.z). The x dimension is the fast-varying one. Think of it as column-major in 'warp space' — threads with adjacent threadIdx.x values end up in the same warp.
+Warps are formed from consecutive threadIds: threadId = threadIdx.x + blockDim.x\*(threadIdx.y + blockDim.y\*threadIdx.z). The x dimension is the fast-varying one. I think of it as column-major in 'warp space': threads with adjacent threadIdx.x values end up in the same warp.
 
 <Figure
   src="/cuda-mmm/threadId_to_warp_mapping.webp"
@@ -94,7 +94,7 @@ Warps are formed from consecutive threadIds: threadId = threadIdx.x + blockDim.x
   invert
 />
 
-Global memory coalescing is the single most important GMEM optimization on GPU. When threads in the same warp issue memory requests to consecutive addresses, the hardware can combine them into one transaction. 32 threads × 4 bytes = 128 bytes, which fits exactly in one L2 cache line — perfect coalescing means 1 transaction per warp instead of 32.
+Global memory coalescing is the most important GMEM optimization on a GPU. When threads in the same warp request consecutive addresses, the hardware combines them into one transaction. 32 threads × 4 bytes = 128 bytes, exactly one L2 cache line, so perfect coalescing means 1 transaction per warp instead of 32.
 
 <Figure
   src="/cuda-mmm/GMEM_coalescing.webp"
@@ -103,7 +103,7 @@ Global memory coalescing is the single most important GMEM optimization on GPU. 
   invert
 />
 
-An interesting nuance: threads within a warp don't have to access memory in threadIdx order for coalescing to work — they just need to collectively touch a consecutive, aligned 128B region. The hardware figures out which transaction to issue based on the union of all the addresses. Non-consecutive within-warp access patterns can still coalesce as long as the addresses themselves are contiguous.
+Threads within a warp don't have to access memory in threadIdx order for this to work. They only need to collectively touch a consecutive, aligned 128B region, and the hardware decides which transaction to issue from the union of the addresses. So a scrambled access pattern within a warp still coalesces as long as the addresses are contiguous.
 
 <Figure
   src="/cuda-mmm/random_access_coalescing.webp"
@@ -112,7 +112,7 @@ An interesting nuance: threads within a warp don't have to access memory in thre
   invert
 />
 
-In the naive kernel we mapped threadIdx.x to the row of A. Threads with consecutive threadIdx.x (i.e., in the same warp) therefore load consecutive rows of A — but A is row-major, so consecutive rows are strided by K floats. That's 32 × K × 4B of cache-line fetches for K dot-product steps. No coalescing at all.
+In the naive kernel we mapped threadIdx.x to the row of A. Threads with consecutive threadIdx.x (i.e., in the same warp) therefore load consecutive rows of A. But A is row-major, so consecutive rows are K floats apart. That's 32 × K × 4B of cache-line fetches for K dot-product steps, with no coalescing at all.
 
 <Figure
   src="/cuda-mmm/Naive_kernel_mem_coalescing.webp"
@@ -121,7 +121,7 @@ In the naive kernel we mapped threadIdx.x to the row of A. Threads with consecut
   invert
 />
 
-The fix: swap how we assign output elements to threads. Instead of threadIdx.x → row, use threadIdx.x → column. Threads in the same warp now compute the same row of C but consecutive columns — meaning they load the same row of A (broadcast-friendly) and consecutive columns of B (coalesced).
+The fix is to swap how output elements are assigned to threads: threadIdx.x → column instead of threadIdx.x → row. Threads in the same warp now compute the same row of C but consecutive columns, so they load the same row of A (a broadcast) and consecutive columns of B (coalesced).
 
 <Figure
   src="/cuda-mmm/Naive_kernel_improved_access.webp"
@@ -130,7 +130,7 @@ The fix: swap how we assign output elements to threads. Instead of threadIdx.x �
   invert
 />
 
-To implement this, we only need to change the first two lines of the index computation:
+This only changes the first two lines of the index computation:
 
 ```cpp
 const int x = blockIdx.x * BLOCKSIZE + (threadIdx.x / BLOCKSIZE);
@@ -145,13 +145,13 @@ if (x < M && y < N) {
 }
 ```
 
-What I found surprising: enabling coalescing changes zero assembly instructions. Coalescing is handled entirely by the hardware memory system at runtime — the PTX and SASS look identical. That makes sense: the compiler can't know at compile time whether the base pointers will be aligned, so it can't emit different instructions. The hardware figures it out dynamically per transaction.
+One thing surprised me: enabling coalescing doesn't change a single assembly instruction. The memory system handles it at runtime, and the PTX and SASS are identical. In hindsight that makes sense. The compiler can't know whether the base pointers will be aligned, so it has no reason to emit different code, and the hardware works it out per transaction.
 
-The payoff is huge: memory throughput jumps from 15 GB/s to 110 GB/s, and FLOP/s goes from \~300 to \~2000 GFLOPS. We haven't changed any math, any shared memory usage, or any arithmetic — just the index assignment. It's a pure access pattern win.
+The payoff is large. Memory throughput goes from 15 GB/s to 110 GB/s, and FLOP/s from \~300 to \~2000 GFLOPS. The math is unchanged and there's still no shared memory; only the index assignment moved.
 
 ## Kernel 3: Shared Memory Cache-Blocking
 
-The GPU memory hierarchy has a crucial middle tier: shared memory (SMEM). It sits on-chip, physically next to the CUDA cores, and is partitioned among blocks — every thread in a block can read and write the same SMEM region. On Volta-era hardware, SMEM bandwidth is measured at \~12 TB/s vs. \~750 GB/s for DRAM — roughly a 16× difference. On an A6000, each block gets up to 48KB of SMEM.
+Between registers and DRAM sits shared memory (SMEM). It's on-chip, physically next to the CUDA cores, and partitioned among blocks, so every thread in a block can read and write the same SMEM region. On Volta-era hardware SMEM bandwidth has been measured at \~12 TB/s, against \~750 GB/s for DRAM, roughly a 16× difference. On an A6000, each block gets up to 48KB of SMEM.
 
 <Figure
   src="/cuda-mmm/memory-hierarchy-in-gpus.webp"
@@ -160,7 +160,7 @@ The GPU memory hierarchy has a crucial middle tier: shared memory (SMEM). It sit
   invert
 />
 
-The cache-blocking idea: instead of every thread independently fetching from GMEM, a group of threads cooperatively loads a tile of A and a tile of B into SMEM. Then everyone computes on the fast local copy. We slide the tile along the K dimension, accumulating partial sums. Each float in SMEM gets used by multiple threads, so the GMEM traffic per FLOP drops significantly.
+With cache-blocking, threads stop fetching from GMEM independently. Instead, the block cooperatively loads a tile of A and a tile of B into SMEM, and then everyone computes on that local copy. The tile slides along the K dimension while threads accumulate partial sums. Since each float in SMEM is used by several threads, GMEM traffic per FLOP drops a lot.
 
 <Figure
   src="/cuda-mmm/cache-blocking.webp"
@@ -194,24 +194,24 @@ C[threadRow * N + threadCol] =
     alpha * tmp + beta * C[threadRow * N + threadCol];
 ```
 
-The result is \~2200 GFLOPS — only a 50% improvement. That might seem small given the effort. The reason: Kernel 2 already got decent L1 hit rates due to the access pattern change, so the explicit SMEM tiling doesn't buy as much as you'd hope. More importantly, the roofline reveals the real problem.
+This gets \~2200 GFLOPS, only a 50% improvement, which felt small for the effort. Part of the reason is that Kernel 2 already had decent L1 hit rates after the access pattern change, so explicit SMEM tiling buys less than you'd hope. The roofline shows the bigger problem.
 
 <Figure
   src="/cuda-mmm/roofline_kernel_3.webp"
   alt="Roofline analysis showing performance vs arithmetic intensity for Kernel 3"
-  caption="Roofline plot for Kernel 3. We're far from the compute roofline — arithmetic intensity is the bottleneck."
+  caption="Roofline plot for Kernel 3. We're far from the compute roofline; arithmetic intensity is the bottleneck."
   invert
 />
 
 ### The Roofline and the Arithmetic Intensity Problem
 
-The roofline model plots achieved FLOPs/s vs. arithmetic intensity (FLOPs per byte of memory traffic). It has two limits: a horizontal line at peak compute (30 TFLOPs/s), and a diagonal line at peak memory bandwidth (768 GB/s × FLOPs/byte). If you're below the diagonal, you're memory-bound. If you're at the horizontal ceiling, you're compute-bound. Kernel 3 sits far below both — its arithmetic intensity is too low to be compute-bound, but it's also not saturating bandwidth. It's stalling on SMEM.
+The roofline model plots achieved FLOPs/s against arithmetic intensity (FLOPs per byte of memory traffic). It has two limits: a horizontal line at peak compute (30 TFLOPs/s) and a diagonal line at peak memory bandwidth (768 GB/s × FLOPs/byte). Below the diagonal you're memory-bound; at the horizontal ceiling you're compute-bound. Kernel 3 sits far below both. Its arithmetic intensity is too low to be compute-bound, yet it isn't saturating bandwidth either. It's stalling on SMEM.
 
-Occupancy at CHUNKSIZE=32 is \~66% (limited by thread count, not SMEM or registers). That's not terrible. But the profiler tells the real story: the instruction mix is dominated by LDS (shared memory loads) rather than FMA. We're spending cycles fetching from SMEM, not doing math. The fix: each thread needs to compute more output elements per SMEM access — reduce the ratio of loads to FMAs by doing more work in registers.
+Occupancy at CHUNKSIZE=32 is \~66% (limited by thread count, not SMEM or registers), which isn't bad. The profiler is more revealing: the instruction mix is dominated by LDS (shared memory loads) rather than FMA, so most cycles go to fetching from SMEM instead of doing math. Each thread needs to compute more outputs per SMEM access, which means doing more of the work in registers to lower the ratio of loads to FMAs.
 
 ## Kernel 4: 1D Blocktiling for Calculating Multiple Results per Thread
 
-Instead of each thread computing one output element, we assign it a column of TM output elements. Each thread now keeps an array of TM partial sums in registers across the K-dimension loop. The critical loop reordering: put dotIdx (the position within the BK tile) as the outer inner loop, and resIdx (which of the TM outputs) as the inner loop. This way, for each dotIdx we load one value of Bs into a register (Btmp) and reuse it across all TM multiply-accumulates. One SMEM load, TM FMAs.
+Instead of one output element, each thread now computes a column of TM output elements and keeps TM partial sums in registers across the K-dimension loop. The loop order matters here. dotIdx (the position within the BK tile) becomes the outer of the two inner loops, and resIdx (which of the TM outputs) becomes the innermost. For each dotIdx we load one value of Bs into a register (Btmp) and reuse it for all TM multiply-accumulates: one SMEM load for TM FMAs.
 
 <Figure
   src="/cuda-mmm/kernel_4_1D_blocktiling.webp"
@@ -244,7 +244,7 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
 
 ### What the Compiler Does for You
 
-With TM known at compile time (it's a template parameter), the compiler can unroll the inner resIdx loop and allocate the threadResults array entirely in registers. The Btmp caching happens automatically too — the compiler sees that Bs\[dotIdx \* BN + threadCol] doesn't change across the resIdx iterations and hoists it into a register. This is why templating the tile sizes matters: without compile-time knowledge, the compiler has to be conservative.
+Because TM is a template parameter, the compiler knows it at compile time, so it can unroll the inner resIdx loop and keep the threadResults array entirely in registers. It would do the Btmp caching on its own as well, since it can see that Bs\[dotIdx \* BN + threadCol] doesn't change across resIdx iterations and hoist it into a register. This is why I template the tile sizes. Without compile-time knowledge, the compiler has to be conservative.
 
 <Figure
   src="/cuda-mmm/1d_warp_tiling.webp"
@@ -253,11 +253,11 @@ With TM known at compile time (it's a template parameter), the compiler can unro
   invert
 />
 
-Result: \~8,600 GFLOPs, a 4× jump from Kernel 3. The profiler confirms the story — MIO stall cycles (shared memory contention) drop dramatically. We've shifted the bottleneck from 'waiting for SMEM' to actually doing FMAs. But we're still only doing 1D output tiling; we can push further.
+Result: \~8,600 GFLOPs, a 4× jump from Kernel 3. The profiler agrees: MIO stall cycles (shared memory contention) drop sharply, and the bottleneck moves from waiting on SMEM to doing FMAs. This is still only 1D output tiling, though, and there's more to get.
 
 ## Kernel 5: Increasing Arithmetic Intensity via 2D Blocktiling
 
-Extend the idea to 2D: each thread now computes a TM×TN output tile. The arithmetic intensity improvement is multiplicative — instead of reusing a Bs value across TM rows, we now reuse a regM value across TN columns and a regN value across TM rows. The inner loop becomes an outer product: load TM values from As into regM, load TN values from Bs into regN, then compute the full TM×TN outer product and accumulate into threadResults.
+The next step is to extend the idea to 2D, with each thread computing a TM×TN output tile. The gain in arithmetic intensity is multiplicative. Instead of reusing one Bs value across TM rows, we reuse each regM value across TN columns and each regN value across TM rows. The inner loop becomes an outer product: load TM values from As into regM, load TN values from Bs into regN, compute the full TM×TN outer product, and accumulate into threadResults.
 
 <Figure
   src="/cuda-mmm/raising_arith_inten.webp"
@@ -324,11 +324,11 @@ for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
   invert
 />
 
-Result: \~16 TFLOPs — another 2× improvement. The GMEM accesses per output element drop to K/64, and SMEM accesses to K/4. We're now genuinely close to the compute roofline. The remaining gap to cuBLAS is about vectorized loads (memory efficiency) and warp-level data locality, which Kernels 6 and 10 address.
+Result: \~16 TFLOPs, another 2×. GMEM accesses per output element drop to K/64 and SMEM accesses to K/4, and we're now close to the compute roofline. What's left of the gap to cuBLAS comes from vectorized loads (memory efficiency) and warp-level data locality, which Kernels 6 and 10 go after.
 
 ## Kernel 6: Vectorize SMEM and GMEM Accesses
 
-Two tricks in one kernel. First, vectorized GMEM loads: use float4 to load 128 bits (4 floats) per instruction, turning LDG.E.32 into LDG.E.128. You have to explicitly promise the compiler the pointer is 128-bit aligned via reinterpret_cast — it can't figure that out from a generic float\* argument. Second, transpose As during the SMEM load so that the subsequent SMEM reads along the column dimension become sequential (enabling LDS.128 instead of strided scalar loads).
+This kernel combines two tricks. The first is vectorized GMEM loads: using float4 to load 128 bits (4 floats) per instruction turns LDG.E.32 into LDG.E.128. You have to promise the compiler that the pointer is 128-bit aligned with a reinterpret_cast, because it can't infer that from a generic float\* argument. The second is transposing As during the SMEM load, so the later SMEM reads along the column dimension are sequential and can use LDS.128 instead of strided scalar loads.
 
 <Figure
   src="/cuda-mmm/kernel_6_As_transpose.webp"
@@ -350,21 +350,21 @@ reinterpret_cast<float4 *>(&Bs[innerRowB * BN + innerColB * 4])[0] =
 __syncthreads();
 ```
 
-The As transpose is the subtle part. In Kernel 5, loading a column of As during the inner computation required strided SMEM reads (bad for bank conflicts). By storing As transposed (column-major) during the loading phase, the inner reads become row-sequential, which both avoids bank conflicts and enables vectorized LDS.128. The extra work during loading is cheap compared to the savings during compute.
+The transpose is the subtle part. In Kernel 5, reading a column of As in the inner computation meant strided SMEM reads, which cause bank conflicts. Storing As transposed (column-major) when loading it makes the inner reads row-sequential, which avoids the bank conflicts and allows vectorized LDS.128. The extra work at load time is cheap next to what it saves during compute.
 
-Performance: \~18,200 GFLOPs, about 500 GFLOP/s over Kernel 5. Meaningful but not dramatic — the low-hanging fruit is mostly picked. The remaining gap to cuBLAS at this point is bank conflicts in SMEM, no double buffering (the GPU stalls waiting for SMEM loads to complete instead of overlapping compute and fetch), and the warp-level register locality that warptiling exploits.
+Performance: \~18,200 GFLOPs, about 500 GFLOP/s over Kernel 5. That's a real gain but not a dramatic one, since the easy wins are mostly gone. At this point the gap to cuBLAS comes from SMEM bank conflicts, the lack of double buffering (the GPU stalls on SMEM loads instead of overlapping compute and fetch), and the warp-level register locality that warptiling exploits.
 
 ## Kernel 9: Autotuning
 
-By this point, the kernel has accumulated five template parameters: BM and BN for the shared memory tile dimensions, BK for the K-dimension tile, and TM and TN for the per-thread register tile. The initial guess — BM=BN=128, BK=8, TM=TN=8 — is reasonable but almost certainly not optimal. Autotuning is just a grid search with validation: write a bash script, sweep sensible combinations, benchmark each, pick the winner.
+By now the kernel has five template parameters: BM and BN for the shared memory tile, BK for the K-dimension tile, and TM and TN for the per-thread register tile. My initial guess (BM=BN=128, BK=8, TM=TN=8) is reasonable but unlikely to be optimal. Autotuning here is a grid search with validation. I wrote a bash script that sweeps sensible combinations, benchmarks each one, and picks the fastest.
 
-The tricky part is keeping the search space honest. Not all combinations are valid — vectorized SMEM loads require BM\*BK to be divisible by 4\*NUM_THREADS, for instance. Out of \~400 configurations, maybe 200 compile and produce correct results. Validating each against a reference prevents accepting fast-but-wrong kernels.
+The tricky part is keeping the search space honest. Not every combination is valid; vectorized SMEM loads, for instance, require BM\*BK to be divisible by 4\*NUM_THREADS. Of \~400 configurations, maybe 200 compile and produce correct results. Checking each against a reference keeps a fast but wrong kernel from winning.
 
-On the A6000, the winner was BM=BN=128, BK=16, TM=TN=8 — only the K-tile changed. That tweak alone pushed throughput from \~19 to \~20 TFLOPs, a \~5% gain. What's humbling is that we can't fully explain *why* BK=16 beats BK=8 on this GPU. Larger BK means more data loaded per SMEM phase, which reduces the total number of GMEM loads — but it also increases register pressure and affects occupancy. The optimal balance is hardware-specific and analytically difficult to predict. This is why production libraries like CUTLASS and cuDNN literally ship hundreds of kernel variants selected at runtime by a dispatcher — the hardware landscape is too fragmented for any single 'best' configuration.
+On the A6000 the winner was BM=BN=128, BK=16, TM=TN=8, so only the K-tile changed. That alone took throughput from \~19 to \~20 TFLOPs, a \~5% gain. I can't fully explain *why* BK=16 beats BK=8 on this GPU. A larger BK loads more data per SMEM phase, which cuts the total number of GMEM loads, but it also raises register pressure and changes occupancy. Where that balance lands depends on the hardware and is hard to predict on paper. It's why production libraries like CUTLASS and cuDNN ship hundreds of kernel variants and pick one at runtime with a dispatcher. The hardware is too varied for a single 'best' configuration.
 
 ## Kernel 10: Warptiling
 
-Kernel 10 introduces a third level of tiling between blocktiling and threadtiling: warptiling. This is the sneaky level that CUDA hides from you — warps don't appear as an explicit concept in your code, but they're very real in the hardware. Every 32 threads are grouped into a warp that executes in lockstep, and the warp ID is just threadIdx.x / 32. The hardware scheduler thinks in warps, not threads.
+Kernel 10 adds a third level of tiling between blocktiling and threadtiling: warptiling. CUDA mostly hides this level from you. Warps never appear explicitly in your code, but the hardware is built around them. Every 32 threads form a warp that executes in lockstep, the warp ID is just threadIdx.x / 32, and the scheduler works in warps rather than threads.
 
 <Figure
   src="/cuda-mmm/Loop_structure.webp"
@@ -380,7 +380,7 @@ Kernel 10 introduces a third level of tiling between blocktiling and threadtilin
   invert
 />
 
-Warps matter for three distinct reasons. First, they're the unit of scheduling — the A6000 has four warp schedulers per SM, so four warps can issue instructions concurrently each cycle. If your block only has one warp's worth of useful work at a time, you're leaving 3/4 of the scheduler capacity idle. Second, SMEM bank conflicts happen at the warp level — when 32 threads in a warp all access the same bank, those accesses serialize. Third, recent GPUs have register file caches that provide faster access to recently used registers; warptiling ensures that the threads in a warp all operate on adjacent data, maximizing cache locality at the register level. Warptiling is what makes the three levels of the memory hierarchy map cleanly to the three levels of the GPU compute hierarchy: GMEM → block, SMEM → warp, registers → thread.
+Warps matter here for three reasons. They're the unit of scheduling: the A6000 has four warp schedulers per SM, so four warps can issue instructions each cycle, and a block with only one warp's worth of useful work at a time leaves 3/4 of that capacity idle. SMEM bank conflicts also happen at the warp level, since accesses from 32 threads to the same bank serialize. And recent GPUs have register file caches that speed up access to recently used registers, so having the threads of a warp work on adjacent data improves locality at the register level. With warptiling, the three levels of the memory hierarchy line up with the three levels of the compute hierarchy: GMEM → block, SMEM → warp, registers → thread.
 
 <Figure
   src="/cuda-mmm/kernel_10_warp_tiling.webp"
@@ -421,7 +421,7 @@ for (uint dotIdx = 0; dotIdx < BK; ++dotIdx) {
 }
 ```
 
-After autotuning kernel 10, throughput climbed from \~19.7 to \~21.7 TFLOPs — a 10% jump from warptiling alone. The gap to cuBLAS at large sizes is now small, maybe 5-10%. But look at the small-matrix performance in the chart below: cuBLAS crushes us on small dimensions. The reason is instructive. By using nvcc --generate-code and peeling apart the cuBLAS binary, you can see it contains \~16 distinct SGEMM implementations, dispatched at runtime based on matrix shape and size. For small square matrices it uses a split-K variant that partitions the K-dimension across thread blocks, enabling more parallelism when M and N are small. Writing one kernel that's optimal at every shape is essentially impossible — cuBLAS doesn't try.
+After autotuning kernel 10, throughput went from \~19.7 to \~21.7 TFLOPs, a 10% jump from warptiling alone. At large sizes the gap to cuBLAS is now small, maybe 5-10%. The chart below tells a different story for small matrices, where cuBLAS is far ahead. Using nvcc --generate-code to pick apart the cuBLAS binary shows why: it contains \~16 distinct SGEMM implementations and chooses one at runtime based on matrix shape and size. For small square matrices it uses a split-K variant that partitions the K-dimension across thread blocks, which exposes more parallelism when M and N are small. No single kernel is optimal at every shape, and cuBLAS doesn't try to be one.
 
 <Figure
   src="/cuda-mmm/split_k.webp"
@@ -439,20 +439,20 @@ After autotuning kernel 10, throughput climbed from \~19.7 to \~21.7 TFLOPs — 
 
 ## Conclusion
 
-The thing that surprised me most about this project wasn't any particular optimization — it was the shape of the progress curve. The first two kernels (naive → coalesced) covered about 80% of the gap to cuBLAS and took maybe a weekend to understand and implement. The remaining 14% took weeks more. Every optimization past the low-hanging fruit required deeper hardware knowledge, better profiling intuition, and a higher tolerance for ambiguity. The power law of optimization effort is real.
+What surprised me most about this project was the shape of the progress curve more than any single optimization. The first two kernels (naive → coalesced) covered about 80% of the gap to cuBLAS and took maybe a weekend to understand and implement. The remaining 14% took weeks. Past the easy wins, each step needed more hardware knowledge, better instincts with the profiler, and more patience with results I couldn't fully explain.
 
-Looking back, what SGEMM teaches about GPU programming transfers everywhere. Memory bandwidth is almost always the binding constraint, and every layer of the memory hierarchy (GMEM → L2 → SMEM → registers) is there to fight that constraint at a progressively smaller scale. The tiling pattern — identify a bottleneck, tile across the level of memory hierarchy that resolves it, repeat — shows up in virtually every high-performance GPU kernel. Attention kernels (FlashAttention), convolutions, sparse operations: they're all variations on the same theme. Learning SGEMM from scratch is basically learning the vocabulary of GPU optimization.
+Most of what SGEMM taught me carries over to other GPU work. Memory bandwidth is almost always the binding constraint, and each layer of the memory hierarchy (GMEM → L2 → SMEM → registers) exists to work around it at a smaller scale. The same loop shows up in nearly every fast GPU kernel: find the bottleneck, tile across the memory level that relieves it, and repeat. Attention kernels (FlashAttention), convolutions and sparse operations are all variations on it. Writing SGEMM from scratch is a good way to learn the vocabulary.
 
-One thing I'd add beyond the original: if you want to understand why cuBLAS is so hard to beat, spend time with a profiler looking at your kernel's warp efficiency, memory throughput, and SM occupancy simultaneously. These numbers are often at tension with each other — maximizing occupancy can hurt register reuse, maximizing tile size can hurt occupancy. The art is in the tradeoffs. CUTLASS's design, with its hierarchical policy system and autotuned dispatch, is essentially a systematic solution to that multi-objective problem. If you're building production ML infrastructure, using CUTLASS as a foundation is almost certainly the right call. If you're learning, writing kernels from scratch like this is irreplaceable.
+One thing I'd add beyond the original: if you want to see why cuBLAS is so hard to beat, look at your kernel's warp efficiency, memory throughput and SM occupancy in the profiler at the same time. They often pull against each other. Raising occupancy can hurt register reuse, and bigger tiles can hurt occupancy. CUTLASS, with its hierarchical policies and autotuned dispatch, is a systematic answer to that tradeoff. For production ML infrastructure I'd build on CUTLASS. For learning, there's no substitute for writing the kernels yourself.
 
 ## Further Resources
 
-- wangzyon's GitHub repository — the benchmarking harness used here as a starting point. Well-structured for iterating on kernel variants.
-- NVIDIA CUTLASS library — readable, production-grade CUDA for GEMM and related ops. The source of truth for how modern GPU kernels are structured.
-- Official CUDA docs: Toolkit Programming Guide, Best Practices Guide, Kernel Profiling Guide — dense but complete.
-- Onur Mutlu's YouTube lectures on Computer Architecture and Heterogeneous Systems — best free resource for building a mental model of GPU hardware.
-- 'Understanding Latency Hiding on GPUs' (Volkov, 2016) — the canonical deep-dive on occupancy, ILP, and warp scheduling. Required reading if you want to understand why occupancy != utilization.
-- Lei Mao's CUDA blog — pragmatic, code-first coverage of CUDA patterns and pitfalls.
-- ONNX Runtime CUDA provider and cuDNN source — when you want to see what a production system actually looks like under the hood.
+- wangzyon's GitHub repository: the benchmarking harness I started from. It's well set up for iterating on kernel variants.
+- NVIDIA CUTLASS library: readable, production-grade CUDA for GEMM and related ops, and the best reference for how modern GPU kernels are structured.
+- Official CUDA docs (Toolkit Programming Guide, Best Practices Guide, Kernel Profiling Guide). Dense but complete.
+- Onur Mutlu's YouTube lectures on Computer Architecture and Heterogeneous Systems, the best free resource I know for building a mental model of GPU hardware.
+- 'Understanding Latency Hiding on GPUs' (Volkov, 2016), the standard deep-dive on occupancy, ILP, and warp scheduling. Read it if you want to understand why occupancy != utilization.
+- Lei Mao's CUDA blog: practical, code-first coverage of CUDA patterns and pitfalls.
+- ONNX Runtime CUDA provider and cuDNN source, for seeing what a production system looks like inside.
 
 <LinkCard href="https://siboehm.com/articles/22/CUDA-MMM" label="Reimagined from article by Simon Boehm" />

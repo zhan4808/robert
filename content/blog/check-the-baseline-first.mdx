@@ -1,0 +1,115 @@
+---
+title: "Before You Trust a Speedup, Check the Baseline"
+shortTitle: "Check the baseline first"
+subtitle: "four wrong answers from one fused-MoE quantization study, and the checks that caught them"
+date: November 2026
+year: 2026
+order: 50
+kind: technical
+hidden: true
+---
+
+Does weight-only quantization make a mixture-of-experts layer faster, and up to how many tokens? I studied that question for one shape: Mixtral's experts (8 experts, hidden size 4096, intermediate size 14336, top-2 routing) on an H100. Along the way I got four confident answers that were wrong, plus one smaller one. Each came from a broken comparison point or a misleading harness, not from the physics of quantization.
+
+This is the kernel-level companion to [Reading a Multi-GPU vLLM Run Without Fooling Yourself](/blog/reading-vllm-runs). That post is about serving runs. This one is about the single operator underneath them, where the mistakes are smaller and easier to believe.
+
+## The kernel that beat the GPU
+
+The study started with a proposed mixed-precision fused-MoE kernel I was asked to evaluate. Its benchmark reported more than 1,500 TFLOPS. The H100's nominal dense fp16 peak is 989. A kernel can't beat the hardware, so the FLOP count had to be describing work that never happened.
+
+It was. The kernel launched one program per (token, expert) pair with no N dimension in its grid, so it computed only the first 128 of the 28,672 output columns of the first GEMM, under half a percent of them. The quantized path ran that first GEMM and stopped, with no SiLU, no up projection and no second GEMM. Against an fp32 reference on a small shape, its relative error was about 15, which means the output was noise. It also didn't compile for bf16, so the bf16 configuration in its own benchmark couldn't have run that path.
+
+Neither check is subtle. Divide the FLOPs the operator should do by the measured time and compare the result with peak. Then compare the output with a reference before reading any timing at all. Any curve from this kernel, including how it "slowed down" as tokens grew, described partial work.
+
+## The quantized path that dequantized everything
+
+Once I moved to the shipped W8A16 path in FlagGems, the opposite problem appeared. Quantized was 6.5 to 22 times slower than bf16, and it took a flat 8.5 ms or so at every token count.
+
+A flat line is a clue, because real kernel time grows with tokens. The code above the kernel call carried a comment saying Triton couldn't do a mixed-dtype dot, and so every call converted all experts' weights to fp16 on the host side: 1.4 GB of int8 into 2.8 GB of fp16, plus the scale multiply, about 10 GB of traffic per forward. The profiler trace showed it plainly. `aten::copy_` took 4.3 ms and `aten::mul` took 3.6 ms, against 0.96 ms for the MoE kernel itself.
+
+The comment was stale. The non-fused kernel already converted each int8 tile in the loop (`b.to(compute_type)` before `tl.dot`) and applied the per-channel scale once on the fp32 accumulator. The real gap was that the fused gate/up path had no W8A16 handling, so the host fallback covered for it. I wrote a patch that does the conversion in that loop too. At 16 tokens W8A16 went from about 8.6 ms to 558 µs, against 971 µs for bf16 (eager timing), with relative error 0.013, the same quantization noise as before. If I'd stopped at the shipped path, the conclusion would have been "quantization is slow." Profile the fast path once to see that it really is the code running.
+
+## The crossover that came from the timer
+
+With a fixed kernel, my first sweep used eager timing, the median of event-timed 30-iteration loops.
+
+*Eager timing:*
+
+| Tokens | bf16 (µs) | W8A16 (µs) | W8A16 vs bf16 |
+| -----: | --------: | ---------: | ------------: |
+|     16 |       971 |        558 |         1.74× |
+|    128 |      1035 |        825 |         1.25× |
+|    256 |      1080 |       1124 |         0.96× |
+|    512 |      1388 |       1919 |         0.72× |
+
+That puts a crossover near 230 tokens, and I wrote it down along with a dispatch rule: W8A16 below about 200 tokens, bf16 above. Then I re-ran the sweep with CUDA graphs, ten launches per graph and the median of 40 replays.
+
+*CUDA-graph timing:*
+
+| Tokens | bf16 (µs) | W8A16 (µs) | W8A16 vs bf16 |
+| -----: | --------: | ---------: | ------------: |
+|     16 |       968 |        564 |         1.72× |
+|    128 |      1000 |        833 |         1.20× |
+|    256 |      1242 |       1209 |         1.03× |
+|    512 |      5311 |       1990 |         2.67× |
+|   2048 |     14917 |       5033 |         2.96× |
+
+The crossover was gone, and W8A16 won at every token count. Two sweeps of the same kernels disagreed about the most important number in the study. For an operator this size, eager timing and graph timing are not two views of the same thing, and an answer that flips when only the harness changes was never a property of the kernel. I struck the dispatch rule.
+
+I should have been more suspicious of the second table than I was. The bf16 column at 512 tokens moved by almost four times between harnesses, and that turned out to be the next problem.
+
+## The baseline that scaled faster than its work
+
+Look at the graph-timed bf16 column again. From 256 to 2,048 tokens the work grows 8 times and the time grows 12 times. A competent kernel's time should grow no faster than its work once it's compute-bound. This baseline did, and the "2.7 to 3.0× win at high token counts" was quantization beating a slow kernel.
+
+To check, I swapped in vLLM's production bf16 `fused_experts` kernel and quantized paths built on CUDA Marlin, timed the same way. The software stack was newer, so I re-measured the roofline's bandwidth and launch-floor parameters first; they came out essentially unchanged.
+
+*CUDA-graph timing:*
+
+| Tokens | FlagGems bf16 (µs) | vLLM bf16 (µs) | Marlin fp8 W8A16 (µs) |
+| -----: | -----------------: | -------------: | --------------------: |
+|     16 |                968 |            953 |                   502 |
+|    256 |               1242 |           1386 |                  1013 |
+|    512 |               5311 |           2210 |                  1791 |
+|   1024 |               8114 |           2404 |                  3071 |
+|   2048 |              14917 |           3377 |                  5690 |
+
+{/* FIGURE NEEDED: speedup vs bf16 over tokens, the FlagGems-baseline curve rising at high T beside the vLLM-baseline curve falling below 1.0 */}
+
+Against a competent baseline the small-token win holds and gets bigger: fp8 W8A16 is 1.76 to 1.90 times faster at 128 tokens and below. At high token counts it reverses. Quantized is 0.59 times the speed of bf16 at 2,048 tokens. That's the result the roofline expects. Weight-only quantization halves the weight bytes, but the int8 or fp8 tile still has to be converted to bf16 inside the loop before the tensor cores can use it. That conversion sets a compute ceiling below bf16's, so once the layer stops being bound by weight bytes, the quantized path has to lose.
+
+## The baseline that was tuned, but not for this shape
+
+This gave a crossover near 600 tokens, and the bf16 curve had a bump in it: slower at 512 tokens than at 640. A latency curve that goes down as work goes up is another baseline smell.
+
+vLLM ships tuned MoE configs per shape and GPU, and it has no bf16 config for this shape on H100. It falls back to a default heuristic that sets `GROUP_SIZE_M=1` below roughly 1,280 rows, which gives up L2 reuse of expert weights across row blocks. Forcing `GROUP_SIZE_M=16`, the value the same heuristic uses at larger sizes, sped bf16 up by 1.3 to 1.6 times between 256 and 512 tokens. I locked the SM clock at 1755 MHz and rotated measurement order for this run, so drift couldn't move the comparison.
+
+*CUDA-graph timing, SM clock locked, median of 3 rotated rounds:*
+
+| Tokens | bf16 stock (µs) | bf16 `GROUP_SIZE_M=16` (µs) | fp8 W8A16 (µs) |
+| -----: | --------------: | --------------------------: | -------------: |
+|    128 |            1005 |                        1009 |            568 |
+|    256 |            1383 |                        1066 |           1057 |
+|    384 |            1800 |                        1199 |           1389 |
+|    512 |            2205 |                        1377 |           1786 |
+|    640 |            1867 |                        1512 |           2084 |
+|   1024 |            2386 |                        1919 |           3053 |
+
+Against the stock config the crossover sits at 601 tokens. Against the tuned one it's 263. A roofline fit to the same sweep, time = launch floor + max(bytes ÷ bandwidth, FLOPs ÷ compute ceiling), puts it at 334. The measured and modelled numbers agree once the baseline is fair, so for this shape quantization wins up to about 300 tokens, not 600. The stock number was generous to quantization by a factor of two. The small-token result didn't move: at 128 tokens and below the two bf16 configs are within half a percent of each other, because there are too few row blocks for grouping to matter.
+
+Tuning doesn't always change the answer. When I ran the same sweep on two fine-grained MoE shapes with 256 small experts, the tuned and stock bf16 baselines matched at every token count. Those layers are bound by streaming many distinct expert weights from memory, and an L2-reuse knob can't reduce how many bytes bf16 has to read. You only know which case you're in by sweeping it.
+
+## Why this keeps happening
+
+Every one of these was a baseline or harness problem, and every one pushed in a different direction: a kernel too fast to be real, a quantized path made slow by surrounding code, a crossover invented by the timer, a win invented by a slow kernel, and a crossover doubled by a missing config. It is easy to spend all the effort on the thing being tested and none on the thing it is tested against, and the result is a speedup that measures the baseline's problems. What caught each one was a number the measurement had to agree with: peak FLOPs, a reference output, linear scaling, a roofline.
+
+## Pre-flight
+
+- Output matches a reference before any timing is read.
+- Achieved FLOPs and bytes per second are both below the hardware's peaks.
+- The baseline's time grows no faster than its work, and never drops as work grows.
+- Each table uses one timing method, written on the table, with graph replay for small operators.
+- The baseline runs a config tuned for this shape, or you've swept the knob that matters.
+- The fast path appears in a profiler trace once.
+- A roofline estimate exists before the measurement, so a disagreement has somewhere to go.
+- Clocks locked and measurement order rotated for the numbers you'll quote.

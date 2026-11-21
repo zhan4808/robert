@@ -1,0 +1,110 @@
+---
+title: "My Profiler Flushed the Cache I Was Measuring"
+shortTitle: "The profiler flushed my cache"
+subtitle: "correcting my own L2 result for INT4 in MLA reconstruction"
+date: November 2026
+year: 2026
+order: 50
+hidden: true
+kind: technical
+---
+
+In my [MLA profiling write-up](/projects/mla-profiling) I claimed that INT4 weights lose to FP16 cuBLAS in the reconstruction GEMMs because the 16 MB FP16 weight matrix sits in H100's 50 MB L2 and gets served at something like 12 TB/s. INT4 saves HBM traffic that was never being spent.
+
+Then I audited my own method on the same H100 model. The short version: INT4 does lose, but two measurement artifacts made the L2 story look much bigger and cleaner than it is. When I take both artifacts out and force FP16 off L2 entirely, INT4 still loses.
+
+## What I claimed
+
+The original argument had three pieces of evidence. FP16 latency was flat from 8 to 32 MB, which I read as "served from L2, so size doesn't matter." The INT4/FP16 time ratio dropped from 1.86x at 16 MB toward 1.08x at 128 MB, with a knee near 40 to 48 MB, which I read as the L2 boundary. And NCU showed FP16 DRAM utilization climbing from 35% to 83% across the sweep, which I read as the kernel falling out of L2 into HBM. Each of those was measuring something else.
+
+## Artifact 1: NCU flushes L2 before every replayed launch
+
+Nsight Compute replays a kernel several times to collect different counter groups, and by default (`--cache-control all`) it flushes the GPU caches before each replayed launch. That's sensible for comparing kernels and exactly wrong for asking whether weights stay in L2 across back-to-back calls, because the profiler empties L2 before it looks.
+
+Every NCU run in my original repo used the default. So every counter in my sweep was cold-cache, at every size. My own data even said so: I had a "warm vs cold" single-pass comparison that showed DRAM utilization of 48.4% and 48.8%. Identical, because both runs were cold.
+
+The smooth DRAM% rise from 35% to 83% wasn't an L2 effect either. On a cold cache, a bigger kernel spends a larger share of its time streaming, so a fixed startup cost gets amortized and the utilization number climbs. The steepest part of that rise was below 32 MB, not "just after the L2 boundary" as I wrote.
+
+The fix is `--cache-control none`, profiling a launch inside a warm loop so L2 holds whatever the previous iteration left there.
+
+## Artifact 2: a timing floor that made everything flat
+
+My latency numbers came from CUDA events recorded around each individual launch. That method has a floor. A 0.5 MB `torch.bmm` timed this way comes in at 15.6 µs, and the 16 MB one at about 15.4 µs. They're the same number because neither is measuring the kernel. They're measuring launch and event overhead, and that floor is why FP16 looked flat from 8 to 32 MB.
+
+To get the kernel time, I captured many launches into a CUDA graph, replayed the graph, and divided. Graph-timed, FP16 goes from 3.5 µs at 8 MB to 4.75 µs at 16 MB to 7.3 µs at 32 MB. Not flat. It scales with size, at an incremental slope of about 6.3 TB/s.
+
+The floor also distorted the headline ratio. Triton has more launch overhead than cuBLAS, so per-launch event timing inflates the INT4/FP16 ratio. On my current stack the event-timed ratio at 16 MB is 2.75x. The graph-timed kernel ratio is 9.06 / 4.75 = 1.91x.
+
+{/* FIGURE NEEDED: FP16 latency vs weight size, event-timed (flat near 15.5 µs) overlaid on graph-timed (3.5 to 7.3 µs, then a jump at 40 MB), from diag_results.json d1_floor and d3_graph. */}
+
+## Redoing it
+
+Warm-loop NCU at the 16 MB point reads 4.0 MB from DRAM per launch, so about 75% of the weight bytes come from L2. At 32 MB it reads 2.2 MB, about 93% from L2. So the mechanism I described is real: in steady state, most of the FP16 weights are L2-served.
+
+The bandwidth isn't. Effective weight-serving bandwidth in the L2-resident range is 3.5 to 4.6 TB/s. That beats the 3.35 TB/s HBM peak, which is direct evidence of L2 serving, but it's nowhere near 12 TB/s.
+
+The boundary isn't 50 MB either. In the graph-timed sweep, FP16 goes from 7.3 µs at 32 MB to 16.6 µs at 40 MB. At 40 MB, warm NCU shows 95% of the weights already being re-read from DRAM. Residency collapses somewhere between 32 and 40 MB, which puts the effective capacity around 36 MB. Above the cliff, from 40 to 128 MB, FP16 time rises at about 2.7 TB/s, which is what HBM streaming looks like for this kernel.
+
+The 8 MB point shows 100% DRAM re-read even warm, likely an evict-policy choice of the `nvjet` tile variant cuBLAS picks there. cuBLAS switches variants across the sweep, so the FP16 curve is several kernels stitched together, and the "L2-resident regime" isn't even monotonic in size.
+
+## Forcing HBM at a fixed shape
+
+A size sweep changes the kernel, the tiling and the cache behavior at once. I wanted to hold the 16 MB shape fixed and remove only the L2 advantage, so I used rotation: allocate N copies of the weight matrix and cycle through them in the graph, one per launch. With one or two copies (16 or 32 MB working set) the current copy is still in L2 from last time. With six copies (96 MB) it has been evicted before it comes around again, so every launch reads from HBM.
+
+Graph-timed results at the fixed 16 MB shape:
+
+| Config                    | Working set | µs per launch |
+| ------------------------- | ----------- | ------------- |
+| FP16, 1 copy              | 16 MB       | 4.77          |
+| FP16, 2 copies            | 32 MB       | 4.73          |
+| FP16, 3 copies            | 48 MB       | 7.92          |
+| FP16, 6 copies            | 96 MB       | 8.30          |
+| INT4, 1 copy              | ~4 MB       | 9.12          |
+| INT4, 6 copies            | ~25 MB      | 9.27          |
+
+Two things stand out. FP16 jumps between two and three copies, consistent with the ~36 MB capacity from the sweep. And with FP16 forced to HBM at 8.3 µs, INT4 is still at 9.1 to 9.3 µs. With no L2 advantage at all, INT4 is about 1.12x slower.
+
+So L2 residency is not a sufficient cause. It isn't even the main one.
+
+## The 16 MB point, decomposed
+
+Putting the graph-timed numbers together at MLA's operating point (bs=1):
+
+- FP16 with warm L2: 4.8 µs
+- FP16 forced to HBM: 8.3 µs
+- INT4, either way: 9.1 to 9.3 µs
+- What INT4 should cost if it were memory-bound: about 3.4 µs (4.2 MB at the measured 2.7 TB/s HBM rate, plus fixed cost)
+
+Of the 1.91x kernel-level deficit, L2 residency accounts for the step from about 1.12x to 1.91x. That's FP16's tier advantage, and it's real. The 1.12x underneath it is the INT4 kernel itself, which runs about 2.7x above its own memory entitlement.
+
+The reason is dequantization. NCU on the INT4 kernel shows SM utilization of 46% to 79% and DRAM utilization of 10% to 23% at every size, including sizes far beyond L2. Every packed byte goes through scalar mask, shift, select and convert. The tiles are `BLOCK_M=16` for an M of 1, so 15/16 of the tensor-core work is padding. And the even/odd nibble interleave means two `tl.dot` calls per K block. The kernel is compute-bound on unpacking, everywhere, so L2 can't be what's making it slow.
+
+So there's no "memory-bound to compute-bound transition," as I wrote originally. INT4 is dequant-bound at every size, FP16 stays memory-side at every size, and what changes near 36 MB is which tier serves FP16.
+
+Graph-timed above the cliff, INT4 runs between 1.02x and 1.13x of FP16 from 48 to 128 MB. It reaches parity at best. It never wins.
+
+{/* FIGURE NEEDED: bar chart of the 16 MB decomposition: FP16 warm 4.8, FP16 forced-HBM 8.3, INT4 9.1 to 9.3, INT4 entitlement ~3.4 µs, from graph_rotation.json and REPORT.md. */}
+
+## The magnitudes don't travel
+
+I reran the original event-timed sweep on a different stack (torch 2.7.0, Triton 3.3.0) from the one the write-up used (torch 2.9.1, Triton 3.5.1), on the same H100 model. At 16 MB the event-timed ratio was 1.86x in the original data and 2.75x here. At 128 MB it was 1.08x versus 1.58x. The direction held and the numbers didn't. Event timing at bs=1 mostly measures launch overhead, which is exactly what varies with the stack, so a ratio from it is a property of my install as much as of the kernel.
+
+## What survives
+
+A weight-only INT4 kernel that dequantizes in its inner loop can't win on these small, latency-dominated BMMs. A cache-tier effect also exists, near 36 MB, so a roofline for these shapes needs more than one memory tier.
+
+The sentence I should have written is: L2 residency removes most of INT4's theoretical upside, and dequantization compute and launch overhead remove the rest.
+
+The constructive test of that sentence is to take dequantization out of the inner loop. A W8A8 kernel that feeds INT8 straight into tensor cores and applies scales once on the accumulator is the first quantized kernel in this project to beat cuBLAS FP16: 1.4 to 1.5x at bs=1 when the weights exceed the ~36 MB effective capacity, and still losing (0.70x) when they're L2-served. The win/loss boundary lands at the residency capacity I measured, which is the best evidence I have that the corrected picture is right.
+
+## What I check now
+
+- Before reading any residency claim off NCU, check `--cache-control`. If it's `all` (the default), the counters are cold by construction. Profile a warm launch with `none`.
+- If two "different" cache conditions give the same counters, assume the setup is wrong before assuming the effect is absent.
+- Time a trivially small version of the same op with the same harness. If it takes as long as the real one, I'm measuring the floor.
+- Time microsecond-scale kernels with CUDA graphs, not events around each launch, especially when comparing Triton to cuBLAS.
+- Convert time to bytes per second and compare it to HBM peak. Above peak means a cache is helping; it also bounds how much.
+- To test a cache claim, change only the cache. Rotate copies of the same tensor at a fixed shape instead of changing the size.
+- Record the software versions next to every number, and don't expect magnitudes to survive a Triton upgrade.
+
+The repo's README now carries the corrected claim and points to the audit. The project page still tells the original story; this post is the correction.

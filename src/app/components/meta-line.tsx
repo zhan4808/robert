@@ -1,8 +1,8 @@
 import { Children, Fragment, type ReactNode } from "react";
 
 /** A post's or project's title, and the one italic serif line under it. Both pages draw the same header. */
-export const HEADER_TITLE = "font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]";
-export const HEADER_SUBTITLE = "mt-3 font-serif text-[20px] italic leading-snug text-muted [text-wrap:pretty]";
+export const HEADER_TITLE = "font-serif text-title-sm font-normal sm:text-title [text-wrap:balance]";
+export const HEADER_SUBTITLE = "mt-3 font-serif text-subtitle italic text-muted [text-wrap:pretty]";
 /** The header's one hairline, under the meta line, and the gap to what follows it. */
 export const HEADER = "border-b border-hairline pb-6";
 

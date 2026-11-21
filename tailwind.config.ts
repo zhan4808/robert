@@ -44,7 +44,9 @@ export default {
                 ui: "15px", // names and titles in lists and cards
                 body: "16px", // prose and the page intro
                 lede: "17px", // the phone project list's text
-                heading: "21px", // the phone project list's titles
+                heading: "21px", // the phone project list's titles, the home page's list headings
+                subtitle: ["20px", { lineHeight: "1.375" }], // the italic serif line under a page title
+                "title-sm": ["28px", { lineHeight: "1.15" }], // page titles on phones, set in the serif
                 title: ["34px", { lineHeight: "1.15", letterSpacing: "-0.01em" }], // page titles, set in the serif
                 display: ["40px", { lineHeight: "1.1", letterSpacing: "-0.015em" }], // the name on the home page
             },

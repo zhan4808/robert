@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Cited from "./citation";
 
 /**
@@ -22,8 +23,15 @@ export default function FrontPage() {
                     <Cited source="comma">Comma Capital</Cited>.
                 </p>
                 <p>
-                    I write here about kernels, interconnects, and the systems in between, and keep a few photos from
-                    outside the lab.
+                    Lately I&apos;ve been writing a four-part series on{" "}
+                    <Link href="/blog/tp-without-nvlink" className="ink-link">
+                        LLM inference without NVLink
+                    </Link>
+                    ; before that I wrote kernels like{" "}
+                    <Link href="/projects/tiny-gemm" className="ink-link">
+                        Tiny-GEMM
+                    </Link>
+                    .
                 </p>
             </div>
         </section>

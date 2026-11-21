@@ -180,8 +180,8 @@ the captions on the pictures stay as they are.
 
 ```mdx
 <Gallery>
-    <Figure src="/IMG_1493.webp" alt="Horseback riding on the beach" caption="horseback riding on the beach" />
-    <Figure src="/IMG_1760.webp" alt="Coastal landscape at sunset" caption="views at sea ranch, ca" />
+    <Figure src="/IMG_1493.webp" alt="A meadow with two chairs above the sea at Sea Ranch" caption="views at sea ranch, ca" />
+    <Figure src="/IMG_1760.webp" alt="A beach seen from horseback" caption="horseback riding on the beach" />
 </Gallery>
 ```
 

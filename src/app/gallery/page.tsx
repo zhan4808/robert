@@ -5,8 +5,8 @@ import Image, { type StaticImageData } from "next/image";
 import PondImage from "../components/pond-image";
 import SiteFooter from "../components/site-footer";
 import TopNav from "../components/top-nav";
-import horseback from "../../../public/IMG_1493.webp";
-import seaRanch from "../../../public/IMG_1760.webp";
+import seaRanch from "../../../public/IMG_1493.webp";
+import horseback from "../../../public/IMG_1760.webp";
 import coastline from "../../../public/IMG_1887.webp";
 import hoover from "../../../public/IMG_2767.webp";
 import stars from "../../../public/IMG_2847.webp";
@@ -21,8 +21,8 @@ type Work = {
 };
 
 const WORKS: Work[] = [
-    { title: "Horseback on the beach", src: horseback, year: "2025" },
     { title: "Sea Ranch", src: seaRanch, place: "California", year: "2025" },
+    { title: "Horseback on the beach", src: horseback, year: "2025" },
     { title: "Rugged coastline", src: coastline, year: "2025" },
     { title: "Hoover Wilderness", src: hoover, place: "backpacking", year: "2025" },
     { title: "Stargazing", src: stars, year: "2025" },
@@ -47,8 +47,8 @@ export default function Gallery() {
             <TopNav />
             <main id="main" tabIndex={-1} className="mx-auto w-full max-w-column px-6 pt-14 outline-none sm:pt-20">
                 <header className="mb-10">
-                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title">Photos</h1>
-                    <p className="mt-2 font-serif text-[19px] italic text-muted">the spaces between.</p>
+                    <h1 className="font-serif text-title-sm font-normal sm:text-title">Photos</h1>
+                    <p className="mt-2 font-serif text-subtitle italic text-muted">the spaces between.</p>
                 </header>
 
                 <section aria-label="Photos" className="grid gap-x-5 gap-y-10 sm:grid-cols-2">

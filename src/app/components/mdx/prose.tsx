@@ -40,7 +40,11 @@ export function H2({ id, className, children, ...props }: ComponentProps<"h2">) 
         );
     }
     return (
-        <h2 {...props} id={id} className="group relative mt-8 scroll-mt-28 font-serif text-[23px] font-normal leading-snug text-foreground">
+        <h2
+            {...props}
+            id={id}
+            className="group relative mt-8 scroll-mt-28 font-serif text-[23px] font-normal leading-snug text-foreground"
+        >
             {id && <HeadingAnchor id={id} />}
             {children}
         </h2>

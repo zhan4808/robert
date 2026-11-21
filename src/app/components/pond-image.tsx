@@ -146,7 +146,10 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
                         ctx.globalAlpha = a;
                         ctx.fillStyle = `rgb(${(R * 0.86 + paper[0] * 0.14) | 0},${(G * 0.86 + paper[1] * 0.14) | 0},${(B * 0.86 + paper[2] * 0.14) | 0})`;
                         ctx.fillRect(c * cw, r * ch, cw, ch);
-                        const g = TILE_GLYPHS[Math.min(TILE_GLYPHS.length - 1, Math.floor((1 - lum[i]) * TILE_GLYPHS.length))];
+                        const g =
+                            TILE_GLYPHS[
+                                Math.min(TILE_GLYPHS.length - 1, Math.floor((1 - lum[i]) * TILE_GLYPHS.length))
+                            ];
                         if (g !== " ") {
                             const k = lum[i] > 0.55 ? 0.55 : 1.45;
                             ctx.globalAlpha = a * 0.55;
@@ -247,7 +250,12 @@ export default function PondImage({ src, alt, ratio, sizes, priority, className,
     }, [loaded, shore]);
 
     const maskStyle = mask
-        ? { maskImage: `url(${mask})`, WebkitMaskImage: `url(${mask})`, maskSize: "100% 100%", WebkitMaskSize: "100% 100%" }
+        ? {
+              maskImage: `url(${mask})`,
+              WebkitMaskImage: `url(${mask})`,
+              maskSize: "100% 100%",
+              WebkitMaskSize: "100% 100%",
+          }
         : undefined;
 
     return (

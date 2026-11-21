@@ -77,7 +77,9 @@ export default async function Page({ params }: Props) {
     return (
         <PostPage>
             <header>
-                <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">{post.title}</h1>
+                <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">
+                    {post.title}
+                </h1>
                 <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
                     {post.subtitle}
                 </p>

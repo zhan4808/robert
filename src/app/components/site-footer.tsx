@@ -20,7 +20,13 @@ export default function SiteFooter() {
                 {LINKS.map(({ label, href }) => {
                     const external = /^https?:/.test(href);
                     return external ? (
-                        <a key={label} href={href} target="_blank" rel="noopener noreferrer" className="ink-link text-muted">
+                        <a
+                            key={label}
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ink-link text-muted"
+                        >
                             {label}
                         </a>
                     ) : (

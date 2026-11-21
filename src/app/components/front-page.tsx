@@ -17,8 +17,8 @@ export default function FrontPage() {
                 </p>
                 <p>
                     Before that I was at <Cited source="sandisk">SanDisk</Cited> and{" "}
-                    <Cited source="endian">Endian</Cited>, and in <Cited source="labs">a couple of research labs</Cited>.
-                    I&apos;m currently researching at <Cited source="socet">Purdue SoCET</Cited> and a fellow at{" "}
+                    <Cited source="endian">Endian</Cited>, and in <Cited source="labs">a couple of research labs</Cited>
+                    . I&apos;m currently researching at <Cited source="socet">Purdue SoCET</Cited> and a fellow at{" "}
                     <Cited source="comma">Comma Capital</Cited>.
                 </p>
                 <p>

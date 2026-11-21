@@ -176,10 +176,7 @@ export default function KoiBanner() {
                     className="absolute inset-0 h-full w-full"
                 />
             </div>
-            <figcaption
-                aria-hidden
-                className="flex justify-between font-geistMono text-label tabular-nums text-muted"
-            >
+            <figcaption aria-hidden className="flex justify-between font-geistMono text-label tabular-nums text-muted">
                 <span>{stats.koi > 0 ? `${stats.koi} koi` : " "}</span>
                 <span>
                     <span className="[@media(pointer:coarse)]:hidden">click</span>

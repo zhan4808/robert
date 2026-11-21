@@ -48,7 +48,9 @@ export function PostCoverBand({ band }: { band: Band }) {
             />
         );
     }
-    return <div aria-hidden className={`mt-8 h-24 w-full rounded-card bg-gradient-to-br opacity-50 ${band.gradient}`} />;
+    return (
+        <div aria-hidden className={`mt-8 h-24 w-full rounded-card bg-gradient-to-br opacity-50 ${band.gradient}`} />
+    );
 }
 
 /** What a pager link needs of its neighbour; a plain object the server page hands across. */

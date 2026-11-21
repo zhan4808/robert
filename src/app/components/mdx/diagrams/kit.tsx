@@ -144,7 +144,12 @@ export class Sketch {
     /** A box with a centred label. */
     box(x: number, y: number, w: number, h: number, lines: string[], o: ShapeOpts & TextOpts = {}) {
         this.rect(x, y, w, h, { fill: o.fill ?? (o.tone && o.tone !== "ink" ? wash(o.tone) : undefined), ...o });
-        return this.label(x + w / 2, y + h / 2, lines, { size: o.size, weight: o.weight ?? 500, tone: "ink", mono: o.mono });
+        return this.label(x + w / 2, y + h / 2, lines, {
+            size: o.size,
+            weight: o.weight ?? 500,
+            tone: "ink",
+            mono: o.mono,
+        });
     }
 
     /** A bracket under a span, with a label beneath it. */

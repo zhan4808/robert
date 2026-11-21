@@ -86,11 +86,15 @@ export default function ProjectPage({
                 className={`${FRAME} px-6 pt-14 font-geistSans outline-none sm:pt-20`}
             >
                 <header>
-                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">{project.title}</h1>
+                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">
+                        {project.title}
+                    </h1>
                     <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
                         {project.description}
                     </p>
-                    <p className={`mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hairline pb-5 text-small ${MUTED}`}>
+                    <p
+                        className={`mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hairline pb-5 text-small ${MUTED}`}
+                    >
                         <span className="font-geistMono text-caption">{project.date}</span>
                         {project.updated && (
                             <span className="font-geistMono text-caption">

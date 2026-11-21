@@ -8,7 +8,17 @@ import { Canvas, Sketch, wash, type Tone } from "./kit";
 const W = 720;
 
 /** Eight GPU squares in a row. */
-function gpus(s: Sketch, x: number, y: number, n: number, size: number, gap: number, tone: Tone = "blue", from = 0, labels = true) {
+function gpus(
+    s: Sketch,
+    x: number,
+    y: number,
+    n: number,
+    size: number,
+    gap: number,
+    tone: Tone = "blue",
+    from = 0,
+    labels = true
+) {
     for (let i = 0; i < n; i++) {
         const gx = x + i * (size + gap);
         s.rect(gx, y, size, size, { tone, fill: wash(tone, 30), rough: 0.7 });
@@ -33,9 +43,27 @@ export function Rig() {
     }
     // Ethernet between the boxes
     s.box(318, 232, 84, 40, ["Ethernet", "switch"], { tone: "orange", size: 12 });
-    s.route([[165, 184], [165, 252], [318, 252]], { tone: "orange", head: false, width: 2 });
-    s.route([[555, 184], [555, 252], [402, 252]], { tone: "orange", head: false, width: 2 });
-    s.text(360, 300, "400G RoCE: any tensor-parallel group larger than 8 crosses here", { anchor: "middle", tone: "muted", size: 12 });
+    s.route(
+        [
+            [165, 184],
+            [165, 252],
+            [318, 252],
+        ],
+        { tone: "orange", head: false, width: 2 }
+    );
+    s.route(
+        [
+            [555, 184],
+            [555, 252],
+            [402, 252],
+        ],
+        { tone: "orange", head: false, width: 2 }
+    );
+    s.text(360, 300, "400G RoCE: any tensor-parallel group larger than 8 crosses here", {
+        anchor: "middle",
+        tone: "muted",
+        size: 12,
+    });
     return (
         <Canvas w={W} h={312} title="Two 8-GPU PCIe boxes joined by RoCE Ethernet through one switch">
             {s.els}
@@ -119,7 +147,12 @@ export function RingAllReduce() {
     const place = (k: number): [number, number] => (k < 4 ? [30 + k * 172, 34] : [30 + (k - 3) * 172, 194]);
     snaps.forEach((snap, k) => {
         const [px, py] = place(k);
-        s.text(px + 12 + (n * cell) / 2, py - 10, snap.title, { anchor: "middle", size: 12, tone: snap.phase, weight: 600 });
+        s.text(px + 12 + (n * cell) / 2, py - 10, snap.title, {
+            anchor: "middle",
+            size: 12,
+            tone: snap.phase,
+            weight: 600,
+        });
         for (let g = 0; g < n; g++) {
             s.text(px, py + g * cell + 15, String(g), { size: 10, tone: "muted", anchor: "middle" });
             for (let c = 0; c < n; c++) {
@@ -133,15 +166,33 @@ export function RingAllReduce() {
                 });
             }
         }
-        for (let c = 0; c < n; c++) s.text(px + 21 + c * cell, py + n * cell + 10, "abcd"[c], { size: 10, tone: "muted", anchor: "middle" });
-        if (k !== 3 && k !== snaps.length - 1) s.arrow(px + 118, py + 42, px + 150, py + 42, { tone: "faint", width: 1.2 });
+        for (let c = 0; c < n; c++)
+            s.text(px + 21 + c * cell, py + n * cell + 10, "abcd"[c], { size: 10, tone: "muted", anchor: "middle" });
+        if (k !== 3 && k !== snaps.length - 1)
+            s.arrow(px + 118, py + 42, px + 150, py + 42, { tone: "faint", width: 1.2 });
     });
-    s.route([[604, 128], [604, 152], [100, 152], [100, 176]], { tone: "faint", width: 1.2 });
+    s.route(
+        [
+            [604, 128],
+            [604, 152],
+            [100, 152],
+            [100, 176],
+        ],
+        { tone: "faint", width: 1.2 }
+    );
     // legend
     const ly = 318;
     [1, 2, 3, 4].forEach((cnt, i) => {
-        s.rect(30 + i * 118, ly - 12, 14, 14, { tone: "faint", width: 1, fill: wash("blue", [0, 12, 34, 60, 100][cnt]), rough: 0.5 });
-        s.text(50 + i * 118, ly, cnt === 4 ? "all 4 summed" : `${cnt} GPU${cnt > 1 ? "s" : ""} summed`, { size: 11, tone: "muted" });
+        s.rect(30 + i * 118, ly - 12, 14, 14, {
+            tone: "faint",
+            width: 1,
+            fill: wash("blue", [0, 12, 34, 60, 100][cnt]),
+            rough: 0.5,
+        });
+        s.text(50 + i * 118, ly, cnt === 4 ? "all 4 summed" : `${cnt} GPU${cnt > 1 ? "s" : ""} summed`, {
+            size: 11,
+            tone: "muted",
+        });
     });
     s.rect(510, ly - 12, 14, 14, { tone: "orange", width: 2, rough: 0.5 });
     s.text(530, ly, "just received", { size: 11, tone: "muted" });
@@ -190,8 +241,18 @@ export function MessageSizes() {
     const hi = Math.log2(256 * 1024 ** 2);
     const X = (b: number) => x0 + ((Math.log2(b) - lo) / (hi - lo)) * (x1 - x0);
     const y = 120;
-    s.rect(X(8 * 1024), y - 18, X(4 * 1024 ** 2) - X(8 * 1024), 36, { tone: "blue", fill: wash("blue", 14), dashed: true, width: 1 });
-    s.text((X(8 * 1024) + X(4 * 1024 ** 2)) / 2, y + 36, "decode: 1 to 512 requests in flight", { anchor: "middle", size: 12, tone: "blue", weight: 600 });
+    s.rect(X(8 * 1024), y - 18, X(4 * 1024 ** 2) - X(8 * 1024), 36, {
+        tone: "blue",
+        fill: wash("blue", 14),
+        dashed: true,
+        width: 1,
+    });
+    s.text((X(8 * 1024) + X(4 * 1024 ** 2)) / 2, y + 36, "decode: 1 to 512 requests in flight", {
+        anchor: "middle",
+        size: 12,
+        tone: "blue",
+        weight: 600,
+    });
     s.line(x0, y, x1, y, { width: 1.6 });
     for (const [b, lab] of [
         [1024, "1 KiB"],
@@ -238,11 +299,20 @@ export function EthCrossing() {
     const y = 120;
     stages.forEach(([lab, t], i) => {
         const x = 12 + i * (bw + gap);
-        s.box(x, y, bw, 46, lab, { tone: t, fill: t === "ink" || t === "muted" ? "none" : undefined, dashed: t === "muted", size: 12 });
+        s.box(x, y, bw, 46, lab, {
+            tone: t,
+            fill: t === "ink" || t === "muted" ? "none" : undefined,
+            dashed: t === "muted",
+            size: 12,
+        });
         if (i < stages.length - 1) s.arrow(x + bw + 3, y + 23, x + bw + gap - 3, y + 23, { width: 1.3 });
     });
     s.box(196, 20, 324, 44, ["NCCL proxy thread on the CPU"], { tone: "orange", size: 12 });
-    s.text(358, 82, "polls GPU buffers, posts RDMA work, polls completions", { anchor: "middle", size: 11, tone: "muted" });
+    s.text(358, 82, "polls GPU buffers, posts RDMA work, polls completions", {
+        anchor: "middle",
+        size: 11,
+        tone: "muted",
+    });
     s.arrow(236, 64, 236, 116, { tone: "orange", dashed: true, width: 1.3 });
     s.arrow(480, 64, 480, 116, { tone: "orange", dashed: true, width: 1.3 });
     s.text(208, 188, "GPU writes → RDMA", { anchor: "middle", size: 11, tone: "muted" });
@@ -270,7 +340,12 @@ export function TwoNics() {
         for (let n = 0; n < 4; n++) {
             const nx = bx + 22 + n * 78;
             const used = n === 0 || n === 3;
-            s.box(nx, 130, 56, 28, ["NIC"], { tone: used ? "green" : "faint", fill: used ? undefined : "none", dashed: !used, size: 11 });
+            s.box(nx, 130, 56, 28, ["NIC"], {
+                tone: used ? "green" : "faint",
+                fill: used ? undefined : "none",
+                dashed: !used,
+                size: 11,
+            });
         }
     }
     // box A → box B: GPU 7 down to its NIC, across to box B's first NIC, up to GPU 8
@@ -279,9 +354,22 @@ export function TwoNics() {
     s.arrow(422, 128, 404, 80, { tone: "orange", width: 2 });
     // box B → box A: GPU 15 down to its NIC, back along the bottom, up to GPU 0
     s.arrow(673, 80, 673, 128, { tone: "orange", width: 2 });
-    s.route([[656, 160], [656, 206], [66, 206], [66, 162]], { tone: "orange", width: 2 });
+    s.route(
+        [
+            [656, 160],
+            [656, 206],
+            [66, 206],
+            [66, 162],
+        ],
+        { tone: "orange", width: 2 }
+    );
     s.arrow(60, 128, 46, 80, { tone: "orange", width: 2 });
-    s.text(360, 228, "the ring leaves and enters each box once: two NICs per box ever see ring traffic", { anchor: "middle", size: 12, tone: "orange", weight: 600 });
+    s.text(360, 228, "the ring leaves and enters each box once: two NICs per box ever see ring traffic", {
+        anchor: "middle",
+        size: 12,
+        tone: "orange",
+        weight: 600,
+    });
     return (
         <Canvas w={W} h={240} title="A 16-GPU ring crosses between the boxes at exactly two points">
             {s.els}
@@ -304,8 +392,10 @@ export function Protocols() {
         const y = 40 + i * 78;
         s.text(20, y + 22, name, { size: 15, weight: 700, tone: t });
         s.text(x0, y - 8, desc, { size: 11, tone: "muted" });
-        const flag = (x: number, w: number) => s.rect(x, y, w, 32, { tone: "orange", fill: wash("orange", 35), rough: 0.5, width: 1.2 });
-        const data = (x: number, w: number) => s.rect(x, y, w, 32, { tone: t, fill: wash(t, 45), rough: 0.5, width: 1.2 });
+        const flag = (x: number, w: number) =>
+            s.rect(x, y, w, 32, { tone: "orange", fill: wash("orange", 35), rough: 0.5, width: 1.2 });
+        const data = (x: number, w: number) =>
+            s.rect(x, y, w, 32, { tone: t, fill: wash(t, 45), rough: 0.5, width: 1.2 });
         if (name === "LL") {
             for (let k = 0; k < 8; k++) {
                 data(x0 + k * 16 * sc, 8 * sc - 2);
@@ -380,10 +470,29 @@ export function SizeRule() {
     const x1 = 700;
     const X = (f: number) => x0 + f * (x1 - x0);
     s.rect(X(0.3), 20, X(0.75) - X(0.3), 130, { tone: "blue", fill: wash("blue", 10), dashed: true, width: 1 });
-    s.text((X(0.3) + X(0.75)) / 2, 168, "where decode messages live", { anchor: "middle", size: 11, tone: "blue", weight: 600 });
+    s.text((X(0.3) + X(0.75)) / 2, 168, "where decode messages live", {
+        anchor: "middle",
+        size: 11,
+        tone: "blue",
+        weight: 600,
+    });
     const rows: [string, [number, number, string, Tone][]][] = [
-        ["NCCL default", [[0, 0.12, "Tree/LL", "green"], [0.12, 0.78, "Ring/LL, far too long", "blue"], [0.78, 1, "Ring/Simple", "purple"]]],
-        ["size rule", [[0, 0.34, "Tree/LL", "green"], [0.34, 0.78, "Ring/LL128", "orange"], [0.78, 1, "Ring/Simple", "purple"]]],
+        [
+            "NCCL default",
+            [
+                [0, 0.12, "Tree/LL", "green"],
+                [0.12, 0.78, "Ring/LL, far too long", "blue"],
+                [0.78, 1, "Ring/Simple", "purple"],
+            ],
+        ],
+        [
+            "size rule",
+            [
+                [0, 0.34, "Tree/LL", "green"],
+                [0.34, 0.78, "Ring/LL128", "orange"],
+                [0.78, 1, "Ring/Simple", "purple"],
+            ],
+        ],
     ];
     rows.forEach(([lab, segs], i) => {
         const y = 38 + i * 58;
@@ -393,7 +502,11 @@ export function SizeRule() {
     s.arrow(x0, 190, x1, 190, { width: 1.3, tone: "muted" });
     s.text(x0, 210, "small", { size: 11, tone: "muted" });
     s.text(x1, 210, "large", { size: 11, tone: "muted", anchor: "end" });
-    s.text((x0 + x1) / 2, 210, "message size; the boundaries are yours to measure", { size: 11, tone: "muted", anchor: "middle" });
+    s.text((x0 + x1) / 2, 210, "message size; the boundaries are yours to measure", {
+        size: 11,
+        tone: "muted",
+        anchor: "middle",
+    });
     return (
         <Canvas w={W} h={220} title="NCCL's default protocol choice across Ethernet against the size rule">
             {s.els}
@@ -406,7 +519,12 @@ export function SizeRule() {
 export function TwoFabrics() {
     const s = new Sketch("fabrics");
     const cols: [string, Tone, string[], string[]][] = [
-        ["RoCE Ethernet", "orange", ["Ethernet", "switch"], ["GPU → PCIe → NIC", "proxy thread, RDMA", "wire → switch → wire", "NIC → PCIe → GPU"]],
+        [
+            "RoCE Ethernet",
+            "orange",
+            ["Ethernet", "switch"],
+            ["GPU → PCIe → NIC", "proxy thread, RDMA", "wire → switch → wire", "NIC → PCIe → GPU"],
+        ],
         ["PCIe switch fabric", "green", ["PCIe", "fabric"], ["GPU → PCIe", "→ fabric →", "PCIe → GPU"]],
     ];
     cols.forEach(([title, t, mid, hops], c) => {
@@ -422,7 +540,11 @@ export function TwoFabrics() {
         s.line(ox + 120, 192, ox + 120, 222, { tone: t, width: 2.2 });
         hops.forEach((h, i) => s.text(ox + 254, 140 + i * 16, h, { size: 11, tone: "muted" }));
     });
-    s.text(360, 312, "Inside a box the two racks are the same; only the hop through the middle differs.", { anchor: "middle", size: 12, weight: 600 });
+    s.text(360, 312, "Inside a box the two racks are the same; only the hop through the middle differs.", {
+        anchor: "middle",
+        size: 12,
+        weight: 600,
+    });
     return (
         <Canvas w={W} h={322} title="The same boxes joined by Ethernet or by a PCIe switch fabric">
             {s.els}
@@ -447,10 +569,14 @@ export function Layouts() {
             const tone: Tone = p === 0 ? "blue" : p === 1 ? (bi ? "green" : "blue") : bi ? "orange" : "purple";
             gpus(s, ox + 10, by + 24, 8, 20, 6.5, tone, 0, false);
         }
-        if (p === 0) for (let k = 0; k < 5; k++) s.line(ox + 26 + k * 42, 124, ox + 26 + k * 42, 156, { tone: "orange", width: 1.8 });
+        if (p === 0)
+            for (let k = 0; k < 5; k++)
+                s.line(ox + 26 + k * 42, 124, ox + 26 + k * 42, 156, { tone: "orange", width: 1.8 });
         if (p === 2) s.arrow(ox + 110, 124, ox + 110, 156, { tone: "orange", width: 1.8 });
         const words = cross.split(", ");
-        words.forEach((w, i) => s.text(ox + 110, 248 + i * 15, w, { anchor: "middle", size: 11, tone: ct, weight: 600 }));
+        words.forEach((w, i) =>
+            s.text(ox + 110, 248 + i * 15, w, { anchor: "middle", size: 11, tone: ct, weight: 600 })
+        );
     });
     return (
         <Canvas w={W} h={280} title="TP16, two TP8 replicas, and PP2 by TP8 on two boxes">
@@ -467,7 +593,13 @@ export function MlaKv() {
     const T = 8;
     const panels: [string, number, number, Tone, string[]][] = [
         ["TP16", L, T, "blue", [`latent KV for all ${L} layers,`, "copied on every rank"]],
-        ["PP2 × TP8", L / 2, 2 * T, "purple", [`latent KV for its own ${L / 2} layers:`, "the same memory holds 2× the tokens"]],
+        [
+            "PP2 × TP8",
+            L / 2,
+            2 * T,
+            "purple",
+            [`latent KV for its own ${L / 2} layers:`, "the same memory holds 2× the tokens"],
+        ],
     ];
     panels.forEach(([t, layers, toks, tone, note], p) => {
         const ox = 20 + p * 300;
@@ -475,9 +607,18 @@ export function MlaKv() {
         s.text(ox, 42, "one GPU's KV memory", { size: 11, tone: "muted" });
         for (let li = 0; li < layers; li++)
             for (let ti = 0; ti < toks; ti++)
-                s.rect(ox + ti * (cw + 2), 56 + li * (ch + 2), cw, ch, { tone, fill: wash(tone, 40), rough: 0.4, width: 0.9 });
+                s.rect(ox + ti * (cw + 2), 56 + li * (ch + 2), cw, ch, {
+                    tone,
+                    fill: wash(tone, 40),
+                    rough: 0.4,
+                    width: 0.9,
+                });
         const by = 56 + layers * (ch + 2) + 6;
-        s.text(ox, by + 12, `${layers} layers × ${toks === T ? "T" : "2T"} tokens`, { size: 11, tone: "muted", mono: true });
+        s.text(ox, by + 12, `${layers} layers × ${toks === T ? "T" : "2T"} tokens`, {
+            size: 11,
+            tone: "muted",
+            mono: true,
+        });
         note.forEach((n, i) => s.text(ox, by + 36 + i * 16, n, { size: 12 }));
     });
     return (
@@ -513,8 +654,24 @@ export function KvCap() {
             s.text(sx - 14, top + 12, "sent", { anchor: "end", size: 12, tone: "orange", weight: 600 });
             s.text(cap + 110, py - 14, "the gap is a queue", { anchor: "middle", size: 11, tone: "orange" });
         } else {
-            s.curve([[x0, base], [x0 + 60, base - 90], [cap, base - 128], [x1, base - 134]], { tone: "green", width: 2.2 });
-            s.curve([[x0, base - 18], [cap, base - 30], [cap + 100, base - 70], [x1, top + 4]], { tone: "orange", width: 2.2 });
+            s.curve(
+                [
+                    [x0, base],
+                    [x0 + 60, base - 90],
+                    [cap, base - 128],
+                    [x1, base - 134],
+                ],
+                { tone: "green", width: 2.2 }
+            );
+            s.curve(
+                [
+                    [x0, base - 18],
+                    [cap, base - 30],
+                    [cap + 100, base - 70],
+                    [x1, top + 4],
+                ],
+                { tone: "orange", width: 2.2 }
+            );
             s.text(cap + 14, base - 146, "throughput: flat", { size: 12, tone: "green", weight: 600 });
             s.text(cap + 40, base - 14, "latency: climbs", { size: 12, tone: "orange", weight: 600 });
         }
@@ -544,9 +701,14 @@ export function EagerVsGraph() {
             s.box(x, y, 64, 32, ["all-reduce"], { tone: "green", size: 10 });
             x += 68;
         }
-        s.text(120, y + 54, r === 0
-            ? "launch gaps let ranks drift; early ones spin inside the collective, and it gets billed as communication"
-            : "replayed back to back: what remains is the collective itself", { size: 11, tone: r === 0 ? "orange" : "green" });
+        s.text(
+            120,
+            y + 54,
+            r === 0
+                ? "launch gaps let ranks drift; early ones spin inside the collective, and it gets billed as communication"
+                : "replayed back to back: what remains is the collective itself",
+            { size: 11, tone: r === 0 ? "orange" : "green" }
+        );
     });
     return (
         <Canvas w={W} h={206} title="Eager mode counts launch gaps as communication; CUDA graphs do not">

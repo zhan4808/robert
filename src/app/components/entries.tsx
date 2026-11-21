@@ -35,23 +35,21 @@ export function KindTag({ kind, className = "" }: { kind: JournalPost["kind"]; c
  */
 export function PostRow({ post, bare = false }: { post: JournalPost; bare?: boolean }) {
     const row = (
-            <Link
-                href={`/blog/${post.slug}`}
-                className="group grid grid-cols-[3.75rem_1fr_auto] items-baseline gap-x-4 py-[7px] focus-ring"
-            >
-                <span className="font-geistMono text-caption tabular-nums text-muted">{shortDate(post.date)}</span>
-                <span className="min-w-0 text-body leading-snug">
-                    <span className="underline decoration-transparent decoration-1 underline-offset-[5px] transition-colors duration-150 group-hover:decoration-koi group-focus-visible:decoration-koi">
-                        {post.title}
-                    </span>
-                    {post.part && (
-                        <span className="ml-2 font-geistMono text-label tabular-nums text-muted">
-                            {post.part}/4
-                        </span>
-                    )}
+        <Link
+            href={`/blog/${post.slug}`}
+            className="group grid grid-cols-[3.75rem_1fr_auto] items-baseline gap-x-4 py-[7px] focus-ring"
+        >
+            <span className="font-geistMono text-caption tabular-nums text-muted">{shortDate(post.date)}</span>
+            <span className="min-w-0 text-body leading-snug">
+                <span className="underline decoration-transparent decoration-1 underline-offset-[5px] transition-colors duration-150 group-hover:decoration-koi group-focus-visible:decoration-koi">
+                    {post.title}
                 </span>
-                <KindTag kind={post.kind} className="max-sm:hidden" />
-            </Link>
+                {post.part && (
+                    <span className="ml-2 font-geistMono text-label tabular-nums text-muted">{post.part}/4</span>
+                )}
+            </span>
+            <KindTag kind={post.kind} className="max-sm:hidden" />
+        </Link>
     );
     return bare ? row : <li>{row}</li>;
 }

@@ -9,7 +9,6 @@ import traced from "./traced.json";
 
 const W = 720;
 const AXIS = "color-mix(in srgb, currentColor 22%, transparent)";
-const GRID = "color-mix(in srgb, currentColor 8%, transparent)";
 
 function Txt({
     x,
@@ -218,9 +217,7 @@ export function ShareChart() {
     ];
     return (
         <Canvas w={W} h={286} title="Communication share of a decode step at TP4, TP8 and TP16">
-            {[0.25, 0.5, 0.75].map((g) => (
-                <line key={g} x1={b.x0} x2={b.x1} y1={py(b, g)} y2={py(b, g)} stroke={GRID} />
-            ))}
+            {/* No gridlines or y ticks: the curves are traced from rig runs, so only their order and shape show. */}
             <Axes b={b} xlabel="concurrent requests" ylabel="communication share of step" />
             {traced.share_labels.map((l, i) => (
                 <Txt key={l} x={px(b, xs[i])} y={b.y1 + 19} anchor="middle">

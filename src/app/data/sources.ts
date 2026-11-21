@@ -27,9 +27,9 @@ export const SOURCES: Record<string, Source> = {
     astera: {
         key: "astera",
         name: "Astera Labs",
-        role: "Applied AI Intern",
+        role: "Office of the CTO, Applied AI",
         dates: "May 2026–Present",
-        summary: "Applied AI for connectivity infrastructure.",
+        summary: "LLM inference performance on PCIe and Ethernet scale-up: NCCL, vLLM, and the fabric underneath.",
         href: "https://www.asteralabs.com",
     },
     purdue: {

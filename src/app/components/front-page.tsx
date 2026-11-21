@@ -12,8 +12,8 @@ export default function FrontPage() {
             <h1 className="font-serif text-display font-normal">Robert Zhang</h1>
             <div className="cited-prose flex flex-col gap-4 text-body leading-body text-prose [text-wrap:pretty]">
                 <p>
-                    I work on applied AI at <Cited source="astera">Astera Labs</Cited>, where most of my time goes into
-                    making large models run fast on hardware that wasn&apos;t built around them.
+                    I work in the CTO office at <Cited source="astera">Astera Labs</Cited>, where most of my time goes
+                    into making large models run fast on hardware that wasn&apos;t built around them.
                 </p>
                 <p>
                     Before that I was at <Cited source="sandisk">SanDisk</Cited> and{" "}

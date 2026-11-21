@@ -21,8 +21,10 @@ export default function Home() {
                 tabIndex={-1}
                 className="mx-auto flex w-full max-w-column flex-col gap-14 px-6 pt-10 outline-none sm:pt-14"
             >
-                <KoiBanner />
-                <FrontPage />
+                <div className="flex flex-col gap-8">
+                    <KoiBanner />
+                    <FrontPage />
+                </div>
                 <section>
                     <ListHeading
                         action={

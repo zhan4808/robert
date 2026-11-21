@@ -156,7 +156,7 @@ export default function KoiBanner() {
     }, []);
 
     return (
-        <figure className="group/banner flex flex-col gap-2">
+        <figure className="group/banner relative">
             <div
                 ref={wrapRef}
                 className="relative h-[clamp(190px,38vw,250px)] w-full cursor-crosshair"
@@ -178,7 +178,7 @@ export default function KoiBanner() {
             {/* The one hint, and only while the cursor is over the water. */}
             <figcaption
                 aria-hidden
-                className="text-right text-small text-muted opacity-0 transition-opacity duration-300 group-hover/banner:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                className="pointer-events-none absolute right-0 top-full mt-1.5 text-small text-muted opacity-0 transition-opacity duration-300 group-hover/banner:opacity-100 [@media(pointer:coarse)]:opacity-100"
             >
                 {stats.pellets > 0 ? "the koi have noticed" : "click the water to feed the koi"}
             </figcaption>

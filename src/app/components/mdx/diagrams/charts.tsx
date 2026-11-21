@@ -286,3 +286,224 @@ export function ForcedChart() {
         </Canvas>
     );
 }
+
+/*
+ * Part 3's trend figures. These are not traced from measurements: they draw the measured ordering (which layout is
+ * ahead, where one overtakes another, where one flattens) with smooth curves on unlabeled axes, so the shape reads
+ * and no value does.
+ *
+ * The rules they encode, all stated in the post:
+ * - One 8-GPU box flattens once its KV cache is full.
+ * - Two independent TP8 replicas are each a box at half the load, so their curve is the one box's, shifted right
+ *   by a factor of two in concurrency and doubled. They never cross the network, so it's the same on both fabrics.
+ * - Over Ethernet, TP16 trails one box until that box runs out of KV cache, then passes it; tuning NCCL lifts it a
+ *   lot at high load and not at all at low load; it stays below two replicas everywhere.
+ * - Over the PCIe fabric, TP16 pulls ahead of one box from medium concurrency. TP16 against two replicas wasn't
+ *   measured on that rack, so that pairing isn't drawn there.
+ */
+
+// Concurrency runs from 1 to 512 requests; the x axis is its log, the curves are functions of the real value.
+const conc = (x: number) => 2 ** (9 * x);
+/** Throughput that grows with load and flattens at a layout's KV-cache cap: cap · (1 − e^(−c/c0)). */
+const flattening = (c: number, cap: number, c0: number) => cap * (1 - Math.exp(-c / c0));
+const oneBoxAt = (c: number) => flattening(c, 0.42, 40);
+const oneBox = (x: number) => oneBoxAt(conc(x));
+/** Two replicas each serve half the requests: 2 · T(c / 2). Same slope as one box at low load, twice the cap. */
+const twoReplicas = (x: number) => 2 * oneBoxAt(conc(x) / 2);
+/** TP16 over Ethernet: a lower slope (every step pays the crossing), but twice the KV pool, so a higher, later cap. */
+const tp16Ethernet = (x: number) => flattening(conc(x), 0.6, 110);
+/** Tuning NCCL helps only where messages are large, i.e. at high load. */
+const tp16EthernetTuned = (x: number) => tp16Ethernet(x) + 0.16 * (1 - Math.exp(-conc(x) / 300)) ** 2;
+/** TP16 over the PCIe fabric: the crossing is cheap, so it keeps one box's slope and adds the bigger pool. */
+const tp16Pcie = (x: number) => flattening(conc(x), 0.8, 76);
+const Y_TOP = 0.95;
+
+const sample = (f: (x: number) => number) =>
+    Array.from({ length: 91 }, (_, i) => [i / 90, Math.max(0, f(i / 90)) / Y_TOP]);
+
+function RegionBand({ b, from, to, tone, label }: { b: Box; from: number; to: number; tone: Tone; label: string }) {
+    return (
+        <g>
+            <rect x={px(b, from)} y={b.y0} width={px(b, to) - px(b, from)} height={b.y1 - b.y0} fill={wash(tone, 7)} />
+            <Txt x={px(b, from) + 8} y={b.y0 + 16} tone={tone} weight={600}>
+                {label}
+            </Txt>
+        </g>
+    );
+}
+
+function LineLabel({
+    b,
+    x,
+    y,
+    tone,
+    children,
+}: {
+    b: Box;
+    x: number;
+    y: number;
+    tone: Tone | "ink";
+    children: ReactNode;
+}) {
+    return (
+        <text x={px(b, x)} y={py(b, y / Y_TOP)} fontSize={12.5} fill={TONE[tone]} fontWeight={600} textAnchor="end">
+            {children}
+        </text>
+    );
+}
+
+/** Part 3: throughput against concurrency for each layout, one panel per fabric, with the winner shaded. */
+export function ScaleUpTrends() {
+    const eth: Box = { x0: 44, x1: 344, y0: 40, y1: 250 };
+    const pcie: Box = { x0: 404, x1: 704, y0: 40, y1: 250 };
+    const ticks = { low: 2 / 9, medium: 5 / 9, high: 0.96 } as const;
+    const panel = (b: Box, title: string) => (
+        <g>
+            <Txt x={b.x0} y={24} tone="ink" size={12} weight={600}>
+                {title}
+            </Txt>
+            <line x1={b.x0} y1={b.y1} x2={b.x1} y2={b.y1} stroke={AXIS} />
+            <line x1={b.x0} y1={b.y0} x2={b.x0} y2={b.y1} stroke={AXIS} />
+            {Object.entries(ticks).map(([lab, f]) => (
+                <Txt key={lab} x={px(b, f)} y={b.y1 + 18} anchor="middle">
+                    {lab}
+                </Txt>
+            ))}
+            <Txt x={(b.x0 + b.x1) / 2} y={b.y1 + 38} anchor="middle">
+                concurrent requests (log)
+            </Txt>
+        </g>
+    );
+    return (
+        <Canvas
+            w={W}
+            h={300}
+            title="Throughput against concurrency for each layout over Ethernet and over a PCIe fabric"
+        >
+            <Txt x={30} y={145} anchor="middle" rotate>
+                throughput →
+            </Txt>
+            <RegionBand b={eth} from={0} to={1} tone="green" label="two replicas win throughout" />
+            <RegionBand b={pcie} from={0} to={0.47} tone="blue" label="one box is enough" />
+            <RegionBand b={pcie} from={0.47} to={1} tone="orange" label="TP16 pulls ahead" />
+            {panel(eth, "RoCE Ethernet")}
+            {panel(pcie, "PCIe switch fabric")}
+
+            <Series b={eth} pts={sample(twoReplicas)} tone="green" />
+            <Series b={eth} pts={sample(oneBox)} tone="blue" />
+            <Series b={eth} pts={sample(tp16Ethernet)} tone="orange" dashed />
+            <Series b={eth} pts={sample(tp16EthernetTuned)} tone="orange" />
+            <LineLabel b={eth} x={0.99} y={twoReplicas(1) + 0.04} tone="green">
+                2 × TP8
+            </LineLabel>
+            <LineLabel b={eth} x={0.99} y={tp16EthernetTuned(1) + 0.035} tone="orange">
+                TP16, tuned NCCL
+            </LineLabel>
+            <LineLabel b={eth} x={0.99} y={tp16Ethernet(1) - 0.115} tone="orange">
+                TP16, stock
+            </LineLabel>
+            <LineLabel b={eth} x={0.99} y={oneBox(1) - 0.05} tone="blue">
+                one box (TP8)
+            </LineLabel>
+
+            <Series b={pcie} pts={sample(oneBox)} tone="blue" />
+            <Series b={pcie} pts={sample(tp16Pcie)} tone="orange" />
+            <LineLabel b={pcie} x={0.99} y={tp16Pcie(1) - 0.06} tone="orange">
+                TP16 across both boxes
+            </LineLabel>
+            <LineLabel b={pcie} x={0.99} y={oneBox(1) - 0.05} tone="blue">
+                one box (TP8)
+            </LineLabel>
+        </Canvas>
+    );
+}
+
+/** Part 3: which layout to run, by fabric and load, as one map. */
+export function LayoutMap() {
+    const cols = ["low concurrency", "medium", "high concurrency"];
+    const rows: { label: string; sub: string; cells: [string, Tone][] }[] = [
+        {
+            label: "RoCE Ethernet",
+            sub: "16 GPUs, two boxes",
+            cells: [
+                ["2 × TP8 replicas", "green"],
+                ["2 × TP8 replicas", "green"],
+                ["2 × TP8 replicas", "green"],
+            ],
+        },
+        {
+            label: "PCIe switch fabric",
+            sub: "16 GPUs, two boxes",
+            cells: [
+                ["one box, TP8", "blue"],
+                ["TP16", "orange"],
+                ["TP16", "orange"],
+            ],
+        },
+        {
+            label: "Long-context MLA",
+            sub: "KV-bound, either fabric",
+            cells: [
+                ["PP2 × TP8", "purple"],
+                ["PP2 × TP8", "purple"],
+                ["PP2 × TP8", "purple"],
+            ],
+        },
+    ];
+    const x0 = 170;
+    const cw = (W - x0 - 10) / 3;
+    const rh = 58;
+    const y0 = 34;
+    return (
+        <Canvas w={W} h={y0 + rh * rows.length + 8} title="Which layout to run by fabric and load">
+            {cols.map((c, i) => (
+                <Txt key={c} x={x0 + cw * i + cw / 2} y={20} anchor="middle">
+                    {c}
+                </Txt>
+            ))}
+            {rows.map((row, r) => {
+                const y = y0 + r * rh;
+                return (
+                    <g key={row.label}>
+                        <Txt x={10} y={y + 25} tone="ink" size={12} weight={600}>
+                            {row.label}
+                        </Txt>
+                        <Txt x={10} y={y + 42} size={10.5}>
+                            {row.sub}
+                        </Txt>
+                        {row.cells.map(([text, tone], c) => {
+                            // Merge runs of the same answer into one cell, so the map reads as regions.
+                            if (c > 0 && row.cells[c - 1][0] === text) return null;
+                            let span = 1;
+                            while (c + span < 3 && row.cells[c + span][0] === text) span++;
+                            const x = x0 + cw * c + 3;
+                            return (
+                                <g key={c}>
+                                    <rect
+                                        x={x}
+                                        y={y + 4}
+                                        width={cw * span - 6}
+                                        height={rh - 10}
+                                        rx={7}
+                                        fill={wash(tone, 16)}
+                                        stroke={wash(tone, 45)}
+                                    />
+                                    <Txt
+                                        x={x + (cw * span - 6) / 2}
+                                        y={y + rh / 2 + 4}
+                                        anchor="middle"
+                                        tone="ink"
+                                        size={12.5}
+                                        weight={500}
+                                    >
+                                        {text}
+                                    </Txt>
+                                </g>
+                            );
+                        })}
+                    </g>
+                );
+            })}
+        </Canvas>
+    );
+}

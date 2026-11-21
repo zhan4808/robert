@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { MUTED } from "../styles";
-import { BreakdownChart, ForcedChart, LatencyChart, ShareChart } from "./charts";
+import { BreakdownChart, ForcedChart, LatencyChart, LayoutMap, ScaleUpTrends, ShareChart } from "./charts";
 import * as sketches from "./sketches";
 
 /** Every drawing a write-up can name, by the id it is written with: `<Diagram name="ring-allreduce" />`. */
@@ -24,6 +24,8 @@ const DIAGRAMS: Record<string, ComponentType> = {
     "chart-latency": LatencyChart,
     "chart-share": ShareChart,
     "chart-forced": ForcedChart,
+    "scale-up-trends": ScaleUpTrends,
+    "layout-map": LayoutMap,
 };
 
 /**

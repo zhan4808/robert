@@ -40,6 +40,8 @@ interface Palette {
     hi: Rgb[];
     /** Glyph brightness relative to the tile under it. */
     ink: number;
+    /** How strongly wakes and ripples are drawn; dark glyphs on paper need more than light ones on a dark page. */
+    waterAlpha: number;
 }
 
 const DARK: Palette = {
@@ -65,6 +67,7 @@ const DARK: Palette = {
         [255, 178, 96],
     ],
     ink: 0.42,
+    waterAlpha: 1,
 };
 
 // Paper page: tiles are pale washes of the skin colour with dark glyphs etched on top.
@@ -75,7 +78,7 @@ const LIGHT: Palette = {
     black: [36, 33, 40],
     fin: [138, 132, 126],
     eye: [24, 22, 26],
-    water: [38, 37, 35],
+    water: [28, 62, 76],
     shadow: [60, 58, 56],
     shadowAlpha: 0.2,
     pellet: [176, 108, 40],
@@ -91,6 +94,7 @@ const LIGHT: Palette = {
         [248, 176, 116],
     ],
     ink: 0.45,
+    waterAlpha: 2,
 };
 
 // Dense glyphs etched into each skin tile, sparse where it catches the light.
@@ -653,7 +657,12 @@ export class KoiRenderer {
         for (let i = 0; i < energy.length; i++) {
             const e = energy[i];
             if (e < 0.22 || cellGlyph[i] || cellShadow[i]) continue;
-            this.glyphAt(i, e > 0.5 ? "-" : ".", palette.water, Math.min(1, (e - 0.22) * 1.4) * 0.35);
+            this.glyphAt(
+                i,
+                e > 0.5 ? "-" : ".",
+                palette.water,
+                Math.min(1, (e - 0.22) * 1.4) * 0.35 * palette.waterAlpha
+            );
         }
     }
 
@@ -672,7 +681,7 @@ export class KoiRenderer {
                 const c1 = Math.min(cols - 1, Math.floor((rp.x + radius + cw) / cw));
                 const r0 = Math.max(0, Math.floor((rp.y - radius - ch) / ch));
                 const r1 = Math.min(rows - 1, Math.floor((rp.y + radius + ch) / ch));
-                const alpha = fade * (ring === 0 ? 0.55 : 0.3);
+                const alpha = Math.min(1, fade * (ring === 0 ? 0.55 : 0.3) * palette.waterAlpha);
                 for (let r = r0; r <= r1; r++) {
                     for (let c = c0; c <= c1; c++) {
                         const i = r * cols + c;

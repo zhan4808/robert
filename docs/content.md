@@ -45,6 +45,7 @@ Projects are listed in `order`; the strip groups them by `year`, newest first, a
 ```yaml
 ---
 title: july
+shortTitle: july # optional, about 40 characters: the name in a series' part list on the index; the full title heads the post
 subtitle: finding excitement in the everyday
 date: July 31, 2025
 updated: "2026-03-04" # ISO date of the last revision; shown as "updated March 4, 2026" beside the date
@@ -53,7 +54,7 @@ order: 5 # where it sits among the posts; lower first
 hidden: false # true: no page in production (still renders in next dev for drafting), left out of every list, the feed and the sitemap
 kind: journal # or technical; shown as "life" or "research", with a coloured dot, in the lists and on the page
 series: LLM inference without NVLink # posts that belong together share a name
-part: 1 # this post's place in the series; shown as 1/4 in the lists
+part: 1 # this post's place in the series; the index shows a series as one row with its parts listed under it
 coverImage: /oai2.webp
 coverGradient: from-orange-300 via-pink-300 to-blue-300 # Tailwind gradient stops
 tracks: # what was playing
@@ -66,7 +67,10 @@ tracks: # what was playing
 ```
 
 `title`, `subtitle`, `date`, `year`, and `order` are required. The blog index groups posts by `year`, newest year
-first, and keeps `order` within a year; previous and next step through visible posts in `order`.
+first, and keeps `order` within a year; previous and next step through visible posts in `order`. Dates in the index
+show the month only ("Nov"); a project dated by year alone shows the year and sorts after the month-dated entries of
+that year. A series is one row: the series name, dated by its newest part, with each part's `shortTitle` (or `title`)
+on a line underneath.
 
 ## The body
 

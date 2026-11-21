@@ -1,6 +1,4 @@
 import Image from "next/image";
-import Cursor from "../components/cursor";
-import MobileNav from "../components/mobile-nav";
 import TopNav from "../components/top-nav";
 import { imageMeta } from "../../lib/images";
 import { CONTENT_IMAGE_SIZES } from "../../lib/image-sizes";
@@ -14,21 +12,17 @@ const UNDERLINE =
 export default function Archive() {
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
-            <MobileNav />
             <TopNav />
             <main
                 id="main"
                 tabIndex={-1}
-                className="mx-auto flex w-full max-w-column flex-col gap-14 px-6 pb-40 pt-28 outline-none lg:gap-20 lg:pt-40"
+                className="mx-auto flex w-full max-w-column flex-col gap-14 px-6 pb-24 pt-14 outline-none sm:pt-20"
             >
-                <header className="flex flex-col gap-4 font-geistMono">
-                    <h1 className="sr-only">Archive</h1>
-                    <p className="text-small lowercase leading-relaxed tracking-tagline opacity-60">
-                        every version of this site.
-                        <Cursor />
-                    </p>
+                <header className="flex flex-col gap-4">
+                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title">Archive</h1>
+                    <p className="-mt-2 font-serif text-[19px] italic text-muted">every version of this site.</p>
                     <p className={`max-w-[32rem] font-geistSans text-body leading-compact [text-wrap:pretty] ${MUTED}`}>
-                        Five designs since 2023. Each one was checked out from its commit, run again, and photographed
+                        Six designs since 2023. Each one was checked out from its commit, run again, and photographed
                         at 1440 and 375 wide.
                     </p>
                 </header>

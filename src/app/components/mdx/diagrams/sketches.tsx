@@ -306,9 +306,18 @@ export function Protocols() {
         s.text(x0, y - 8, desc, { size: 11, tone: "muted" });
         const flag = (x: number, w: number) => s.rect(x, y, w, 32, { tone: "orange", fill: wash("orange", 35), rough: 0.5, width: 1.2 });
         const data = (x: number, w: number) => s.rect(x, y, w, 32, { tone: t, fill: wash(t, 45), rough: 0.5, width: 1.2 });
-        if (name === "LL") for (let k = 0; k < 8; k++) (data(x0 + k * 16 * sc, 8 * sc - 2), flag(x0 + (k * 16 + 8) * sc, 8 * sc - 2));
-        else if (name === "LL128") (data(x0, 120 * sc - 2), flag(x0 + 120 * sc, 8 * sc - 2));
-        else (data(x0, 128 * sc - 2), flag(x0 + 128 * sc + 12, 22));
+        if (name === "LL") {
+            for (let k = 0; k < 8; k++) {
+                data(x0 + k * 16 * sc, 8 * sc - 2);
+                flag(x0 + (k * 16 + 8) * sc, 8 * sc - 2);
+            }
+        } else if (name === "LL128") {
+            data(x0, 120 * sc - 2);
+            flag(x0 + 120 * sc, 8 * sc - 2);
+        } else {
+            data(x0, 128 * sc - 2);
+            flag(x0 + 128 * sc + 12, 22);
+        }
         s.text(x0 + 128 * sc, y - 8, eff, { anchor: "end", size: 12, weight: 600 });
     });
     s.text(x0, 276, "← one 128-byte window on the wire →", { size: 11, tone: "muted", mono: true });

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import AudioPlayer from "../../components/audio-player";
 import { TableOfContents } from "../../components/mdx/toc";
@@ -10,7 +9,8 @@ import { renderMdx } from "../../../lib/mdx";
 import { pageMetadata } from "../../../lib/metadata";
 import { readingMinutes } from "../../../lib/reading-time";
 import { formatIsoDate, parseContentDate } from "../../../lib/site";
-import PostPage, { PostPager, type Band, type PagerPost } from "./post-page";
+import PostPage, { PostCoverBand, PostPager, type Band, type PagerPost } from "./post-page";
+import { KindTag } from "../../components/entries";
 
 const MUTED = "text-muted";
 const HAIRLINE = "border-hairline";
@@ -75,27 +75,31 @@ export default async function Page({ params }: Props) {
     const { content, headings } = await renderMdx(doc.body, `content/blog/${slug}.mdx`);
 
     return (
-        <PostPage band={bandOf(post)}>
+        <PostPage>
             <header>
-                <Link
-                    href="/blog"
-                    className={`text-small ${MUTED} focus-ring transition-colors hover:text-foreground focus-visible:text-foreground`}
-                >
-                    ← Blog
-                </Link>
-                <h1 className="mt-10 text-title font-medium">{post.title}</h1>
-                <p className={`mt-1 text-body ${MUTED}`}>{post.subtitle}</p>
-                <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 font-geistMono text-caption ${MUTED}`}>
-                    <span>{post.date}</span>
-                    {post.updated && <span>updated {formatIsoDate(post.updated)}</span>}
-                    <span>{readingMinutes(doc.body)} min read</span>
-                    <span>{post.kind}</span>
+                <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">{post.title}</h1>
+                <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
+                    {post.subtitle}
                 </p>
+                <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 whitespace-pre-wrap border-b border-hairline pb-5 font-geistMono text-caption tabular-nums text-muted">
+                    <span>
+                        {[
+                            post.date,
+                            post.updated && `updated ${formatIsoDate(post.updated)}`,
+                            `${readingMinutes(doc.body)} min`,
+                            post.series && post.part && `part ${post.part} of ${post.series}`,
+                        ]
+                            .filter(Boolean)
+                            .join("  ·  ")}
+                    </span>
+                    <KindTag kind={post.kind} className="ml-auto" />
+                </p>
+                {bandOf(post) && <PostCoverBand band={bandOf(post)!} />}
             </header>
 
             {post.tracks.length > 0 && <Listening tracks={post.tracks} />}
 
-            <div className="mt-16">
+            <div className="mt-10">
                 <TableOfContents headings={headings} />
                 <div className="flex flex-col gap-5">{content}</div>
             </div>
@@ -103,7 +107,7 @@ export default async function Page({ params }: Props) {
             {(newer || older) && (
                 <nav
                     aria-label="More posts"
-                    className={`mt-24 flex items-start justify-between gap-6 border-t ${HAIRLINE} pt-6`}
+                    className={`mt-20 flex items-start justify-between gap-6 border-t ${HAIRLINE} pt-6`}
                 >
                     {older ? <PostPager post={pagerPost(older)} direction="back" /> : <span />}
                     {newer && <PostPager post={pagerPost(newer)} direction="forward" />}

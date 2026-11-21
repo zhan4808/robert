@@ -6,55 +6,56 @@ import { useTheme } from "next-themes";
 import ThemeIcon from "./theme-icon";
 
 const LINKS = [
-    { label: "pond", href: "/" },
-    { label: "projects", href: "/projects" },
-    { label: "gallery", href: "/gallery" },
+    { label: "home", href: "/" },
     { label: "blog", href: "/blog" },
+    { label: "projects", href: "/projects" },
+    { label: "photos", href: "/gallery" },
 ];
 
-const ITEM = "transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 focus-ring";
-
-type TopNavProps = {
-    /** The nav is sitting over a dark cover image, so it uses light text whatever the theme. */
-    overCover?: boolean;
-};
-
-export default function TopNav({ overCover = false }: TopNavProps) {
+/**
+ * The site's one row of navigation, at the top of the reading column on every page. The current section is in ink
+ * with a small koi-coloured mark under it; the rest sit back in the muted colour until hovered.
+ */
+export default function TopNav() {
     const pathname = usePathname();
     const { resolvedTheme, setTheme } = useTheme();
-    // A project's own page still counts as being in projects.
+    // A post or project page still counts as being in its section.
     const active = (href: string) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
 
     return (
-        <nav
-            data-koi-avoid
-            aria-label="Main"
-            // Named for view transitions, so the nav stays in place instead of fading out with the rest of the page.
-            className={`fixed inset-x-0 top-0 z-30 flex max-lg:hidden items-center justify-center gap-8 pt-8 font-geistMono text-meta lowercase transition-colors duration-200 [view-transition-name:site-nav] ${
-                overCover ? "text-dark-foreground" : "text-foreground"
-            }`}
-        >
-            {LINKS.map(({ label, href }) => (
-                <Link
-                    key={href}
-                    href={href}
-                    aria-current={active(href) ? "page" : undefined}
-                    className={`${ITEM} ${active(href) ? "opacity-100" : "opacity-50"}`}
-                >
-                    {label}
-                </Link>
-            ))}
-            {/* A margin of dead space around the toggle, so a near miss doesn't drop food in the pond behind it. */}
-            <span data-koi-ignore className="-m-4 flex p-4">
+        <header className="mx-auto w-full max-w-column px-6 pt-8 sm:pt-12">
+            <nav aria-label="Main" className="flex items-center gap-5 text-small">
+                {LINKS.map(({ label, href }) => {
+                    const on = active(href);
+                    return (
+                        <Link
+                            key={href}
+                            href={href}
+                            aria-current={on ? "page" : undefined}
+                            className={`relative focus-ring transition-colors duration-150 ${
+                                on ? "text-foreground" : "text-muted hover:text-foreground"
+                            }`}
+                        >
+                            {label}
+                            {on && (
+                                <span
+                                    aria-hidden
+                                    className="absolute -bottom-1.5 left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full bg-koi"
+                                />
+                            )}
+                        </Link>
+                    );
+                })}
                 <button
                     type="button"
-                    onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                     aria-label="Toggle theme"
-                    className={`${ITEM} opacity-50`}
+                    data-koi-ignore
+                    className="ml-auto -m-2 p-2 text-muted transition-colors duration-150 hover:text-foreground focus-ring"
                 >
                     <ThemeIcon size={15} />
                 </button>
-            </span>
-        </nav>
+            </nav>
+        </header>
     );
 }

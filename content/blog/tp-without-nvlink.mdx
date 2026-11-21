@@ -1,10 +1,12 @@
 ---
 title: "Tensor Parallelism Without NVLink: Where the All-Reduce Time Actually Goes"
 subtitle: "at decode sizes you pay for latency, not bandwidth"
-date: November 2026
+date: November 15, 2026
 year: 2026
 order: -4
 kind: technical
+series: LLM inference without NVLink
+part: 1
 ---
 
 The cheapest way to serve a large model is starting to look like a box of workstation GPUs. A card in the RTX Pro 6000 class has plenty of memory and compute for its price. What it doesn't have is NVLink. The GPUs talk over PCIe, and once a model spans more than one box, over Ethernet.

@@ -1,10 +1,12 @@
 ---
 title: "PCIe vs Ethernet Scale-Up for Inference: When Each One Wins"
 subtitle: "same GPUs, two ways to join them, different best layouts"
-date: November 2026
+date: November 15, 2026
 year: 2026
 order: -2
 kind: technical
+series: LLM inference without NVLink
+part: 3
 ---
 
 Parts [1](/blog/tp-without-nvlink) and [2](/blog/nccl-defaults-off-nvlink) were about what a single all-reduce costs when GPUs have no NVLink. This part zooms out to the decision people actually make. You have 16 GPUs in two boxes. Do you join the boxes with RoCE Ethernet or with a PCIe switch fabric, and how do you lay the model out on top?

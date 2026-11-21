@@ -57,8 +57,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     skip to content
                 </a>
                 <JsonLd />
-                {/* Follows the system until the toggle picks a theme, which is then kept. */}
-                <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="theme">
+                {/* Paper by default; the toggle's choice is kept. */}
+                <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="theme">
                     {children}
                 </ThemeProvider>
             </body>

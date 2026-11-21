@@ -12,14 +12,16 @@ export default {
     theme: {
         extend: {
             colors: {
-                "light-foreground": "#262523",
-                "light-background": "#f5f4f1",
-                "dark-foreground": "#fff7f0",
-                "dark-background": "#1a1917",
+                "light-foreground": "#25221d",
+                "light-background": "#f6f3ec",
+                "dark-foreground": "#f3eee6",
+                "dark-background": "#171614",
                 background: "var(--background-color)",
                 foreground: "var(--foreground-color)",
                 // Secondary text: dates, captions, labels, descriptions. Set per theme in the plugin below.
                 muted: "var(--muted-color)",
+                // The koi's red-orange: link hovers, active marks, the one warm note on the page.
+                koi: "var(--koi-color)",
                 // Running prose, a step quieter than the foreground so headings and emphasis stand out from it.
                 prose: ink(72),
                 // Underlines at rest, before hover firms them up.
@@ -39,7 +41,8 @@ export default {
                 body: "16px", // prose and the page intro
                 lede: "17px", // the phone project list's text
                 heading: "21px", // the phone project list's titles
-                title: ["28px", { lineHeight: "1.2", letterSpacing: "-0.015em" }], // the page title of a write-up
+                title: ["34px", { lineHeight: "1.15", letterSpacing: "-0.01em" }], // page titles, set in the serif
+                display: ["40px", { lineHeight: "1.1", letterSpacing: "-0.015em" }], // the name on the home page
             },
             lineHeight: {
                 body: "1.7", // prose
@@ -54,7 +57,7 @@ export default {
                 panel: "8px", // floating cards
             },
             maxWidth: {
-                column: "56rem", // the reading column of the write-ups and the blog list
+                column: "42rem", // the reading column: every page sits in it
             },
             spacing: {
                 gutter: "20vw", // the desktop page gutter
@@ -64,15 +67,21 @@ export default {
                     "0%, 49%": { opacity: "1" },
                     "50%, 100%": { opacity: "0" },
                 },
+                "page-in": {
+                    from: { opacity: "0", transform: "translateY(6px)" },
+                    to: { opacity: "1", transform: "none" },
+                },
             },
             animation: {
                 blink: "blink 1.1s step-end infinite",
+                "page-in": "page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both",
             },
             fontFamily: {
                 inter: "var(--font-inter)",
                 playfairDisplay: "var(--font-playfair-display)",
                 geistMono: "var(--font-geist-mono)",
                 geistSans: "var(--font-geist-sans)",
+                serif: "var(--font-newsreader)",
             },
         },
     },
@@ -83,12 +92,14 @@ export default {
                 ":root": {
                     "--background-color": theme("colors.light-background"),
                     "--foreground-color": theme("colors.light-foreground"),
-                    "--muted-color": ink(64),
+                    "--muted-color": ink(62),
+                    "--koi-color": "#c4512a",
                 },
                 ".dark": {
                     "--background-color": theme("colors.dark-background"),
                     "--foreground-color": theme("colors.dark-foreground"),
-                    "--muted-color": ink(50),
+                    "--muted-color": ink(52),
+                    "--koi-color": "#ec8457",
                 },
             });
         }),

@@ -76,6 +76,9 @@ export const postFrontmatterSchema = z
         hidden: z.boolean().optional(),
         /** A journal entry (the default) or a technical write-up; shown as a small label beside the date. */
         kind: z.enum(["journal", "technical"]).default("journal"),
+        /** Posts that belong together share a series name; `part` is this post's place in it. */
+        series: nonEmpty.optional(),
+        part: z.number().int().positive().optional(),
         coverImage: nonEmpty.optional(),
         /** Tailwind gradient stops, e.g. "from-orange-300 via-pink-300 to-blue-300". */
         coverGradient: nonEmpty.optional(),

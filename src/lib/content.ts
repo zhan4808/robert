@@ -2,6 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { parseContentDate } from "./site";
 import { z } from "zod";
 import { postFrontmatterSchema, projectFrontmatterSchema, type JournalPost, type Project } from "./content-schema";
 
@@ -62,10 +63,15 @@ export const getPosts = (): JournalPost[] => postDocuments().map((doc) => doc.me
 export const getPost = (slug: string): Document<JournalPost> | undefined =>
     postDocuments().find((doc) => doc.meta.slug === slug);
 
-/** The posts that show in the list, the feed, and the sitemap. */
-export const getVisiblePosts = (): JournalPost[] => getPosts().filter((post) => !post.hidden);
+const postTime = (post: JournalPost) => parseContentDate(post.date)?.getTime() ?? Date.UTC(post.year, 0, 1);
 
-/** Visible posts grouped by year, newest year first; within a year they keep their `order`. */
+/** The posts that show in the list, the feed, and the sitemap: newest first, `order` settling posts on one date. */
+export const getVisiblePosts = (): JournalPost[] =>
+    getPosts()
+        .filter((post) => !post.hidden)
+        .sort((a, b) => postTime(b) - postTime(a) || a.order - b.order);
+
+/** Visible posts grouped by year, newest year first, newest first within a year. */
 export function getVisiblePostsByYear(): Map<number, JournalPost[]> {
     const byYear = new Map<number, JournalPost[]>();
     for (const post of getVisiblePosts()) {

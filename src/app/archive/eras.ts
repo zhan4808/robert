@@ -31,8 +31,17 @@ export const shots = (era: Era) => ({
 /** Newest first. */
 export const ERAS: Era[] = [
     {
+        id: "v6",
+        span: "nov 2026 – now",
+        description:
+            "A reading column on warm paper: a serif for titles, the koi pond cut down to a banner with a shoreline of scattered tiles, photos that surface from the same tiles through a ripple, and hand-drawn diagrams drawn into the page.",
+        stack: "next 16 · react 19 · tailwind 3 · newsreader · geist · rough.js · mdx",
+        inner: "a write-up",
+    },
+    {
         id: "v5",
-        span: "oct 2026 – now",
+        span: "oct 2026 – nov 2026",
+        commit: { sha: "c5ddfef412c881b8915c2e98ed54172271dbe66a", date: "2026-11-15" },
         description:
             "The pixel koi pond, after Dao Ho's portfolio: a lowercase mono nav, a pond you can feed, a strip of projects, a gallery, and MDX write-ups with a contents rail.",
         stack: "next 16 · react 19 · tailwind 3 · motion · mdx · shiki",

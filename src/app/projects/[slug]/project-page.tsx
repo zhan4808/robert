@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
-import MobileNav from "../../components/mobile-nav";
+import SiteFooter from "../../components/site-footer";
 import TopNav from "../../components/top-nav";
 import InlineLink from "../../components/inline-link";
 import { TableOfContents } from "../../components/mdx/toc";
@@ -51,7 +51,6 @@ export default function ProjectPage({
     minutes: number;
     children: ReactNode;
 }) {
-    const router = useRouter();
     const { slug } = project;
     const still = useReducedMotion() ?? false;
 
@@ -76,7 +75,6 @@ export default function ProjectPage({
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
-            <MobileNav />
             <TopNav />
             <motion.main
                 // The view transition already brings the page in when it comes from the strip.
@@ -85,25 +83,14 @@ export default function ProjectPage({
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 id="main"
                 tabIndex={-1}
-                className={`${FRAME} px-6 pb-40 pt-28 font-geistSans outline-none lg:box-content lg:pt-40`}
+                className={`${FRAME} px-6 pt-14 font-geistSans outline-none sm:pt-20`}
             >
                 <header>
-                    <Link
-                        href="/projects"
-                        onClick={(e) => {
-                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                            e.preventDefault();
-                            // The reverse of opening a project: this page slides off to the right, uncovering the strip.
-                            pushWithTransition(router, "/projects", "back");
-                        }}
-                        className={`text-small ${MUTED} focus-ring transition-colors hover:text-foreground focus-visible:text-foreground`}
-                    >
-                        ← Projects
-                    </Link>
-                    <h1 className="mt-10 text-title font-medium">{project.title}</h1>
-                    <p className={`mt-1 text-body ${MUTED}`}>{project.description}</p>
-                    <p className={`${BODY} mt-8`}>{project.longDescription}</p>
-                    <p className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 text-small ${MUTED}`}>
+                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">{project.title}</h1>
+                    <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
+                        {project.description}
+                    </p>
+                    <p className={`mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hairline pb-5 text-small ${MUTED}`}>
                         <span className="font-geistMono text-caption">{project.date}</span>
                         {project.updated && (
                             <span className="font-geistMono text-caption">
@@ -120,10 +107,11 @@ export default function ProjectPage({
                             <InlineLink href={link}>{linkLabel(link)}</InlineLink>
                         )}
                     </p>
+                    <p className={`${BODY} mt-6 text-prose`}>{project.longDescription}</p>
                 </header>
 
                 {hero && (
-                    <div className="mt-16">
+                    <div className="mt-10">
                         {hero.type === "video" ? (
                             // Muted autoplay loops like a gif; with reduced motion it waits for the viewer to press play.
                             <video
@@ -147,7 +135,7 @@ export default function ProjectPage({
                                 placeholder={heroMeta ? "blur" : "empty"}
                                 blurDataURL={heroMeta?.blurDataURL}
                                 preload
-                                sizes="(min-width: 1024px) 56rem, 100vw"
+                                sizes="(min-width: 768px) 42rem, 100vw"
                                 quality={IMAGE_QUALITY}
                                 unoptimized={hero.src.endsWith(".gif")}
                                 className={`${MEDIA} object-cover`}
@@ -156,7 +144,7 @@ export default function ProjectPage({
                     </div>
                 )}
 
-                <div className="mt-20">
+                <div className="mt-12">
                     <TableOfContents headings={headings} />
                     {children}
                 </div>
@@ -164,13 +152,14 @@ export default function ProjectPage({
                 {pages.length > 1 && (
                     <nav
                         aria-label="More projects"
-                        className="mt-24 flex items-start justify-between gap-6 border-t border-hairline pt-6"
+                        className="mt-20 flex items-start justify-between gap-6 border-t border-hairline pt-6"
                     >
                         <PagerLink project={prev} direction="back" />
                         <PagerLink project={next} direction="forward" />
                     </nav>
                 )}
             </motion.main>
+            <SiteFooter />
         </div>
     );
 }

@@ -114,6 +114,21 @@
         "height": 1624,
         "blurDataURL": "data:image/webp;base64,UklGRjAAAABXRUJQVlA4ICQAAAAwAQCdASoFAAoAAoBCJaQAA3AA/vcWDNa12m7BF76bvAKAAAA="
     },
+    "/archive/v6-home.webp": {
+        "width": 2160,
+        "height": 1350,
+        "blurDataURL": "data:image/webp;base64,UklGRi4AAABXRUJQVlA4ICIAAABwAQCdASoKAAYAAoBCJZwCdAF1AAD+9/8SXLBTfBl0AQAA"
+    },
+    "/archive/v6-inner.webp": {
+        "width": 2160,
+        "height": 1350,
+        "blurDataURL": "data:image/webp;base64,UklGRjQAAABXRUJQVlA4ICgAAABQAQCdASoKAAYAAoBCJZwABDOAAP734FRg1h5mz0Z4nr9PDP2O9wQA"
+    },
+    "/archive/v6-mobile.webp": {
+        "width": 750,
+        "height": 1624,
+        "blurDataURL": "data:image/webp;base64,UklGRjAAAABXRUJQVlA4ICQAAACQAQCdASoFAAoAAoBCJZwAAudFuiAA/vsqzbCnO9WXqkOAAAA="
+    },
     "/atalla/atallaax02arch.webp": {
         "width": 1164,
         "height": 1206,

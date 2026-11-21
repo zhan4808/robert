@@ -1,10 +1,12 @@
 ---
 title: "NCCL's Defaults Are Tuned for NVLink. Off It, They Pick Wrong."
 subtitle: "a three-row rules file fixed the protocol choice across Ethernet"
-date: November 2026
+date: November 15, 2026
 year: 2026
 order: -3
 kind: technical
+series: LLM inference without NVLink
+part: 2
 ---
 
 [Part 1](/blog/tp-without-nvlink) showed that on GPUs without NVLink, most all-reduce time is fixed per-call cost, and that crossing Ethernet adds more of it. This part is about the setting that moved that cost the most: which algorithm and protocol NCCL runs at each message size.

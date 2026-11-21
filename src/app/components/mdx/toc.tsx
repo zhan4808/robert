@@ -26,7 +26,7 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
                         aria-current={heading.id === active ? "location" : undefined}
                         className={`-ml-px block border-l-2 py-1 font-geistMono leading-normal focus-ring transition-colors hover:text-foreground focus-visible:text-foreground ${
                             heading.depth === 3 ? "pl-6 text-label" : "pl-3 text-caption"
-                        } ${heading.id === active ? "border-foreground text-foreground" : `border-transparent ${MUTED}`}`}
+                        } ${heading.id === active ? "border-koi text-foreground" : `border-transparent ${MUTED}`}`}
                     >
                         {heading.text}
                     </a>
@@ -38,15 +38,15 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
         <>
             <nav
                 aria-label="Contents"
-                // Sits in the margin outside the 56rem column, its right edge a step clear of the column's padding, and
+                // Sits in the margin outside the 42rem column, its right edge a step clear of the column's padding, and
                 // only when there is room for it there.
-                className="fixed top-40 hidden w-[10rem] max-h-[calc(100vh-14rem)] overflow-y-auto min-[1280px]:block"
-                style={{ right: "calc(50% + 28rem + 1.5rem)" }}
+                className="fixed top-32 hidden w-[11rem] max-h-[calc(100vh-12rem)] overflow-y-auto min-[1120px]:block"
+                style={{ right: "calc(50% + 21rem + 1.5rem)" }}
             >
                 <p className={`mb-3 font-geistMono text-caption ${MUTED}`}>contents</p>
                 {list}
             </nav>
-            <details className="group mb-10 min-[1280px]:hidden">
+            <details className="group mb-10 min-[1120px]:hidden">
                 <summary
                     className={`w-fit cursor-pointer list-none font-geistMono text-caption focus-ring transition-colors hover:text-foreground focus-visible:text-foreground [&::-webkit-details-marker]:hidden ${MUTED}`}
                 >

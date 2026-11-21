@@ -1,98 +1,54 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import MobileNav from "../../components/mobile-nav";
+import type { ReactNode } from "react";
+import PondImage from "../../components/pond-image";
+import SiteFooter from "../../components/site-footer";
 import TopNav from "../../components/top-nav";
 import { useGlideScroll } from "../../components/use-glide-scroll";
 import { HOVER_CARD, useHoverCard } from "../../components/use-hover-card";
 import type { ImageMeta } from "../../../lib/images";
 import { PostCover, type CoverSource } from "../post-cover";
 
-const FRAME = "mx-auto w-full max-w-column";
 const MUTED = "text-muted";
-/** The cover's height: a band, not a hero, whatever the screen. */
-const BAND_HEIGHT = "clamp(180px, 26vw, 440px)";
-/** How far below the band's top the nav's text ends; past that the nav is back on the page's own colour. */
-const NAV_DEPTH = 72;
 
 /** What the page knows about its cover: a photo (with its manifest entry) or a gradient. */
 export type Band = { image: string; meta?: ImageMeta } | { gradient: string };
 
-/**
- * The shell of a post: the cover band when there is one, the nav (light while it sits over a photo), and the
- * content frame, fading in on arrival. The server page renders everything inside it.
- */
-export default function PostPage({ band, children }: { band?: Band; children: ReactNode }) {
-    const still = useReducedMotion() ?? false;
-    const bandRef = useRef<HTMLDivElement>(null);
-    const photo = band !== undefined && "image" in band;
-    // Over a photo the nav goes light; a gradient is faded enough that the page's own colour still reads on it.
-    const [overCover, setOverCover] = useState(photo);
-
+/** The shell of a post: the nav, the reading column fading in on arrival, and the footer. */
+export default function PostPage({ children }: { children: ReactNode }) {
     useGlideScroll();
-
-    useEffect(() => {
-        if (!photo) return;
-        const onScroll = () => setOverCover(window.scrollY < (bandRef.current?.offsetHeight ?? 0) - NAV_DEPTH);
-        onScroll();
-        window.addEventListener("scroll", onScroll, { passive: true });
-        return () => window.removeEventListener("scroll", onScroll);
-    }, [photo]);
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
-            <MobileNav />
-            <TopNav overCover={overCover} />
-            <motion.div
-                initial={still ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
+            <TopNav />
+            <main
+                id="main"
+                tabIndex={-1}
+                className="mx-auto w-full max-w-column animate-page-in px-6 pt-14 font-geistSans outline-none motion-reduce:animate-none sm:pt-20"
             >
-                {band && (
-                    <div
-                        ref={bandRef}
-                        aria-hidden
-                        className="relative w-full overflow-hidden"
-                        style={{ height: BAND_HEIGHT }}
-                    >
-                        {"image" in band ? (
-                            <Image
-                                src={band.image}
-                                alt=""
-                                fill
-                                preload
-                                placeholder={band.meta ? "blur" : "empty"}
-                                blurDataURL={band.meta?.blurDataURL}
-                                sizes="100vw"
-                                quality={90}
-                                className="object-cover"
-                            />
-                        ) : (
-                            <div className={`absolute inset-0 bg-gradient-to-br opacity-60 ${band.gradient}`} />
-                        )}
-                        {/* A faint shade at the top keeps the nav's light text readable over a bright sky. */}
-                        {"image" in band && (
-                            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-dark-background/45 to-transparent" />
-                        )}
-                        {/* The lower edge dissolves into the page, so the band has no hard bottom line. */}
-                        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-b from-transparent to-background" />
-                    </div>
-                )}
-                <main
-                    id="main"
-                    tabIndex={-1}
-                    className={`${FRAME} px-6 pb-40 font-geistSans outline-none ${
-                        band ? "pt-10 lg:pt-14" : "pt-28 lg:pt-40"
-                    }`}
-                >
-                    {children}
-                </main>
-            </motion.div>
+                {children}
+            </main>
+            <SiteFooter />
         </div>
     );
+}
+
+/** A post's cover under its title: a photo surfacing from the pond, or a soft band of its gradient. */
+export function PostCoverBand({ band }: { band: Band }) {
+    if ("image" in band) {
+        return (
+            <PondImage
+                src={band.image}
+                alt=""
+                ratio={2.2}
+                priority
+                blurDataURL={band.meta?.blurDataURL}
+                className="mt-8"
+            />
+        );
+    }
+    return <div aria-hidden className={`mt-8 h-24 w-full rounded-card bg-gradient-to-br opacity-50 ${band.gradient}`} />;
 }
 
 /** What a pager link needs of its neighbour; a plain object the server page hands across. */

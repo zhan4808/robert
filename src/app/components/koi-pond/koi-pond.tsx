@@ -4,7 +4,7 @@ import { useEffect, useEffectEvent, useRef } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "../../../lib/utils";
 import { KoiRenderer } from "./renderer";
-import { World, type Box } from "./world";
+import { World, type Box, type Stocking } from "./world";
 
 export type PondStats = { koi: number; pellets: number };
 
@@ -36,7 +36,7 @@ function mergeNearby(boxes: Box[]) {
 }
 
 class PondEngine {
-    private world = new World();
+    private world: World;
     private renderer: KoiRenderer;
     private raf = 0;
     private last = 0;
@@ -55,8 +55,10 @@ class PondEngine {
 
     constructor(
         private canvas: HTMLCanvasElement,
-        private onStats: (stats: PondStats) => void
+        private onStats: (stats: PondStats) => void,
+        stocking: Stocking
     ) {
+        this.world = new World(stocking);
         this.renderer = new KoiRenderer(canvas);
         this.resizeObserver.observe(canvas);
         this.intersectionObserver.observe(canvas);
@@ -197,9 +199,9 @@ class PondEngine {
     };
 }
 
-type KoiPondProps = { className?: string; onStats?: (stats: PondStats) => void };
+type KoiPondProps = { className?: string; onStats?: (stats: PondStats) => void; stocking?: Stocking };
 
-export default function KoiPond({ className, onStats }: KoiPondProps) {
+export default function KoiPond({ className, onStats, stocking }: KoiPondProps) {
     const isLight = useTheme().resolvedTheme === "light";
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<PondEngine | null>(null);
@@ -209,12 +211,14 @@ export default function KoiPond({ className, onStats }: KoiPondProps) {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const engine = new PondEngine(canvas, (stats) => emitStats(stats));
+        const engine = new PondEngine(canvas, (stats) => emitStats(stats), stocking ?? {});
         engineRef.current = engine;
         return () => {
             engine.destroy();
             engineRef.current = null;
         };
+        // The pond is stocked once, when it mounts.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Also sets the first theme: it runs right after the engine is created, before any frame is drawn.

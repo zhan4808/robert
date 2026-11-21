@@ -12,7 +12,7 @@ export default function ErrorBody({ error, reset }: { error: Error & { digest?: 
         <main
             id="main"
             tabIndex={-1}
-            className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center font-geistMono outline-none"
+            className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-6 text-center font-geistMono outline-none"
         >
             <p className="text-small lowercase leading-relaxed tracking-tagline opacity-60">
                 something broke.

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image, { type StaticImageData } from "next/image";
-import Cursor from "../components/cursor";
-import MobileNav from "../components/mobile-nav";
+import PondImage from "../components/pond-image";
+import SiteFooter from "../components/site-footer";
 import TopNav from "../components/top-nav";
 import horseback from "../../../public/IMG_1493.webp";
 import seaRanch from "../../../public/IMG_1760.webp";
@@ -29,28 +29,13 @@ const WORKS: Work[] = [
     { title: "New York weekend", src: newYork, year: "2025" },
 ];
 
-/** Works by column on desktop, top to bottom, picked so the columns come out close in height. */
+/** Two columns from sm up, picked so they come out close in height; one stack on phones. */
 const COLUMNS = [
-    [0, 3],
-    [1, 4],
-    [2, 5],
+    [0, 2, 4],
+    [1, 3, 5],
 ];
 /** The order the works read in, and step through in the lightbox. */
-const HANG = COLUMNS.flat();
-const GAP_REM = 1; // matches lg:gap-4 between and within columns
-const MOST = Math.max(...COLUMNS.map((c) => c.length));
-
-/**
- * Sizes a column so every column ends at the same height: width grows with 1/(sum of height/width), and the basis
- * makes up for columns with fewer gaps.
- */
-function columnFlex(works: number[]) {
-    const ratio = works.reduce((sum, i) => sum + WORKS[i].src.height / WORKS[i].src.width, 0);
-    return `${1 / ratio} 1 ${((MOST - works.length) * GAP_REM) / ratio}rem`;
-}
-
-const UNDERLINE =
-    "underline decoration-faint decoration-1 underline-offset-[5px] focus-ring transition-opacity duration-150 hover:decoration-foreground focus-visible:decoration-foreground";
+const HANG = [0, 1, 2, 3, 4, 5];
 
 const details = (work: Work) => [work.place, work.year].filter(Boolean).join(" · ");
 
@@ -59,67 +44,40 @@ export default function Gallery() {
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
-            <MobileNav />
             <TopNav />
-            <main
-                id="main"
-                tabIndex={-1}
-                className="mx-auto flex w-full max-w-[1280px] flex-col gap-14 px-6 pb-24 pt-28 outline-none lg:gap-20 lg:px-[6vw] lg:pt-36"
-            >
-                <header className="flex flex-col gap-6 font-geistMono lg:flex-row lg:items-end lg:justify-between">
-                    <div className="flex flex-col gap-4">
-                        <h1 className="sr-only">Gallery</h1>
-                        <p className="text-small lowercase leading-relaxed tracking-tagline opacity-60">
-                            the spaces between.
-                            <Cursor />
-                        </p>
-                        <p className="max-w-[32rem] font-geistSans text-body leading-compact opacity-80 [text-wrap:pretty]">
-                            Photos from outside the lab.
-                        </p>
-                    </div>
-                    <a
-                        href="https://www.instagram.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`${UNDERLINE} self-start text-small opacity-60 hover:opacity-100 focus-visible:opacity-100 lg:self-end`}
-                    >
-                        instagram
-                    </a>
+            <main id="main" tabIndex={-1} className="mx-auto w-full max-w-column px-6 pt-14 outline-none sm:pt-20">
+                <header className="mb-10">
+                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title">Photos</h1>
+                    <p className="mt-2 font-serif text-[19px] italic text-muted">
+                        the spaces between. Each one surfaces as you reach it.
+                    </p>
                 </header>
 
-                <section aria-label="Works" className="flex flex-col gap-y-16 lg:flex-row lg:items-start lg:gap-4">
+                <section aria-label="Photos" className="grid gap-x-5 gap-y-10 sm:grid-cols-2">
                     {COLUMNS.map((column) => (
-                        // On phones the columns drop away and the works stack in one list.
-                        <div
-                            key={column[0]}
-                            className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-4"
-                            style={{ flex: columnFlex(column) }}
-                        >
+                        <div key={column[0]} className="contents sm:flex sm:flex-col sm:gap-10">
                             {column.map((i) => {
                                 const work = WORKS[i];
                                 return (
-                                    <figure key={work.title} className="group relative min-w-0">
+                                    <figure key={work.title} className="min-w-0">
                                         <button
                                             type="button"
                                             onClick={() => setOpen(i)}
                                             aria-label={`View ${work.title} larger`}
-                                            className="block w-full overflow-hidden rounded-[3px] focus-ring"
+                                            className="block w-full cursor-zoom-in focus-ring"
                                         >
-                                            <Image
+                                            <PondImage
                                                 src={work.src}
                                                 alt={work.title}
-                                                placeholder="blur"
-                                                sizes="(min-width: 1024px) 33vw, 100vw"
-                                                className="h-auto w-full transition-transform duration-500 ease-out group-hover:scale-[1.02]"
-                                                preload={i === HANG[0]}
+                                                ratio={work.src.width / work.src.height}
+                                                sizes="(min-width: 640px) 21rem, 100vw"
+                                                priority={i < 2}
+                                                shore={2}
                                             />
                                         </button>
-                                        {/* Under the work on phones; on desktop it shows over the corner on hover, so the tiles sit flush. */}
-                                        <figcaption className="mt-3 flex items-baseline justify-between gap-3 font-geistMono text-caption lg:pointer-events-none lg:absolute lg:bottom-3 lg:left-3 lg:mt-0 lg:max-w-[calc(100%-1.5rem)] lg:rounded-full lg:bg-[rgb(0_0_0/0.55)] lg:px-3 lg:py-1.5 lg:text-dark-foreground lg:opacity-0 lg:backdrop-blur-md lg:transition-opacity lg:duration-300 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
+                                        <figcaption className="mt-2.5 flex items-baseline justify-between gap-3 font-geistMono text-caption">
                                             <span className="truncate">{work.title}</span>
-                                            <span className="shrink-0 tabular-nums opacity-50 lg:opacity-60">
-                                                {details(work)}
-                                            </span>
+                                            <span className="shrink-0 tabular-nums text-muted">{details(work)}</span>
                                         </figcaption>
                                     </figure>
                                 );
@@ -128,6 +86,7 @@ export default function Gallery() {
                     ))}
                 </section>
             </main>
+            <SiteFooter />
 
             <Lightbox index={open} onClose={() => setOpen(null)} onStep={setOpen} />
         </div>

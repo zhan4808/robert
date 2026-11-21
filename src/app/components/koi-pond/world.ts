@@ -147,7 +147,12 @@ const THROW_RADIUS = 34;
 const STARTLE_SPEED = 1100;
 const MAX_PELLETS = 24;
 
+/** How a pond is stocked: koi size relative to the default, and how many. */
+export type Stocking = { scale?: number; count?: number };
+
 export class World {
+    constructor(private stocking: Stocking = {}) {}
+
     width = 0;
     height = 0;
     time = 0;
@@ -171,10 +176,10 @@ export class World {
     private seed() {
         const { width: W, height: H } = this;
         const minSide = Math.min(W, H);
-        const baseLength = clamp(minSide * 0.5, 170, 420);
-        const count = clamp(Math.round((W * H) / 240000), 3, 6);
-        // Wide screens also get a couple of young koi that keep to the deep water, for a sense of depth.
-        const young = W >= 1024 ? 2 : 0;
+        const baseLength = clamp(minSide * 0.5, 170, 420) * (this.stocking.scale ?? 1);
+        const count = this.stocking.count ?? clamp(Math.round((W * H) / 240000), 3, 6);
+        // Wide ponds also get a couple of young koi that keep to the deep water, for a sense of depth.
+        const young = this.stocking.count !== undefined ? 1 : W >= 1024 ? 2 : 0;
 
         this.koi = [];
         for (let i = 0; i < count + young; i++) {

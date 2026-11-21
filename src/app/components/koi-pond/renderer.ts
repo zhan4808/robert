@@ -43,7 +43,7 @@ interface Palette {
 }
 
 const DARK: Palette = {
-    bg: [26, 25, 33],
+    bg: [23, 22, 20],
     white: [236, 228, 218],
     red: [232, 96, 56],
     black: [92, 90, 108],
@@ -69,7 +69,7 @@ const DARK: Palette = {
 
 // Paper page: tiles are pale washes of the skin colour with dark glyphs etched on top.
 const LIGHT: Palette = {
-    bg: [245, 244, 241],
+    bg: [246, 243, 236],
     white: [112, 108, 104],
     red: [204, 62, 28],
     black: [36, 33, 40],

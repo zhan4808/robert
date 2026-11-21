@@ -80,7 +80,8 @@ Markdown, with GitHub tables, footnotes, `$$` math, and fenced code. Every eleme
 A project body is a sequence of sections; a post body is just the blocks.
 
 A page with three or more headings (`<Section>`s, `##`, `###`) gets a table of contents: a rail in the left margin
-on wide screens that follows the reader, and a collapsible "contents" list above the body on narrow ones. Hovering a
+on wide screens that follows the reader, and on narrow ones a "Contents" button in the meta line under the title
+that opens the list above the body. Hovering a
 heading shows a `#` that links to it.
 
 ````mdx

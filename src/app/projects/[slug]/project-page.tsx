@@ -8,13 +8,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import SiteFooter from "../../components/site-footer";
 import TopNav from "../../components/top-nav";
 import InlineLink from "../../components/inline-link";
-import { TableOfContents } from "../../components/mdx/toc";
+import { HEADER, HEADER_SUBTITLE, HEADER_TITLE, MetaLine } from "../../components/meta-line";
+import { ContentsButton, TableOfContents } from "../../components/mdx/toc";
 import { useGlideScroll } from "../../components/use-glide-scroll";
 import { HOVER_CARD, useHoverCard } from "../../components/use-hover-card";
 import { LAST_PROJECT_KEY, nameOf, primaryLink, type Project } from "../../data/project-helpers";
 import type { ImageMeta } from "../../../lib/images";
 import type { Heading } from "../../../lib/mdx";
-import { formatIsoDate } from "../../../lib/site";
+import { abbreviateDate, formatIsoDate } from "../../../lib/site";
 import { finishTransition, isTransitioning, pushWithTransition } from "../../../lib/view-transition";
 
 /** One centred frame holds everything, so text and media share both edges. */
@@ -95,23 +96,13 @@ export default function ProjectPage({
                     arrivedSliding ? "" : "animate-page-in motion-reduce:animate-none"
                 }`}
             >
-                <header>
-                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">
-                        {project.title}
-                    </h1>
-                    {subtitle && (
-                        <p className="mt-2 font-serif text-[19px] italic leading-snug text-muted [text-wrap:pretty]">
-                            {subtitle}
-                        </p>
-                    )}
-                    <p
-                        className={`mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hairline pb-5 text-small ${MUTED}`}
-                    >
-                        <span className="text-small">{project.date}</span>
-                        {project.updated && (
-                            <span className="text-small">updated {formatIsoDate(project.updated)}</span>
-                        )}
-                        <span className="text-small">{minutes} min read</span>
+                <header className={HEADER}>
+                    <h1 className={HEADER_TITLE}>{project.title}</h1>
+                    {subtitle && <p className={HEADER_SUBTITLE}>{subtitle}</p>}
+                    <MetaLine trailing={<ContentsButton count={headings.length} />}>
+                        {abbreviateDate(project.date)}
+                        {project.updated && `updated ${abbreviateDate(formatIsoDate(project.updated))}`}
+                        {`${minutes} min`}
                         {project.paperUrl && <InlineLink href={project.paperUrl}>paper</InlineLink>}
                         {project.githubUrl && <InlineLink href={project.githubUrl}>code</InlineLink>}
                         {project.liveUrl && (
@@ -120,12 +111,11 @@ export default function ProjectPage({
                         {!project.paperUrl && !project.githubUrl && !project.liveUrl && link && (
                             <InlineLink href={link}>{linkLabel(link)}</InlineLink>
                         )}
-                    </p>
-                    <p className={`${BODY} mt-6 text-prose`}>{project.longDescription}</p>
+                    </MetaLine>
                 </header>
 
                 {hero && (
-                    <div className="mt-10">
+                    <div className="mt-8">
                         {hero.type === "video" ? (
                             // Muted autoplay loops like a gif; with reduced motion it waits for the viewer to press play.
                             <video
@@ -158,9 +148,11 @@ export default function ProjectPage({
                     </div>
                 )}
 
-                <div className="mt-12">
+                <div className="mt-8 flex flex-col gap-5">
                     <TableOfContents headings={headings} />
-                    {children}
+                    {/* The lede opens the body, as a post's first paragraph does. */}
+                    <p className={`${BODY} text-prose`}>{project.longDescription}</p>
+                    <div>{children}</div>
                 </div>
 
                 {pages.length > 1 && (

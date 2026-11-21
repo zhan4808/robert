@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AudioPlayer from "../../components/audio-player";
-import { TableOfContents } from "../../components/mdx/toc";
+import { HEADER, HEADER_SUBTITLE, HEADER_TITLE, MetaLine } from "../../components/meta-line";
+import { ContentsButton, TableOfContents } from "../../components/mdx/toc";
 import Link from "next/link";
 import { getPost, getPosts, getVisiblePosts, hasPostPage } from "../../../lib/content";
 import type { JournalPost, JournalTrack } from "../../../lib/content-schema";
@@ -9,11 +10,14 @@ import { imageMeta } from "../../../lib/images";
 import { renderMdx } from "../../../lib/mdx";
 import { pageMetadata } from "../../../lib/metadata";
 import { readingMinutes } from "../../../lib/reading-time";
-import { formatIsoDate, parseContentDate } from "../../../lib/site";
+import { abbreviateDate, formatIsoDate, parseContentDate } from "../../../lib/site";
 import PostPage, { PostCoverBand, PostPager, type Band, type PagerPost } from "./post-page";
 
 const MUTED = "text-muted";
 const HAIRLINE = "border-hairline";
+
+/** How many visible parts a series has, for "Part 1 of 4". */
+const seriesLength = (series: string) => getPosts().filter((p) => p.series === series && !p.hidden).length;
 
 export const dynamicParams = false;
 
@@ -79,36 +83,25 @@ export default async function Page({ params }: Props) {
 
     return (
         <PostPage>
-            <header>
-                <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title [text-wrap:balance]">
-                    {post.title}
-                </h1>
-                <p className="mt-3 font-serif text-[20px] italic leading-snug text-muted [text-wrap:pretty]">
-                    {post.subtitle}
-                </p>
-                <p className="mt-4 text-[15px] tabular-nums text-muted">
-                    {[
-                        post.date,
-                        post.updated && `updated ${formatIsoDate(post.updated)}`,
-                        `${readingMinutes(doc.body)} min read`,
-                    ]
-                        .filter(Boolean)
-                        .join(" · ")}
+            <header className={HEADER}>
+                <h1 className={HEADER_TITLE}>{post.title}</h1>
+                <p className={HEADER_SUBTITLE}>{post.subtitle}</p>
+                <MetaLine trailing={<ContentsButton count={headings.length} />}>
+                    {abbreviateDate(post.date)}
+                    {post.updated && `updated ${abbreviateDate(formatIsoDate(post.updated))}`}
+                    {`${readingMinutes(doc.body)} min`}
                     {post.series && post.part && (
-                        <>
-                            {" · "}
-                            <span className="text-foreground/80">
-                                Part {post.part} of <em className="font-serif text-[16px]">{post.series}</em>
-                            </span>
-                        </>
+                        <a href="#series" className="ink-link">
+                            Part {post.part} of {seriesLength(post.series)}
+                        </a>
                     )}
-                </p>
-                {bandOf(post) && <PostCoverBand band={bandOf(post)!} />}
+                </MetaLine>
             </header>
+            {bandOf(post) && <PostCoverBand band={bandOf(post)!} />}
 
             {post.tracks.length > 0 && <Listening tracks={post.tracks} />}
 
-            <div className="mt-10 border-t border-hairline pt-10">
+            <div className="mt-8">
                 <TableOfContents headings={headings} />
                 <div className="flex flex-col gap-5">{content}</div>
             </div>
@@ -152,7 +145,7 @@ function SeriesNav({ series, current }: { series: string; current: string }) {
         .filter((p) => p.series === series && !p.hidden)
         .sort((a, b) => (a.part ?? 0) - (b.part ?? 0));
     return (
-        <aside aria-label="Series" className="mt-16 rounded-card bg-tile px-6 py-5">
+        <aside id="series" aria-label="Series" className="mt-16 scroll-mt-28 rounded-card bg-tile px-6 py-5">
             <p className="text-small text-muted">
                 A {parts.length}-part series: <em className="font-serif text-[16px] text-foreground">{series}</em>
             </p>

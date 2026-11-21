@@ -172,21 +172,18 @@ export function getEntries(): Entry[] {
     }
     return rows
         .sort(
-            (a, b) =>
-                b.year - a.year || Number(b.monthly) - Number(a.monthly) || b.time - a.time || a.order - b.order
+            (a, b) => b.year - a.year || Number(b.monthly) - Number(a.monthly) || b.time - a.time || a.order - b.order
         )
-        .map(
-            (e): Entry => ({
-                slug: e.slug,
-                href: e.href,
-                title: e.title,
-                date: e.date,
-                year: e.year,
-                kind: e.kind,
-                external: e.external,
-                parts: e.parts,
-            })
-        );
+        .map((e): Entry => ({
+            slug: e.slug,
+            href: e.href,
+            title: e.title,
+            date: e.date,
+            year: e.year,
+            kind: e.kind,
+            external: e.external,
+            parts: e.parts,
+        }));
 }
 
 /** Entries grouped by year, newest year first. */

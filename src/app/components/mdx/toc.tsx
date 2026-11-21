@@ -1,21 +1,67 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Heading } from "../../../lib/mdx";
 import { HAIRLINE, MUTED } from "./styles";
 
 /** Below this many headings a write-up is short enough to take in without a contents list. */
-const MIN_HEADINGS = 3;
+export const MIN_HEADINGS = 3;
+const SHEET_ID = "contents-sheet";
+
+// Whether the narrow-screen contents list is open. The button lives in the header's meta line and the list above the
+// body, so they share this rather than a parent's state.
+let sheetOpen = false;
+const listeners = new Set<() => void>();
+const setSheetOpen = (open: boolean) => {
+    sheetOpen = open;
+    listeners.forEach((listener) => listener());
+};
+const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+};
+const useSheetOpen = () =>
+    useSyncExternalStore(
+        subscribe,
+        () => sheetOpen,
+        () => false
+    );
+
+/**
+ * "Contents" in the header's meta line on narrow screens, where there is no rail: it opens and closes the list above
+ * the body. Nothing is drawn for a write-up with too few headings, or once the rail has room.
+ */
+export function ContentsButton({ count }: { count: number }) {
+    const open = useSheetOpen();
+    if (count < MIN_HEADINGS) return null;
+    return (
+        <span className="min-[1120px]:hidden">
+            <span aria-hidden> · </span>
+            <button
+                type="button"
+                aria-expanded={open}
+                aria-controls={SHEET_ID}
+                onClick={() => setSheetOpen(!open)}
+                className="ink-link focus-ring"
+            >
+                Contents
+            </button>
+        </span>
+    );
+}
 /** The viewport band, as a share of its height from the top, that a heading has to be above to count as current. */
 const BAND = 0.25;
 
 /**
  * The write-up's contents, from the headings the compiler read: a rail in the left margin on wide screens that
- * follows the reader down the page, and a collapsible list above the body on narrow ones. Rendered only when there
- * are enough headings to be worth it.
+ * follows the reader down the page, and on narrow ones a list above the body that the header's "Contents" button
+ * opens. Rendered only when there are enough headings to be worth it.
  */
 export function TableOfContents({ headings }: { headings: Heading[] }) {
     const active = useActiveHeading(headings);
+    const open = useSheetOpen();
+    // A new page starts with the list closed.
+    useEffect(() => () => setSheetOpen(false), []);
     if (headings.length < MIN_HEADINGS) return null;
     const list = (
         <ol className={`flex flex-col border-l ${HAIRLINE}`}>
@@ -46,14 +92,18 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
                 <p className={`mb-3 text-small ${MUTED}`}>Contents</p>
                 {list}
             </nav>
-            <details className="group mb-10 min-[1120px]:hidden">
-                <summary
-                    className={`w-fit cursor-pointer list-none text-small focus-ring transition-colors hover:text-foreground focus-visible:text-foreground [&::-webkit-details-marker]:hidden ${MUTED}`}
+            {open && (
+                <nav
+                    id={SHEET_ID}
+                    aria-label="Contents"
+                    className="mb-10 min-[1120px]:hidden"
+                    onClick={(e) => {
+                        if ((e.target as HTMLElement).closest("a")) setSheetOpen(false);
+                    }}
                 >
-                    Contents <span className="inline-block transition-transform group-open:rotate-90">→</span>
-                </summary>
-                <div className="mt-3">{list}</div>
-            </details>
+                    {list}
+                </nav>
+            )}
         </>
     );
 }

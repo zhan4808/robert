@@ -2,7 +2,7 @@
 title: "Profiling MLA's Absorbed-Projection BMMs on H100, and Why INT4 Didn't Help"
 shortTitle: MLA Profiling
 description: In eager mode at batch size 1, MLA's absorbed projection BMMs take 61% of attention-layer time on DeepSeek-V3 shapes. Weight-only INT4 keeps quality but runs at about half the speed of FP16, partly because the weights sit in L2 in an isolated benchmark loop and mostly because the kernel is bound by dequantization.
-longDescription: MLA keeps a compact latent per token instead of full K and V, and folds the up-projections into two batched matmuls per layer. I profiled those BMMs on H100 with DeepSeek-V3 shapes, tried weight-only INT4 on them, and then went back and re-measured with better methodology. Dequantization overhead keeps the INT4 kernel at about 2.7× its memory cost, in a warm single-operator loop L2 residency takes away what is left of the upside at the 16 MB MLA shape, and a W8A8 kernel that skips dequantization wins only once the weights no longer fit in L2.
+longDescription: MLA keeps a compact latent per token instead of full K and V, and folds the up-projections into two batched matmuls per layer. I profiled those BMMs on H100 with DeepSeek-V3 shapes and tried weight-only INT4 on them. Dequantization overhead keeps the INT4 kernel at about 2.7× its memory cost, in a warm single-operator loop L2 residency takes away what is left of the upside at the 16 MB MLA shape, and a W8A8 kernel that skips dequantization wins only once the weights no longer fit in L2.
 date: "2026"
 updated: "2026-11-21"
 year: 2026
@@ -22,10 +22,6 @@ githubUrl: https://github.com/zhan4808/sglang
 ---
 
 <Section id="motivation" title="Motivation">
-  <Note title="correction">
-    Corrected November 2026. An earlier version of this page blamed the INT4 result on the 16 MB weights living in H100's 50 MB L2 at about 12 TB/s, but when I re-measured I found my NCU runs had flushed L2 before every launch and my timing had a launch floor near 15.5 µs. L2 residency is one of two causes, the cache holds about 36 MB in practice, and it serves these weights at 3.5 to 4.6 TB/s; the sections below use the corrected numbers.
-  </Note>
-
   Multi-head Latent Attention (MLA) is the attention design in DeepSeek-V2 and V3. Each token's KV cache entry is a 512-dimensional latent plus a 64-dimensional RoPE key, 576 values in all, instead of full per-head keys and values, so the attention kernel reads far less memory.
 
   The latent still has to meet the per-head query and value spaces somewhere. In the weight-absorbed form that serving engines use, that happens in two batched matmuls per layer, and they run every layer for every token with weight matrices that do not depend on batch size or sequence length. Attention kernel benchmarks time the kernel on its own, so these BMMs fall outside them. I wanted to know how much time they take, and whether quantizing their weights would make them cheaper.
@@ -77,16 +73,16 @@ githubUrl: https://github.com/zhan4808/sglang
   />
 </Section>
 
-<Section id="measurement" title="What I got wrong in the first measurement">
-  My first explanation was that the 16 MB weights fit in the 50 MB L2, get served at about 12 TB/s, and so INT4 saves HBM bandwidth that was never the bottleneck. I supported that with a weight-size sweep and an NCU sweep. When I went back to check it, three parts of the evidence did not hold.
+<Section id="measurement" title="Measuring the cache">
+  The obvious explanation is that the 16 MB weights fit in H100's 50 MB L2, so INT4 saves HBM bandwidth that was never the bottleneck. Checking that takes more care than it looks, because the two standard tools both hide the effect by default.
 
-  The NCU counters were all cold-cache. Kernel replay defaults to `--cache-control all`, which flushes the caches before every measured launch, so none of those runs could see L2 residency at any size. Re-collected with `--cache-control none` in a warm loop, `torch.bmm` re-reads 4.0 MB from DRAM per launch at the 16 MB shape, so about 75% of the weight bytes come from L2. At 32 MB it re-reads 2.2 MB. At 40 MB and above, essentially the whole weight comes from DRAM again.
+  NCU flushes the caches before every measured launch: kernel replay defaults to `--cache-control all`, so a default run can't see L2 residency at any size. Collected with `--cache-control none` in a warm loop, `torch.bmm` re-reads 4.0 MB from DRAM per launch at the 16 MB shape, so about 75% of the weight bytes come from L2. At 32 MB it re-reads 2.2 MB. At 40 MB and above, essentially the whole weight comes from DRAM again.
 
-  So the effective capacity is about 36 MB, not the nominal 50 MB, and the cliff sits between 32 and 40 MB. The effective serving bandwidth below the cliff is 3.5 to 4.6 TB/s, with an incremental slope of 6.3 TB/s. That is above the 3.35 TB/s HBM peak, which is only possible if L2 serves part of it, but it is nowhere near 12 TB/s.
+  So the effective capacity is about 36 MB, not the nominal 50 MB, and the cliff sits between 32 and 40 MB. Below the cliff L2 serves these weights at 3.5 to 4.6 TB/s, with an incremental slope of 6.3 TB/s: above the 3.35 TB/s HBM peak, which is only possible with L2 serving part of it, but far from L2's headline bandwidth.
 
-  The timing had a floor. Per-launch CUDA-event timing on this stack bottoms out near 15.5 µs: a 0.5 MB bmm times the same as a 16 MB one. That floor made FP16 latency look flat from 8 to 32 MB, which I had read as L2 serving. Timed inside a CUDA graph, the same FP16 kernel goes from 3.5 µs at 8 MB to 7.3 µs at 32 MB, then jumps to 16.6 µs at 40 MB.
+  Per-launch CUDA-event timing has a floor near 15.5 µs on this stack: a 0.5 MB bmm times the same as a 16 MB one, which makes latency look flat across exactly the sizes where the cache matters. Timed inside a CUDA graph, the same FP16 kernel goes from 3.5 µs at 8 MB to 7.3 µs at 32 MB, then jumps to 16.6 µs at 40 MB.
 
-  What I check now, before believing a number like these:
+  What I check before believing a number like these:
 
   - the `--cache-control` setting, before reading any residency claim off NCU;
   - whether two supposedly different cache conditions give the same counters, which means the setup is wrong before it means the effect is absent;

@@ -25,9 +25,9 @@ Neither check is subtle. Divide the FLOPs the operator should do by the measured
 
 Once I moved to the shipped W8A16 path in FlagGems, the opposite problem appeared. Quantized was 6.5 to 22 times slower than bf16, and it took a flat 8.5 ms or so at every token count.
 
-A flat line is a clue, because real kernel time grows with tokens. The code above the kernel call carried a comment saying Triton couldn't do a mixed-dtype dot, and so every call converted all experts' weights to fp16 on the host side: 1.4 GB of int8 into 2.8 GB of fp16, plus the scale multiply, about 10 GB of traffic per forward. The profiler trace showed it plainly. `aten::copy_` took 4.3 ms and `aten::mul` took 3.6 ms, against 0.96 ms for the MoE kernel itself.
+A flat line is a clue, because real kernel time grows with tokens. The code above the kernel call carried a comment saying Triton couldn't do a mixed-dtype dot, and so every call converted all experts' weights to fp16 outside the kernel, in PyTorch ops on the GPU: 1.4 GB of int8 into 2.8 GB of fp16, plus the scale multiply, about 10 GB of traffic per forward. The profiler trace showed it plainly. `aten::copy_` took 4.3 ms and `aten::mul` took 3.6 ms, against 0.96 ms for the MoE kernel itself.
 
-The comment was stale. The non-fused kernel already converted each int8 tile in the loop (`b.to(compute_type)` before `tl.dot`) and applied the per-channel scale once on the fp32 accumulator. The real gap was that the fused gate/up path had no W8A16 handling, so the host fallback covered for it. I wrote a patch that does the conversion in that loop too. At 16 tokens W8A16 went from about 8.6 ms to 558 µs, against 971 µs for bf16 (eager timing), with relative error 0.013, the same quantization noise as before. If I'd stopped at the shipped path, the conclusion would have been "quantization is slow." Profile the fast path once to see that it really is the code running.
+The comment was stale. The non-fused kernel already converted each int8 tile in the loop (`b.to(compute_type)` before `tl.dot`) and applied the per-channel scale once on the fp32 accumulator. The real gap was that the fused gate/up path had no W8A16 handling, so the PyTorch fallback covered for it. I wrote a patch that does the conversion in that loop too. At 16 tokens W8A16 went from about 8.6 ms to 558 µs, against 971 µs for bf16 (eager timing), with relative error 0.013, the same quantization noise as before. If I'd stopped at the shipped path, the conclusion would have been "quantization is slow." Profile the fast path once to see that it really is the code running.
 
 ## The crossover that came from the timer
 
@@ -56,11 +56,11 @@ That puts a crossover near 230 tokens, and I wrote it down along with a dispatch
 
 The crossover was gone, and W8A16 won at every token count. Two sweeps of the same kernels disagreed about the most important number in the study. For an operator this size, eager timing and graph timing are not two views of the same thing, and an answer that flips when only the harness changes was never a property of the kernel. I struck the dispatch rule.
 
-I should have been more suspicious of the second table than I was. The bf16 column at 512 tokens moved by almost four times between harnesses, and that turned out to be the next problem.
+I should have been more suspicious of the second table than I was. The bf16 column at 512 tokens moved by almost four times between harnesses. I never found out why graph timing made that kernel so much slower than eager timing did, and the next section only shows that the graph-timed baseline couldn't be trusted.
 
 ## The baseline that scaled faster than its work
 
-Look at the graph-timed bf16 column again. From 256 to 2,048 tokens the work grows 8 times and the time grows 12 times. A competent kernel's time should grow no faster than its work once it's compute-bound. This baseline did, and the "2.7 to 3.0× win at high token counts" was quantization beating a slow kernel.
+Look at the graph-timed bf16 column again. From 256 to 2,048 tokens the work grows 8 times and the time grows 12 times. A competent kernel's time should grow no faster than its work once it's compute-bound. This baseline did, so the "2.7 to 3.0× win at high token counts" was quantization beating a baseline that wasn't behaving like a competent kernel.
 
 To check, I swapped in vLLM's production bf16 `fused_experts` kernel and quantized paths built on CUDA Marlin, timed the same way. The software stack was newer, so I re-measured the roofline's bandwidth and launch-floor parameters first; they came out essentially unchanged.
 
@@ -95,7 +95,7 @@ vLLM ships tuned MoE configs per shape and GPU, and it has no bf16 config for th
 |    640 |            1867 |                        1512 |           2084 |
 |   1024 |            2386 |                        1919 |           3053 |
 
-Against the stock config the crossover sits at 601 tokens. Against the tuned one it's 263. A roofline fit to the same sweep, time = launch floor + max(bytes ÷ bandwidth, FLOPs ÷ compute ceiling), puts it at 334. The measured and modelled numbers agree once the baseline is fair, so for this shape quantization wins up to about 300 tokens, not 600. The stock number was generous to quantization by a factor of two. The small-token result didn't move: at 128 tokens and below the two bf16 configs are within half a percent of each other, because there are too few row blocks for grouping to matter.
+Against the stock config the crossover sits at 601 tokens. Against the tuned one it's 263. A roofline fit to the same sweep, time = launch floor + max(bytes ÷ bandwidth, FLOPs ÷ compute ceiling), puts it at 334. The measured and modelled numbers are close once the baseline is fair, so for this shape quantization wins up to about 300 tokens, not 600. The stock number was generous to quantization by a factor of two. The small-token result didn't move: at 128 tokens and below the two bf16 configs are within half a percent of each other, because there are too few row blocks for grouping to matter.
 
 Tuning doesn't always change the answer. When I ran the same sweep on two fine-grained MoE shapes with 256 small experts, the tuned and stock bf16 baselines matched at every token count. Those layers are bound by streaming many distinct expert weights from memory, and an L2-reuse knob can't reduce how many bytes bf16 has to read. You only know which case you're in by sweeping it.
 

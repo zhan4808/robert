@@ -18,7 +18,7 @@ Across two PCIe boxes on Ethernet, NCCL's defaults kept the slowest reasonable p
 
 Every collective NCCL runs comes down to two settings. The algorithm decides the route data takes between GPUs. The protocol decides how each piece of data is packaged, and how the receiver finds out it has arrived.
 
-The two algorithms that matter here are Ring and Tree. Ring is the loop from part 1: 2(N−1) steps, and the best use of bandwidth. Tree reduces data up a tree and broadcasts the result back down. NCCL's tree is only a tree between nodes; inside each node the GPUs form a chain. Across two boxes, it crosses the slow link far fewer times in a row than Ring does, which matters when each crossing has a high fixed cost. (NCCL has newer algorithms too, but they need NVLink.)
+The two algorithms that matter here are Ring and Tree. Ring is the loop from part 1: 2(N−1) steps, and the best use of bandwidth. Tree reduces data up a tree and broadcasts the result back down. NCCL's tree is only a tree between nodes; inside each node the GPUs form a chain. Across two boxes, it crosses the slow link far fewer times in a row than Ring does, which matters when each crossing has a high fixed cost. (NCCL's newer all-reduce algorithms need NVSwitch or in-network reduction hardware, which these boxes don't have.)
 
 <Diagram name="ring-vs-tree" caption="Every Ring step is gated by the slowest link, the Ethernet hop. Tree crosses it once on the way up and once on the way down." />
 
@@ -78,7 +78,7 @@ allreduce,<c>,4294967295,ring,simple,<ch>,2,16
 The boundaries `<a>`, `<b>` and `<c>` are specific to your hardware. You can find them with a sweep like this one on any multi-node box:
 
 ```bash
-# mpirun doesn't pass your shell environment to remote ranks,
+# Open MPI's mpirun doesn't pass your shell environment to remote ranks,
 # so forward NCCL_* with -x.
 for algo in Ring Tree; do
   for proto in LL LL128 Simple; do
@@ -106,7 +106,7 @@ NCCL_TUNER_CONFIG_FILE=/path/to/rules.conf
 
 ## Is forcing LL128 safe without NVLink?
 
-LL128 relies on 128-byte writes arriving whole, which is exactly why NCCL turns it off on PCIe. So before shipping it I checked results, not just timings: a long soak across sizes with LL128 forced and every result compared, which found zero wrong values, plus a comparison of generated text under load that showed no corruption. That's evidence for this fabric, not a guarantee for yours, so check your own.
+LL128 relies on 128-byte writes arriving whole, which is exactly why NCCL turns it off on PCIe. So before shipping it I checked results, not just timings: a long soak across sizes with LL128 forced and results checked, which found zero wrong values, plus a comparison of generated text under load that showed no corruption. That's evidence for this fabric, not a guarantee for yours, so check your own.
 
 One trap in that check: nccl-tests' `-c N` compares N all-reduces per size *after* the timed loop, not every timed iteration. My first "one-hour soak" compared far fewer results than I thought it had. Set `-c` high and count what was actually compared.
 

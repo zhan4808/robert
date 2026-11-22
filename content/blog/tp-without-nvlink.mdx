@@ -102,7 +102,7 @@ So communication's share of the step climbs with every doubling, then jumps when
 
 ## What I'd do on a box without NVLink
 
-Keep tensor parallelism inside one PCIe box and scale out with independent replicas. When the model fits in one box at TP8, two separate TP8 servers on our 16 GPUs beat one TP16 server over Ethernet at every concurrency we tried, because nothing has to cross the network on every step. When it doesn't fit, or the KV cache is the limit, [part 3](/blog/pcie-vs-ethernet-scale-up) covers splitting it into two pipeline stages with TP8 in each box.
+Keep tensor parallelism inside one PCIe box and scale out with independent replicas. When the model fits in one box at TP8, two separate TP8 servers on our 16 GPUs beat one TP16 server over Ethernet at every concurrency we tried, because nothing has to cross the network on every step. For long-context MLA models bound by KV-cache capacity, [part 3](/blog/pcie-vs-ethernet-scale-up) covers splitting the model into two pipeline stages with TP8 in each box.
 
 Profile in CUDA-graph mode, since eager mode inflates communication and invents spin-wait. When you benchmark with nccl-tests, force the same algorithm and protocol your server uses (`NCCL_ALGO`, `NCCL_PROTO`); compared like that, per-call time inside vLLM matched the isolated benchmark closely. Don't buy extra NIC rails hoping to speed up tensor-parallel all-reduce, because a two-host ring can't use them.
 

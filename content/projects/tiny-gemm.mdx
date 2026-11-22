@@ -2,7 +2,7 @@
 title: "Tiny-GEMM: Packed INT4 Triton GEMM for Decode-Heavy LLM Inference"
 shortTitle: Tiny-GEMM
 description: A packed INT4 GEMM in Triton for small-batch LLM decode, measured on an A10G to find which layer shapes it actually speeds up and why.
-longDescription: Small-batch LLM decoding is dominated by narrow GEMMs that stress memory bandwidth and launch overhead rather than peak FLOPs. Tiny-GEMM is a packed INT4 GEMM kernel in Triton for decode-heavy shapes, with measurement-driven analysis backed by hardware counters of when weight-only INT4 helps or hurts.
+longDescription: Small-batch LLM decoding is dominated by narrow GEMMs that stress memory bandwidth and launch overhead rather than peak FLOPs. Tiny-GEMM is a packed INT4 GEMM kernel in Triton for decode-heavy shapes, with measurement-driven analysis backed by hardware counters of when INT4 helps or hurts.
 date: "2025"
 year: 2025
 order: 2
@@ -13,21 +13,24 @@ tags:
   - Quantization
   - GPU Kernels
 featured: true
+hidden: true
 thumb: /thumbs/tiny-gemm.svg
 paperUrl: /tiny-gemm/Tiny-GEMM.pdf
 githubUrl: https://github.com/zhan4808/gemmopt
 ---
 
+{/* RESULTS INVALID until the grid / pid mapping in tiny-gemm/triton_gemm.py is fixed and reruns pass correctness. The grid is grid_m * grid_n // GROUP_SIZE_M and the pid mapping then skips most programs, so with the static configs at M = 1 the kernel computes 1/16 (Q/O proj, FFN down) or 1/4 (FFN up) of the output; only K/V proj is complete. max_abs_diff is about 4e7 in every CSV. Every speedup on this page is on partial work. */}
+
 <Section id="motivation" title="Motivation">
   Decoding runs one token at a time. With a batch of 1 to 8, every linear layer is a skinny GEMM: a few rows of activations against a full weight matrix. Each weight is read once and used for a handful of multiply-adds, so the time goes to streaming weights out of DRAM and to the fixed cost of each launch, not to arithmetic.
 
-  That makes weight-only INT4 look like a free win. An FP16 weight is 2 bytes and a packed INT4 weight is half a byte, so the kernel reads 4x fewer weight bytes, and a purely bandwidth-bound kernel would run up to 4x faster. In practice some layers got close to that and some got slower than FP16. I built Tiny-GEMM to find out which, and why.
+  That makes INT4 look like a free win. An FP16 weight is 2 bytes and a packed INT4 weight is half a byte, so the kernel reads 4x fewer weight bytes, and a purely bandwidth-bound kernel would run up to 4x faster. In practice some layers got close to that and some got slower than FP16. I built Tiny-GEMM to find out which, and why.
 </Section>
 
 <Section id="kernel" title="The Kernel">
-  The kernel is written in Triton. Weights are quantized per tensor and packed two INT4 values to a byte. Each tile of packed weights is loaded from DRAM, unpacked to floating point in registers, and multiplied against the activations with FP32 accumulation. Tile configurations are static, keyed by shape family and batch bucket; decode shapes cluster tightly enough that a small lookup table was enough and avoided autotuning at runtime.
+  The kernel is written in Triton. Both operands are INT4 (W4A4): weights and activations are each quantized per tensor and packed two INT4 values to a byte. Each tile of packed values is loaded from DRAM, unpacked to floating point in registers, and multiplied with FP32 accumulation. Tile configurations are static, keyed by shape family and batch bucket; decode shapes cluster tightly enough that a small lookup table was enough and avoided autotuning at runtime.
 
-  The dot products run in FP32 rather than on tensor cores. INT4 tensor-core MMA would not help a weight-only kernel anyway: Ampere's INT4 MMA multiplies INT4 by INT4, so it needs quantized activations too, and Hopper has no INT4 MMA at all. The realistic fast path for weight-only INT4 is to unpack to FP16 in registers and use FP16 tensor-core MMA, which this kernel does not do yet.
+  The unpacked values go to `tl.dot` as FP32, which Triton runs as TF32 on Ampere tensor cores unless told otherwise; I haven't checked which path this kernel compiled to. Since both operands are already INT4, Ampere's INT4 tensor-core MMA would apply directly, and this kernel doesn't use it. Hopper has no INT4 MMA at all.
 
   I compared three versions of every shape: FP16 through torch.matmul (cuBLAS), a dequantized baseline that unpacks INT4 to an FP16 tensor and then runs an FP16 GEMM, and the fused INT4 kernel. The dequantized baseline separates the cost of the format from the cost of doing the unpack inside the GEMM.
 </Section>
@@ -60,7 +63,7 @@ githubUrl: https://github.com/zhan4808/gemmopt
   <Figure
     src="/tiny-gemm/speedup_vs_n_k4096.webp"
     alt="Speedup of INT4 over FP16 versus output width N at K=4096, one line per batch size from 1 to 64"
-    caption="Speedup over FP16 as output width grows at K=4096. INT4 loses below about N = 2048 and wins above it, and the M = 1 to 8 lines nearly overlap. The M = 16 point above 4x is a shape where cuBLAS FP16 ran well below its own bandwidth, not INT4 beating the byte ratio."
+    caption="Speedup over FP16 as output width grows at K=4096. INT4 loses below about N = 2048 and wins above it, and the M = 1 to 8 lines stay close except at N = 8192."
   />
 </Section>
 
@@ -94,7 +97,7 @@ githubUrl: https://github.com/zhan4808/gemmopt
   <Figure
     src="/tiny-gemm/ncu_utilization_comparison.webp"
     alt="Nsight Compute comparison of FP16 and INT4: DRAM bandwidth, SM throughput, warps active and tensor instruction share"
-    caption="Nsight Compute counters for FP16 and INT4. FP16 is pinned on DRAM bandwidth. INT4 is low on both DRAM and SM throughput, and its tensor-instruction share is near zero because its dot products run in FP32."
+    caption="Nsight Compute counters for FP16 and INT4. FP16 is pinned on DRAM bandwidth. INT4 is low on both DRAM and SM throughput, and its tensor-instruction share is near zero."
   />
 
   The INT4 kernel is not bound by memory or by arithmetic. It moves a quarter of the bytes but uses only a fraction of the bandwidth, and its SM throughput is lower than FP16's, not higher. Very few warps are active in either kernel. cuBLAS keeps DRAM busy anyway; my kernel doesn't, which points at latency and occupancy rather than the unpack arithmetic being expensive in itself. That is the same story as the FFN down result.

@@ -90,6 +90,17 @@ function Series({
     );
 }
 
+/*
+ * Qualitative size labels for the two message-size charts. Byte-valued ticks would let a reader recover the
+ * measured crossover sizes from the traced curves, so the axes only say where small, decode-sized and large
+ * messages sit. "decode range" is centred on the shaded decode band.
+ */
+const SIZE_TICKS = {
+    small: 0.1,
+    "decode range": (traced.latency_shade[0] + traced.latency_shade[1]) / 2,
+    large: 0.9,
+};
+
 function Ticks({ b, ticks }: { b: Box; ticks: Record<string, number> }) {
     return (
         <g>
@@ -193,7 +204,7 @@ export function LatencyChart() {
                 decode sizes
             </Txt>
             <Axes b={b} xlabel="all-reduce message size (log)" ylabel="time per call (log)" />
-            <Ticks b={b} ticks={traced.latency_ticks} />
+            <Ticks b={b} ticks={SIZE_TICKS} />
             <Series b={b} pts={traced.latency.one_box} tone="blue" />
             <Series b={b} pts={traced.latency.two_boxes} tone="orange" />
             {/* Under the blue curve's climb, right of the band: at the left edge the two curves sit too close for a label. */}
@@ -262,7 +273,7 @@ export function ForcedChart() {
             title="Each NCCL algorithm and protocol forced on 16 GPUs over Ethernet, with the default dashed"
         >
             <Axes b={b} xlabel="all-reduce message size (log)" ylabel="time per call (log), lower is better" />
-            <Ticks b={b} ticks={traced.forced_ticks} />
+            <Ticks b={b} ticks={SIZE_TICKS} />
             {series.map(([k, t, , dashed]) => (
                 <Series key={k} b={b} pts={traced.forced[k]} tone={t} dashed={dashed} width={dashed ? 2 : 2.2} />
             ))}

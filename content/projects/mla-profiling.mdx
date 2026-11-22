@@ -1,8 +1,8 @@
 ---
 title: "Profiling MLA's Absorbed-Projection BMMs on H100, and Why INT4 Didn't Help"
 shortTitle: MLA Profiling
-description: In eager mode at batch size 1, MLA's absorbed projection BMMs take 61% of attention-layer time on DeepSeek-V3 shapes. Weight-only INT4 keeps quality but runs at about half the speed of FP16, partly because the weights sit in L2 and mostly because the kernel is bound by dequantization.
-longDescription: MLA keeps a 512-dimensional latent per token instead of full K and V, and folds the up-projections into two batched matmuls per layer. I profiled those BMMs on H100 with DeepSeek-V3 shapes, tried weight-only INT4 on them, and then went back and re-measured with better methodology. Dequantization overhead keeps the INT4 kernel at about 2.7× its memory cost, L2 residency takes away what is left of the upside at the 16 MB MLA shape, and a W8A8 kernel that skips dequantization wins only once the weights no longer fit in L2.
+description: In eager mode at batch size 1, MLA's absorbed projection BMMs take 61% of attention-layer time on DeepSeek-V3 shapes. Weight-only INT4 keeps quality but runs at about half the speed of FP16, partly because the weights sit in L2 in an isolated benchmark loop and mostly because the kernel is bound by dequantization.
+longDescription: MLA keeps a compact latent per token instead of full K and V, and folds the up-projections into two batched matmuls per layer. I profiled those BMMs on H100 with DeepSeek-V3 shapes, tried weight-only INT4 on them, and then went back and re-measured with better methodology. Dequantization overhead keeps the INT4 kernel at about 2.7× its memory cost, in a warm single-operator loop L2 residency takes away what is left of the upside at the 16 MB MLA shape, and a W8A8 kernel that skips dequantization wins only once the weights no longer fit in L2.
 date: "2026"
 updated: "2026-11-21"
 year: 2026
@@ -26,7 +26,7 @@ githubUrl: https://github.com/zhan4808/sglang
     Corrected November 2026. An earlier version of this page blamed the INT4 result on the 16 MB weights living in H100's 50 MB L2 at about 12 TB/s, but when I re-measured I found my NCU runs had flushed L2 before every launch and my timing had a launch floor near 15.5 µs. L2 residency is one of two causes, the cache holds about 36 MB in practice, and it serves these weights at 3.5 to 4.6 TB/s; the sections below use the corrected numbers.
   </Note>
 
-  Multi-head Latent Attention (MLA) is the attention design in DeepSeek-V2 and V3. Each token's KV cache entry is a 512-dimensional latent instead of full per-head keys and values, so the attention kernel reads far less memory.
+  Multi-head Latent Attention (MLA) is the attention design in DeepSeek-V2 and V3. Each token's KV cache entry is a 512-dimensional latent plus a 64-dimensional RoPE key, 576 values in all, instead of full per-head keys and values, so the attention kernel reads far less memory.
 
   The latent still has to meet the per-head query and value spaces somewhere. In the weight-absorbed form that serving engines use, that happens in two batched matmuls per layer, and they run every layer for every token with weight matrices that do not depend on batch size or sequence length. Attention kernel benchmarks time the kernel on its own, so these BMMs fall outside them. I wanted to know how much time they take, and whether quantizing their weights would make them cheaper.
 </Section>
@@ -46,7 +46,7 @@ githubUrl: https://github.com/zhan4808/sglang
 
   These are eager-mode numbers, and they carry the launch floor described below. With CUDA-graph timing a single 16 MB BMM takes about 4.8 µs instead of about 17 µs, so an engine that captures decode in a graph will see a much smaller absolute cost. The ratio to attention moves less, since the attention kernel carries the same floor.
 
-  By arithmetic intensity, every one of these BMMs is memory-bound: intensity reaches 93 at bs=128, against a crossover of 295 on H100 (989 TFLOPS over 3.35 TB/s).
+  By arithmetic intensity, every one of these BMMs is memory-bound: intensity reaches 93 only at bs=1024, against a crossover of 295 on H100 (989 TFLOPS over 3.35 TB/s).
 
   <Figure
     src="/mla-profiling/roofline.webp"
@@ -106,7 +106,7 @@ githubUrl: https://github.com/zhan4808/sglang
   | FP16, forced to HBM (6 copies)                 | 8.3 µs       | 0.58×                   |
   | INT4 W4A16 (1 or 6 copies)                     | 9.1 to 9.3 µs | 0.52×                  |
 
-  INT4 barely notices the cache state. FP16 slows by 3.5 µs when forced to HBM, which matches reloading 16 MB at HBM rate. Even then INT4 is still slower: 0.89× of FP16 with FP16 reading from HBM. L2 residency explains why the speedup falls from 0.89× to 0.52×, but removing it would not make this kernel win.
+  INT4 barely notices the cache state. FP16 slows by 3.5 µs when forced to HBM, which matches reloading the roughly 12 MB (75%) that L2 had been serving. Even then INT4 is still slower: 0.89× of FP16 with FP16 reading from HBM. L2 residency explains why the speedup falls from 0.89× to 0.52×, but removing it would not make this kernel win.
 
   The rest is the kernel itself. Reading 4.2 MB at HBM rate plus fixed cost should take about 3.4 µs, and it takes 9.1 to 9.3 µs. It is bound by dequantization instructions, not by memory or by useful math:
 
@@ -120,7 +120,7 @@ githubUrl: https://github.com/zhan4808/sglang
 </Section>
 
 <Section id="w8a8" title="What does win">
-  If dequantization is the in-core limit, a kernel without it should win exactly where the weights stream from HBM and lose where they sit in L2. I tested that with a W8A8 Triton kernel: per-channel INT8 weights, per-token INT8 activations from one small extra kernel, an inner loop that is only `tl.dot(int8, int8)` into INT32, and scales applied once on the final accumulator. It costs more accuracy than weight-only quantization (relative error about 0.009 against about 1e-3), and the timings include the activation-quant kernel.
+  If dequantization is the in-core limit, a kernel without it should win exactly where the weights stream from HBM and lose where they sit in L2. I tested that with a W8A8 Triton kernel: per-channel INT8 weights, per-token INT8 activations from one small extra kernel, an inner loop that is only `tl.dot(int8, int8)` into INT32, and scales applied once on the final accumulator. Relative error is about 0.009, and the timings include the activation-quant kernel.
 
   | Weights     | FP16 (µs) | W8A8 (µs) | W4A16 (µs) | W8A8 speedup |
   | ----------- | --------- | --------- | ---------- | ------------ |
@@ -132,7 +132,7 @@ githubUrl: https://github.com/zhan4808/sglang
   | 96 MB       | 38.6      | 28.2      | 41.8       | 1.37×        |
   | 128 MB      | 49.1      | 34.4      | 55.7       | 1.43×        |
 
-  Graph-timed, bs=1. The flip happens between 32 and 48 MB, at the measured effective capacity rather than the nominal 50 MB, and W8A8 beats W4A16 at every size. At the 16 MB MLA shape FP16 still wins. Stacking several 16 MB layers into one decode step crosses the same line: FP16 wins through two layers (32 MB) and W8A8 wins from three (48 MB). At large batch sizes the workload turns compute-bound and cuBLAS wins again.
+  Graph-timed, bs=1. The flip happens between 32 and 48 MB, at the measured effective capacity rather than the nominal 50 MB, and W8A8 beats W4A16 at every size. At the 16 MB MLA shape FP16 still wins in this loop. Stacking several 16 MB layers into one decode step crosses the same line: FP16 wins through two layers (32 MB) and W8A8 wins from three (48 MB). At large batch sizes the workload turns compute-bound and cuBLAS wins again.
 </Section>
 
 <Section id="methodology" title="Checking the setup first">
@@ -142,9 +142,9 @@ githubUrl: https://github.com/zhan4808/sglang
 <Section id="takeaways" title="Takeaways">
   At small batch sizes in eager mode, MLA's absorbed projection BMMs cost more than the attention kernel they feed. They are tiny, fixed-weight, launch-floor-dominated operations, and a single-level roofline badly mispredicts them.
 
-  Weight-only INT4 with a dequantization-heavy kernel cannot win at the MLA shape. Dequantization overhead keeps the kernel at about 2.7× its memory cost, and L2 residency takes away what is left of the upside. Quantization starts to pay only when the working set is larger than the roughly 36 MB that L2 actually holds and the kernel skips per-element dequantization.
+  Weight-only INT4 with a dequantization-heavy kernel cannot win at the MLA shape. Dequantization overhead keeps the kernel at about 2.7× its memory cost, and in a warm single-operator loop L2 residency takes away what is left of the upside. Quantization starts to pay only when the working set is larger than the roughly 36 MB that L2 actually holds and the kernel skips per-element dequantization.
 
   The bigger lesson for me was about measurement. For microsecond kernels, I now time inside CUDA graphs, collect cache-residency counters with `--cache-control none`, and test a causal story by removing the cause at a fixed shape before I believe it.
 
-  The open question is production serving, where other layers and other requests compete for L2 and the 16 MB weights may not stay resident.
+  All of the L2 results on this page come from a warm loop that runs one operator on the same weights again and again. A full decode step reads each layer's 16 MB weights once, with the rest of the model's weights passing through L2 in between, so in serving these weights stream from HBM. There the comparison that applies is the forced-HBM row above, where INT4 is 0.89× of FP16, and the stacking result, where W8A8 wins.
 </Section>

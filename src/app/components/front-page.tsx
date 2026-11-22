@@ -27,9 +27,9 @@ export default function FrontPage() {
                     <Link href="/blog/tp-without-nvlink" className="ink-link">
                         LLM inference without NVLink
                     </Link>
-                    ; before that I wrote kernels like{" "}
-                    <Link href="/projects/tiny-gemm" className="ink-link">
-                        Tiny-GEMM
+                    ; before that I{" "}
+                    <Link href="/projects/mla-profiling" className="ink-link">
+                        profiled MLA kernels on H100
                     </Link>
                     .
                 </p>

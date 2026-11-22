@@ -94,11 +94,11 @@ thumb: /thumbs/graph-scheduling.svg
 <Section id="solver" title="The Solver">
   The solver is C++. It starts with every op in its own subgraph. Fusion is a greedy hill-climb: score every pair of connected subgraphs by how much a merge lowers latency, apply the best merge, and repeat until no merge helps. Before any merge it runs a BFS to check that merging would not create a cycle in the subgraph DAG, since an indirect path between the two would make the schedule impossible to order.
 
-  A second pass then applies merges that leave latency unchanged but make more tensors ephemeral. Under this model that changes no scores on compute-bound graphs, but it removes HBM traffic that real hardware would still pay for. On benchmark 17 it folded each five-MatMul attention chain into one subgraph and took the graph from 73 subgraphs to 17.
+  A second pass then applies merges that leave latency unchanged but make more tensors ephemeral. Under this model that changes no scores on compute-bound graphs, but it removes HBM traffic that a more detailed cost model might still charge for. On benchmark 17 it folded each five-MatMul attention chain into one subgraph and took the graph from 73 subgraphs to 17.
 
   For each subgraph, granularity search tries power-of-two values of `w`, `h` and `k`, discards any whose working set exceeds capacity, and keeps the lowest-latency one, preferring larger tiles on ties. Every MatMul subgraph with more than one tile gets a zig-zag order. Finally, for each pair of consecutive subgraphs, a tensor passed from the first to the second is retained if it fits in both working sets.
 
-  The organizers' evaluator wasn't runnable outside Google, so we wrote our own checker. It verifies that every op is scheduled exactly once, subgraphs are in topological order, every tile's working set fits, and the reported latencies match a recomputation. We also hand-checked the solver against the worked examples in the problem statement.
+  The organizers' evaluator wasn't runnable standalone for us, so we wrote our own checker. It verifies that every op is scheduled exactly once, subgraphs are in topological order, every tile's working set fits, and the reported latencies match a recomputation. We also hand-checked the solver against worked example 1B in the problem statement.
 </Section>
 
 <Section id="results" title="Results">

@@ -3,11 +3,11 @@ import type { ReactNode } from "react";
 import type { Entry } from "../../lib/content";
 import type { JournalPost, Project } from "../../lib/content-schema";
 
-/** What a post is, as the index labels it, with the colour of its dot and its label. */
+/** What a post is, as the index labels it, and the colour of its dot. The label stays muted; koi is kept for the accent. */
 export const KINDS = {
-    technical: { label: "Research", dot: "bg-koi", text: "text-koi" },
-    project: { label: "Project", dot: "bg-kind-project", text: "text-kind-project" },
-    journal: { label: "Life", dot: "bg-kind-life", text: "text-kind-life" },
+    technical: { label: "Research", dot: "bg-koi" },
+    project: { label: "Project", dot: "bg-kind-project" },
+    journal: { label: "Life", dot: "bg-kind-life" },
 } as const;
 export type Kind = keyof typeof KINDS;
 
@@ -31,7 +31,7 @@ export function shortDate(date: string) {
 export function KindTag({ kind, className = "" }: { kind: Kind; className?: string }) {
     const k = KINDS[kind];
     return (
-        <span className={`inline-flex items-center gap-2 text-small ${k.text} ${className}`}>
+        <span className={`inline-flex items-center gap-2 text-small text-muted ${className}`}>
             <span aria-hidden className={`h-[6px] w-[6px] rounded-full ${k.dot}`} />
             <span className="max-sm:sr-only">{k.label}</span>
         </span>

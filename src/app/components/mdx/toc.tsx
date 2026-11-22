@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Heading } from "../../../lib/mdx";
 import { HAIRLINE, MUTED } from "./styles";
 
@@ -60,8 +60,17 @@ const BAND = 0.25;
 export function TableOfContents({ headings }: { headings: Heading[] }) {
     const active = useActiveHeading(headings);
     const open = useSheetOpen();
+    const sheet = useRef<HTMLElement>(null);
     // A new page starts with the list closed.
     useEffect(() => () => setSheetOpen(false), []);
+    // The list opens below the cover band or hero, often off screen on a phone, so bring it into view and move focus
+    // to its first link; otherwise the button would look dead.
+    useEffect(() => {
+        if (!open || !sheet.current) return;
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        sheet.current.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+        sheet.current.querySelector("a")?.focus({ preventScroll: true });
+    }, [open]);
     if (headings.length < MIN_HEADINGS) return null;
     const list = (
         <ol className={`flex flex-col border-l ${HAIRLINE}`}>
@@ -94,9 +103,10 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
             </nav>
             {open && (
                 <nav
+                    ref={sheet}
                     id={SHEET_ID}
                     aria-label="Contents"
-                    className="mb-10 min-[1120px]:hidden"
+                    className="mb-10 scroll-mt-24 min-[1120px]:hidden"
                     onClick={(e) => {
                         if ((e.target as HTMLElement).closest("a")) setSheetOpen(false);
                     }}

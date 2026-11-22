@@ -1,7 +1,7 @@
 ---
 title: "Before You Trust a Speedup, Check the Baseline"
 shortTitle: "Check the baseline first"
-subtitle: "four wrong answers from one fused-MoE quantization study, and the checks that caught them"
+subtitle: "five wrong answers from one fused-MoE quantization study, and the checks that caught them"
 date: November 2026
 year: 2026
 order: 50
@@ -9,7 +9,7 @@ kind: technical
 hidden: true
 ---
 
-Does weight-only quantization make a mixture-of-experts layer faster, and up to how many tokens? I studied that question for one shape: Mixtral's experts (8 experts, hidden size 4096, intermediate size 14336, top-2 routing) on an H100. Along the way I got four confident answers that were wrong, plus one smaller one. Each came from a broken comparison point or a misleading harness, not from the physics of quantization.
+Does weight-only quantization make a mixture-of-experts layer faster, and up to how many tokens? I studied that question for one shape: Mixtral's experts (8 experts, hidden size 4096, intermediate size 14336, top-2 routing) on an H100. Along the way I got five confident answers that were wrong. Each came from a broken comparison point or a misleading harness, not from the physics of quantization.
 
 This is the kernel-level companion to [Reading a Multi-GPU vLLM Run Without Fooling Yourself](/blog/reading-vllm-runs). That post is about serving runs. This one is about the single operator underneath them, where the mistakes are smaller and easier to believe.
 
@@ -99,11 +99,9 @@ Against the stock config the crossover sits at 601 tokens. Against the tuned one
 
 Tuning doesn't always change the answer. When I ran the same sweep on two fine-grained MoE shapes with 256 small experts, the tuned and stock bf16 baselines matched at every token count. Those layers are bound by streaming many distinct expert weights from memory, and an L2-reuse knob can't reduce how many bytes bf16 has to read. You only know which case you're in by sweeping it.
 
-## Why this keeps happening
-
-Every one of these was a baseline or harness problem, and every one pushed in a different direction: a kernel too fast to be real, a quantized path made slow by surrounding code, a crossover invented by the timer, a win invented by a slow kernel, and a crossover doubled by a missing config. It is easy to spend all the effort on the thing being tested and none on the thing it is tested against, and the result is a speedup that measures the baseline's problems. What caught each one was a number the measurement had to agree with: peak FLOPs, a reference output, linear scaling, a roofline.
-
 ## Pre-flight
+
+What caught each one was a number the measurement had to agree with: peak FLOPs, a reference output, linear scaling, a roofline. This is the list I run now.
 
 - Output matches a reference before any timing is read.
 - Achieved FLOPs and bytes per second are both below the hardware's peaks.

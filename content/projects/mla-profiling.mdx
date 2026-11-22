@@ -2,7 +2,7 @@
 title: "Profiling MLA's Absorbed-Projection BMMs on H100, and Why INT4 Didn't Help"
 shortTitle: MLA Profiling
 description: In eager mode at batch size 1, MLA's absorbed projection BMMs take 61% of attention-layer time on DeepSeek-V3 shapes. Weight-only INT4 keeps quality but runs at about half the speed of FP16, partly because the weights sit in L2 and mostly because the kernel is bound by dequantization.
-longDescription: MLA keeps a 512-dimensional latent per token instead of full K and V, and folds the up-projections into two batched matmuls per layer. I profiled those BMMs on H100 with DeepSeek-V3 shapes, tried weight-only INT4 on them, and then went back and re-measured with better methodology. L2 residency removes most of INT4's theoretical upside at the 16 MB MLA shape, dequantization overhead removes the rest, and a W8A8 kernel that skips dequantization wins only once the weights no longer fit in L2.
+longDescription: MLA keeps a 512-dimensional latent per token instead of full K and V, and folds the up-projections into two batched matmuls per layer. I profiled those BMMs on H100 with DeepSeek-V3 shapes, tried weight-only INT4 on them, and then went back and re-measured with better methodology. Dequantization overhead keeps the INT4 kernel at about 2.7× its memory cost, L2 residency takes away what is left of the upside at the 16 MB MLA shape, and a W8A8 kernel that skips dequantization wins only once the weights no longer fit in L2.
 date: "2026"
 updated: "2026-11-21"
 year: 2026
@@ -85,6 +85,16 @@ githubUrl: https://github.com/zhan4808/sglang
   So the effective capacity is about 36 MB, not the nominal 50 MB, and the cliff sits between 32 and 40 MB. The effective serving bandwidth below the cliff is 3.5 to 4.6 TB/s, with an incremental slope of 6.3 TB/s. That is above the 3.35 TB/s HBM peak, which is only possible if L2 serves part of it, but it is nowhere near 12 TB/s.
 
   The timing had a floor. Per-launch CUDA-event timing on this stack bottoms out near 15.5 µs: a 0.5 MB bmm times the same as a 16 MB one. That floor made FP16 latency look flat from 8 to 32 MB, which I had read as L2 serving. Timed inside a CUDA graph, the same FP16 kernel goes from 3.5 µs at 8 MB to 7.3 µs at 32 MB, then jumps to 16.6 µs at 40 MB.
+
+  What I check now, before believing a number like these:
+
+  - the `--cache-control` setting, before reading any residency claim off NCU;
+  - whether two supposedly different cache conditions give the same counters, which means the setup is wrong before it means the effect is absent;
+  - a trivially small version of the same op in the same harness, which tells me whether I am timing the floor;
+  - CUDA-graph timing for microsecond kernels, especially when comparing Triton to cuBLAS;
+  - time converted to bytes per second and compared to HBM peak, since above peak means a cache is helping and also bounds how much;
+  - a fixed shape with only the cache changed, by rotating weight copies, rather than a size sweep that changes the kernel too;
+  - the software versions, written next to every number.
 </Section>
 
 <Section id="two-causes" title="Two causes, not one">
@@ -106,7 +116,7 @@ githubUrl: https://github.com/zhan4808/sglang
 
   Cold-cache NCU is still fine for classifying the kernels, and it agrees. Across the size sweep the FP16 cuBLAS kernel stays below 15% SM utilization while DRAM utilization rises from 35% to 83%, and the INT4 kernel runs 33% to 79% SM utilization with DRAM under 23%. Useful compute never exceeds about 4.6 TFLOPS, 0.5% of peak, so the high SM utilization in the INT4 kernel is unpacking work, not FLOPs.
 
-  The size sweep, re-timed with CUDA graphs, tells the same story from the other side. INT4's speedup is about 0.5× at 16 MB and rises to about 0.9 to 1.0× once the weights pass the cliff at 40 MB and above. It reaches parity and never wins. The event-timed version of this sweep gives different magnitudes on different torch and Triton versions, so I only trust the graph-timed numbers.
+  The size sweep, re-timed with CUDA graphs, tells the same story from the other side. INT4's speedup is about 0.5× at 16 MB and rises to about 0.9 to 1.0× once the weights pass the cliff at 40 MB and above. It reaches parity and never wins. The event-timed version of this sweep does not travel across software versions: at 16 MB the INT4/FP16 time ratio was 1.86× on Triton 3.5.1 and 2.75× on Triton 3.3.0, and at 128 MB 1.08× against 1.58×. The direction held and the numbers did not, because event timing at bs=1 mostly measures launch overhead, which is what changes with the stack. I only trust the graph-timed numbers.
 </Section>
 
 <Section id="w8a8" title="What does win">
@@ -132,7 +142,7 @@ githubUrl: https://github.com/zhan4808/sglang
 <Section id="takeaways" title="Takeaways">
   At small batch sizes in eager mode, MLA's absorbed projection BMMs cost more than the attention kernel they feed. They are tiny, fixed-weight, launch-floor-dominated operations, and a single-level roofline badly mispredicts them.
 
-  Weight-only INT4 with a dequantization-heavy kernel cannot win at the MLA shape. L2 residency takes away most of the bytes-saved upside, and unpacking overhead takes the rest. Quantization starts to pay only when the working set is larger than the roughly 36 MB that L2 actually holds and the kernel skips per-element dequantization.
+  Weight-only INT4 with a dequantization-heavy kernel cannot win at the MLA shape. Dequantization overhead keeps the kernel at about 2.7× its memory cost, and L2 residency takes away what is left of the upside. Quantization starts to pay only when the working set is larger than the roughly 36 MB that L2 actually holds and the kernel skips per-element dequantization.
 
   The bigger lesson for me was about measurement. For microsecond kernels, I now time inside CUDA graphs, collect cache-residency counters with `--cache-control none`, and test a causal story by removing the cause at a fixed shape before I believe it.
 

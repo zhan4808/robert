@@ -36,7 +36,8 @@ function FigureLabel({ number, children }: { number: string; children?: ReactNod
  */
 const RASTER = "mix-blend-multiply dark:mix-blend-normal";
 const RASTER_DARK = "dark:opacity-90";
-const RASTER_INVERT = "dark:invert dark:hue-rotate-180 dark:mix-blend-screen";
+const INVERT = "dark:invert dark:hue-rotate-180";
+const RASTER_INVERT = `${INVERT} dark:mix-blend-screen`;
 
 /** An image in the write-up, with an optional caption; clicking opens it in the lightbox. */
 export function Figure({ src, alt, caption, invert, sizes, number }: FigureProps) {
@@ -50,6 +51,7 @@ export function Figure({ src, alt, caption, invert, sizes, number }: FigureProps
                 alt={alt}
                 caption={number ? <FigureLabel number={number}>{caption}</FigureLabel> : caption}
                 className={image}
+                fullClassName={invert ? INVERT : undefined}
                 frameClassName={raster ? "bg-tile" : undefined}
                 meta={imageMeta(src)}
                 sizes={sizes}

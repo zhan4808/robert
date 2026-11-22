@@ -11,13 +11,13 @@ hidden: true
 
 Quantization is sold on bytes. Store a weight in INT8 instead of FP16 and you read half as much memory, so a memory-bound layer should run up to twice as fast. I wanted to know when that's actually true on an H100, and I ended up with a kernel that is about 1.5× faster than cuBLAS FP16 on large weight matrices and about 0.7× as fast on small ones, with the sign flipping at one specific size.
 
-The short version: halving the bytes only helps if bytes were the cost. When a weight matrix fits in the GPU's L2, FP16 is already reading it from cache, and the INT8 kernel's extra work makes it slower. In Qwen3-8B, one projection per block sits under that line. Quantizing every layer makes the model's GEMMs slower even though some layers get faster.
+Halving the bytes only helps if bytes were the cost. When a weight matrix fits in the GPU's L2, FP16 is already reading it from cache, and the INT8 kernel's extra work makes it slower. In Qwen3-8B, one projection per block sits under that line. Quantizing every layer makes the model's GEMMs slower even though some layers get faster.
 
-This builds on an earlier write-up, [the L2 cache barrier in MLA serving](/projects/mla-profiling), where an INT4 kernel lost to FP16 because the weights it was meant to shrink were already cache-resident.
+This builds on an earlier write-up, [the L2 cache barrier in MLA serving](/projects/mla-profiling), where an INT4 kernel lost to FP16, mostly to dequantization overhead and partly because the weights were already in L2.
 
 ## Why the earlier quantized kernels never won
 
-The INT4 and INT8 weight-only kernels I'd written before (W4A16, W8A16) all lost to cuBLAS, including on weights too big for L2. The reason is in the inner loop. A weight-only kernel stores weights in low precision but multiplies in FP16, so every element has to be unpacked and converted before it reaches the tensor cores: mask, shift, sign-extend, convert. That work runs on the same SMs as the matmul. It sets a compute ceiling of its own, about 30 TFLOPS for my MLA W4A16 kernel, and once you hit it the saved bandwidth doesn't turn into speed.
+The INT4 and INT8 weight-only kernels I'd written before (W4A16, W8A16) all lost to cuBLAS, including on weights too big for L2. The reason is in the inner loop. A weight-only kernel stores weights in low precision but multiplies in FP16, so every element has to be unpacked and converted before it reaches the tensor cores: mask, shift, sign-extend, convert. That work runs on the same SMs as the matmul and sets a compute ceiling of its own, and once you hit it the saved bandwidth doesn't turn into speed.
 
 So the first thing to fix wasn't the cache. It was the conversion. A W8A8 kernel quantizes the activations too, and then the inner loop never converts anything:
 
@@ -30,39 +30,17 @@ Relative error against FP16 was about 0.009 with both operands quantized. All ti
 
 ## Sweeping the weight size across L2
 
-To isolate the cache, I held the MLA reconstruction shape fixed at batch size 1 and scaled the weight matrix from 8 MB to 128 MB.
-
-| FP16 weights | cuBLAS FP16 | W8A8 | W4A16 | W8A8 vs FP16 |
-|---|---|---|---|---|
-| 8 MB | 3.6 µs | 5.1 µs | 5.5 µs | 0.70× |
-| 16 MB | 4.9 µs | 6.9 µs | 9.0 µs | 0.70× |
-| 32 MB | 7.6 µs | 10.4 µs | 15.6 µs | 0.73× |
-| 48 MB | 21.7 µs | 14.3 µs | 22.5 µs | 1.52× |
-| 64 MB | 27.5 µs | 17.9 µs | 29.0 µs | 1.53× |
-| 96 MB | 38.6 µs | 28.2 µs | 41.8 µs | 1.37× |
-| 128 MB | 49.1 µs | 34.4 µs | 55.7 µs | 1.43× |
-
-<Figure
-  src="/drafts/quantizing-can-make-it-slower/w8a8_results.png"
-  alt="Left: latency against FP16 weight size for cuBLAS FP16, W8A8 and W4A16, with FP16 jumping between 32 and 48 MB. Right: W8A8 and W4A16 speedup over FP16 at the 16 MB shape across batch sizes, all below 1."
-  caption="Left, batch size 1 across the L2 boundary. Right, the 16 MB shape at every batch size."
-/>
-
-{/* FIGURE NEEDED: themed <Diagram> redraw of the left panel only (latency vs weight size, shaded band at ~36 MB), so it reads in both themes and drops the paper-style titles. */}
-
-Look at the FP16 column first. It grows slowly up to 32 MB, then nearly triples between 32 and 48 MB. That jump is FP16 falling out of L2 and starting to stream from HBM. W8A8 grows smoothly through the same range, because at INT8 those matrices are half the size and its cost is roughly proportional to the bytes it reads.
+To isolate the cache, I held the MLA shape fixed at batch size 1 and scaled the weight matrix from 8 MB to 128 MB. The full table is on the [project page](/projects/mla-profiling#w8a8). FP16 grows slowly up to 32 MB, then nearly triples between 32 and 48 MB as it falls out of L2 and starts streaming from HBM. W8A8 grows smoothly through the same range, because at INT8 those matrices are half the size and its cost is roughly proportional to the bytes it reads.
 
 H100 has 50 MB of L2 on paper. When I measured the effective capacity, the answer was about 36 MB, and that's where the sign flips: below it W8A8 is 0.7× of FP16, above it 1.4 to 1.5×. Below the line, FP16's bytes were coming from cache, so INT8 saved traffic nobody was paying for and added an activation-quant launch plus a less tuned GEMM. Above the line, the saved bytes are real HBM reads, and because nothing in the inner loop converts, the saving shows up as latency.
 
 W4A16 loses at every size. It moves a quarter of FP16's bytes and still can't win, which is the conversion ceiling from the previous section.
 
-The right panel answers the obvious follow-up: does a bigger batch rescue the 16 MB shape? It doesn't. W8A8 is 0.60 to 0.71× at batch 1 to 16 and worse beyond that, where cuBLAS is very strong and this shape gives the INT8 tiles little math per byte.
+A bigger batch doesn't rescue the 16 MB shape either. W8A8 is 0.60 to 0.71× at batch 1 to 16 and worse beyond that, where cuBLAS is very strong and this shape gives the INT8 tiles little math per byte.
 
 ## How this squares with MARLIN
 
-MARLIN reports close to the ideal 4× for INT4 weight-only kernels at batch sizes up to 32. My W4A16 kernel never won at all. I don't think these disagree. MARLIN is a carefully tuned CUDA kernel running on ordinary LLM layers, whose weights are hundreds of megabytes and stream from HBM. That's the far right of my sweep, where bytes are the cost. My MLA weights were 16 MB, the far left.
-
-When I re-ran the weight-only comparison with CUDA Marlin kernels on a Mixtral MoE layer, where expert weights are large, FP8 weight-only won 1.76 to 1.90× at 128 tokens and below. The conversion ceiling still showed up, just later: those kernels topped out around 422 TFLOPS while bf16 kept climbing, and against a properly tuned bf16 baseline they lost past roughly 300 tokens. So both results fit one picture. Weight-only quantization has a window: weights big enough to come from HBM, and few enough tokens that the in-core conversion isn't the bottleneck yet.
+MARLIN reports close to the ideal 4× for INT4 weight-only kernels at batch sizes up to 32, on ordinary LLM layers whose weights are hundreds of megabytes and stream from HBM. That's the far right of my sweep, where bytes are the cost, and [a separate MoE experiment](/blog/check-the-baseline-first) shows the same window closing as tokens grow.
 
 ## Qwen3-8B, layer by layer
 
@@ -84,11 +62,11 @@ Add up the five GEMMs at M = 1 and bf16 takes 138.1 µs per block. Quantizing al
 
 ## The activation quant has to be fused
 
-The activation-quant kernel is easy to treat as a detail. It isn't. My first Qwen3 version quantized activations with plain PyTorch ops, which comes to about six kernel launches. With that, W8A8 lost on every shape at every M, including gate and up, where it was 1.26× slower than bf16. Fusing activation quant into one Triton kernel is what turned gate and up into 0.78×. At decode sizes a GEMM takes tens of microseconds, so a handful of extra launches is enough to erase the whole byte saving.
+My first Qwen3 version quantized activations with about six PyTorch launches, and W8A8 lost on every shape at every M, including gate and up, where it was 1.26× slower than bf16. Fusing activation quant into one Triton kernel is what turned gate and up into 0.78×. At decode sizes a GEMM takes tens of microseconds, so a handful of extra launches is enough to erase the whole byte saving.
 
 ## Measure on the GPU you're serving on
 
-I tried to turn this into an automatic per-layer choice, seeding the cost model with the ratios from the MLA sweep. Those ratios said W8A8 wins whenever weights stream from HBM, which, as the Qwen3 table shows, isn't true for this kernel on these shapes. The seeded policy over-quantized and came out 19% slower than plain bf16 in decode. Replacing the seed with a short GEMM sweep run on the serving GPU at startup brought it to 9% faster than bf16, matching the best per-layer choice at every M I tested. The rule tells you where to look. The numbers have to come from the machine.
+I tried to turn this into an automatic per-layer choice, seeding the cost model with the ratios from the MLA sweep. Those ratios said W8A8 wins whenever weights stream from HBM, which, as the Qwen3 table shows, isn't true for this kernel on these shapes. The seeded policy over-quantized and came out 19% slower than plain bf16 in decode. Replacing the seed with a short GEMM sweep run on the serving GPU at startup brought it to 9% faster than bf16, matching the best per-layer choice at every M I tested.
 
 ## The rule
 

@@ -40,15 +40,16 @@ export function Diagram({ name, caption, number }: { name: string; caption?: str
              * Every drawing is a 720-unit canvas whose smallest labels are 11.4 units, so it scales with the column only
              * from lg up, where it has its full width. Below that, shrunk to fit, those labels would fall under 11px; it
              * keeps a readable width instead and scrolls sideways, edge to edge, with the right edge fading out to show
-             * there is more. It can take focus so the keyboard can scroll it too.
+             * there is more. The inner frame ends in 2.5rem of padding, so at the end of the scroll the faded strip is
+             * empty. It can take focus so the keyboard can scroll it too.
              */}
             <div
                 tabIndex={0}
                 role="region"
                 aria-label={number ? `Figure ${number}` : "Diagram"}
-                className="-mx-6 overflow-x-auto px-6 text-foreground focus-ring [mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)] lg:mx-0 lg:overflow-visible lg:px-0 lg:[mask-image:none]"
+                className="-mx-6 overflow-x-auto pl-6 text-foreground focus-ring [mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)] lg:mx-0 lg:overflow-visible lg:px-0 lg:[mask-image:none]"
             >
-                <div className="min-w-[696px] lg:min-w-0">
+                <div className="min-w-[736px] pr-10 lg:min-w-0 lg:pr-0">
                     <Drawing />
                 </div>
             </div>

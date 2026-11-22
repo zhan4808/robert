@@ -9,7 +9,10 @@ interface ImageLightboxProps {
     src: string;
     alt: string;
     caption?: ReactNode;
+    /** Classes for the thumbnail image. */
     className?: string;
+    /** Classes for the full-size image in the overlay; defaults to none, so thumbnail blend modes never reach it. */
+    fullClassName?: string;
     /** Size and blur placeholder from the manifest; without it the thumbnail is a plain <img>. */
     meta?: ImageMeta;
     /** How wide the thumbnail renders, for the srcset; defaults to the full write-up frame. */
@@ -23,6 +26,7 @@ export function ImageLightbox({
     alt,
     caption,
     className,
+    fullClassName,
     meta,
     sizes = CONTENT_IMAGE_SIZES,
     frameClassName,
@@ -222,7 +226,7 @@ export function ImageLightbox({
                         <img
                             src={src}
                             alt={alt}
-                            className={`max-w-[90vw] max-h-[90vh] object-contain select-none rounded-lg shadow-2xl transition-transform duration-100 ease-out${className ? ` ${className}` : ""}`}
+                            className={`max-w-[90vw] max-h-[90vh] object-contain select-none rounded-lg shadow-2xl transition-transform duration-100 ease-out${fullClassName ? ` ${fullClassName}` : ""}`}
                             style={{
                                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
                                 transformOrigin: "center center",

@@ -20,76 +20,76 @@ Most of the night went into making the site more credible rather than bigger. Th
 - **Figures:** raster figures sit on a tile, multiplied in light mode and dimmed in dark mode. `invert` now applies in dark mode only; before, it also turned dark-on-white diagrams black in light mode. The lightbox shows the full image without those blend modes. Before this fix, every expanded figure rendered almost black in light mode.
 - **Astera guard on part 1's traced charts:** gridlines are gone and the traced values are rounded, so the charts keep their shapes and order but carry no readable levels.
 - **Small fixes:**
-  - the swapped gallery captions (and the same swap in the docs example)
-  - the july photo captions, which were on the wrong photos
-  - a dead home-intro sentence, which now links the NVLink series and Tiny-GEMM
-  - a footer that is one wrapping line of links (it no longer clips at 320px)
-  - the archive's v6 description
-  - chart labels that overlapped curves in parts 1 and 3
-  - the code-block copy button sitting on top of code
-  - table columns hidden on desktop
-  - a 4px horizontal overflow on photo pages
+    - the swapped gallery captions (and the same swap in the docs example)
+    - the july photo captions, which were on the wrong photos
+    - a dead home-intro sentence, which now links the NVLink series and Tiny-GEMM
+    - a footer that is one wrapping line of links (it no longer clips at 320px)
+    - the archive's v6 description
+    - chart labels that overlapped curves in parts 1 and 3
+    - the code-block copy button sitting on top of code
+    - table columns hidden on desktop
+    - a 4px horizontal overflow on photo pages
 
 ## Posts and projects
 
 - **Retired (hidden, files kept):** `cuda-mmm`, `cpu-mmm`, `pipeline-parallel` (retellings of other people's work and timings) and `projects/sparse-attention` (a design doc with no results).
 - **tp-without-nvlink (part 1):**
-  - all-reduce count stated as "about two per layer" instead of an unexplained 91
-  - ring as NCCL's default, with the Tree exception linked to part 2
-  - a sentence on channels
-  - the TP8 claim limited to models that fit in one box
-  - scope stated: tensor parallelism only
+    - all-reduce count stated as "about two per layer" instead of an unexplained 91
+    - ring as NCCL's default, with the Tree exception linked to part 2
+    - a sentence on channels
+    - the TP8 claim limited to models that fit in one box
+    - scope stated: tensor parallelism only
 - **nccl-defaults-off-nvlink (part 2):**
-  - removed "half rate", "several times faster" and "over a hundred thousand all-reduces"
-  - says the tree is a chain inside each node
-  - the mpirun command now forwards `NCCL_*` with `-x`
+    - removed "half rate", "several times faster" and "over a hundred thousand all-reduces"
+    - says the tree is a chain inside each node
+    - the mpirun command now forwards `NCCL_*` with `-x`
 - **pcie-vs-ethernet-scale-up (part 3):**
-  - MLA replication tied to default TP in vLLM/SGLang
-  - why TP16 starts behind
-  - the async caveat in a Note
-  - CPU-tier sentence cut
-  - trends-only disclaimer kept in the caption only
+    - MLA replication tied to default TP in vLLM/SGLang
+    - why TP16 starts behind
+    - the async caveat in a Note
+    - CPU-tier sentence cut
+    - trends-only disclaimer kept in the caption only
 - **reading-vllm-runs (part 4):** removed every rig-derived count. The heading is now "What cost us GPU time", because the list holds nine pitfalls and two of them hang the run. The profiler advice is in one place.
 - **projects/mla-profiling:**
-  - Corrected against the later validation work in `cache-barrier/profiling/validation/` (REPORT.md, diag_results.json, graph_rotation.json).
-  - A dated correction note.
-  - The cold-cache NCU and launch-floor explanation, plus the 36 MB effective capacity.
-  - The rotation table and the W8A8 result.
-  - One causal story throughout: dequantization is the main cause and L2 the smaller one.
-  - A "what I check now" list, plus the finding that event-timed ratios changed between Triton versions.
-  - Dropped figures with wrong captions or the old 50 MB boundary drawn in, and dropped unsupported claims.
+    - Corrected against the later validation work in `cache-barrier/profiling/validation/` (REPORT.md, diag_results.json, graph_rotation.json).
+    - A dated correction note.
+    - The cold-cache NCU and launch-floor explanation, plus the 36 MB effective capacity.
+    - The rotation table and the W8A8 result.
+    - One causal story throughout: dequantization is the main cause and L2 the smaller one.
+    - A "what I check now" list, plus the finding that event-timed ratios changed between Triton versions.
+    - Dropped figures with wrong captions or the old 50 MB boundary drawn in, and dropped unsupported claims.
 - **projects/tiny-gemm:**
-  - consistent 4x byte ceiling, and 3.58x instead of "up to 3.7x"
-  - the regime section rewritten around launch floor and CTA fill
-  - the alpha rule dropped, with the reason
-  - correct unpack path (registers, FP16 MMA)
-  - a Limitations paragraph
-  - 15 figures cut to the 4 that match the table
+    - consistent 4x byte ceiling, and 3.58x instead of "up to 3.7x"
+    - the regime section rewritten around launch floor and CTA fill
+    - the alpha rule dropped, with the reason
+    - correct unpack path (registers, FP16 MMA)
+    - a Limitations paragraph
+    - 15 figures cut to the 4 that match the table
 - **projects/graph-scheduling:**
-  - scoring corrected to the contest rules
-  - final per-benchmark speedups from `MLSys/NOTES.md`, checked against the output JSONs
-  - zig-zag claim reduced to the one measured case
-  - recomputation described as considered and rejected (the solver has none)
+    - scoring corrected to the contest rules
+    - final per-benchmark speedups from `MLSys/NOTES.md`, checked against the output JSONs
+    - zig-zag claim reduced to the one measured case
+    - recomputation described as considered and rejected (the solver has none)
 - **projects/atalla-kernels:**
-  - cache and softmax contradictions fixed
-  - double buffering stated honestly (the loop as written doesn't overlap)
-  - im2col and Horner numbers cut
-  - conditional rescaling credited to FlashAttention-4
-  - Ax02 marked as planned
+    - cache and softmax contradictions fixed
+    - double buffering stated honestly (the loop as written doesn't overlap)
+    - im2col and Horner numbers cut
+    - conditional rescaling credited to FlashAttention-4
+    - Ax02 marked as planned
 - **july, purpose:** cut abstract filler and repeated lines. Only things the posts already said remain.
 
 ## New drafts (both `hidden: true`)
 
 - **quantizing-can-make-it-slower:** W8A8 beats cuBLAS FP16 above the roughly 36 MB effective L2 and loses below it. A Qwen3-8B per-layer table shows quantizing all five projections is slower than bf16. Two further sections: fused activation quant, and calibrating the per-layer choice on the serving GPU.
-  - Evidence:
-    - `cache-barrier/profiling/w8a8/REPORT.md` and `results_w8a8.json`
-    - `regime-router/RESULTS.md`, `FINDINGS.md` and `runs/summary/gemm_sweep.csv`
-    - `cache-barrier/profiling/cuda_validation/REPORT.md`
-  - It links to the MLA page for the sweep table rather than copying it, and its paper-style PNG was removed.
+    - Evidence:
+        - `cache-barrier/profiling/w8a8/REPORT.md` and `results_w8a8.json`
+        - `regime-router/RESULTS.md`, `FINDINGS.md` and `runs/summary/gemm_sweep.csv`
+        - `cache-barrier/profiling/cuda_validation/REPORT.md`
+    - It links to the MLA page for the sweep table rather than copying it, and its paper-style PNG was removed.
 - **check-the-baseline-first:** five wrong answers from one fused-MoE quantization study, each caused by a baseline or a harness, and a pre-flight list.
-  - Evidence:
-    - `cache-barrier/profiling/fused_moe/REPORT.md`, `results_fused_moe_extended.json` and `PR_BODY.md`
-    - `cache-barrier/profiling/cuda_validation/REPORT.md` and `results_verification.json`
+    - Evidence:
+        - `cache-barrier/profiling/fused_moe/REPORT.md`, `results_fused_moe_extended.json` and `PR_BODY.md`
+        - `cache-barrier/profiling/cuda_validation/REPORT.md` and `results_verification.json`
 - **Cut:** a third draft, the-profiler-flushed-my-cache. Once the MLA page carried the full correction, the draft told the same story twice. Its checklist and version-drift paragraph moved into the MLA page.
 
 ## Deliberately not done
@@ -106,9 +106,9 @@ Most of the night went into making the site more credible rather than bigger. Th
 1. **Drafts:** read both drafts and spot-check their numbers against the evidence files before unhiding. quantizing-can-make-it-slower links to check-the-baseline-first, so publish them together or drop that link.
 2. **MLA correction note:** confirm you're comfortable with a public correction on MLA. Also check that `public/mla-profiling/paper.pdf` matches the corrected `cache-barrier/paper/main.tex`.
 3. **Tiny-GEMM inconsistencies:**
-   - FP16 DRAM bandwidth is 75 to 77% in the paper but 92.3% on the NCU chart.
-   - The M=16 curve exceeds the 4x ceiling.
-   - Some values are arithmetic derived from the page's own numbers, not measurements: "about 90%", the weight MB values and "about 80%".
+    - FP16 DRAM bandwidth is 75 to 77% in the paper but 92.3% on the NCU chart.
+    - The M=16 curve exceeds the 4x ceiling.
+    - Some values are arithmetic derived from the page's own numbers, not measurements: "about 90%", the weight MB values and "about 80%".
 4. **july:** the subtitle "finding excitement in the everyday" no longer matches the body. Retitle?
 5. **Part 3:** the LayoutMap row for long-context MLA shows PP2 × TP8 winning at all three loads, but the text only claims the agentic trace. Should that row be one merged cell?
 6. **Part 1:** a small channel diagram would help next to the new channel sentence.

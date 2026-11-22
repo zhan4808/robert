@@ -180,7 +180,11 @@ shows under it when the Gallery has its own `caption`; the captions on the pictu
 
 ```mdx
 <Gallery>
-    <Figure src="/IMG_1493.webp" alt="A meadow with two chairs above the sea at Sea Ranch" caption="views at sea ranch, ca" />
+    <Figure
+        src="/IMG_1493.webp"
+        alt="A meadow with two chairs above the sea at Sea Ranch"
+        caption="views at sea ranch, ca"
+    />
     <Figure src="/IMG_1760.webp" alt="A beach seen from horseback" caption="horseback riding on the beach" />
 </Gallery>
 ```

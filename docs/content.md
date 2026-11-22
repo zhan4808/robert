@@ -45,15 +45,16 @@ Projects are listed in `order`; the strip groups them by `year`, newest first, a
 ```yaml
 ---
 title: july
+shortTitle: july # optional, about 40 characters: the name in a series' part list on the index; the full title heads the post
 subtitle: finding excitement in the everyday
 date: July 31, 2025
 updated: "2026-03-04" # ISO date of the last revision; shown as "updated March 4, 2026" beside the date
 year: 2025
 order: 5 # where it sits among the posts; lower first
-hidden: false # true: still builds at its URL with noindex, but out of the list, the feed, and the sitemap
+hidden: false # true: no page in production (still renders in next dev for drafting), left out of every list, the feed and the sitemap
 kind: journal # or technical; shown as "life" or "research", with a coloured dot, in the lists and on the page
 series: LLM inference without NVLink # posts that belong together share a name
-part: 1 # this post's place in the series; shown as 1/4 in the lists
+part: 1 # this post's place in the series; the index shows a series as one row with its parts listed under it
 coverImage: /oai2.webp
 coverGradient: from-orange-300 via-pink-300 to-blue-300 # Tailwind gradient stops
 tracks: # what was playing
@@ -66,7 +67,10 @@ tracks: # what was playing
 ```
 
 `title`, `subtitle`, `date`, `year`, and `order` are required. The blog index groups posts by `year`, newest year
-first, and keeps `order` within a year; previous and next step through visible posts in `order`.
+first, and keeps `order` within a year; previous and next step through visible posts in `order`. Dates in the index
+show the month only ("Nov"); a project dated by year alone shows the year and sorts after the month-dated entries of
+that year. A series is one row: the series name, dated by its newest part, with each part's `shortTitle` (or `title`)
+on a line underneath.
 
 ## The body
 
@@ -76,7 +80,8 @@ Markdown, with GitHub tables, footnotes, `$$` math, and fenced code. Every eleme
 A project body is a sequence of sections; a post body is just the blocks.
 
 A page with three or more headings (`<Section>`s, `##`, `###`) gets a table of contents: a rail in the left margin
-on wide screens that follows the reader, and a collapsible "contents" list above the body on narrow ones. Hovering a
+on wide screens that follows the reader, and on narrow ones a "Contents" button in the meta line under the title
+that opens the list above the body. Hovering a
 heading shows a `#` that links to it.
 
 ````mdx
@@ -170,13 +175,13 @@ accents that read on both papers, and Excalidraw-style strokes from rough.js. Ea
 
 ### Gallery
 
-A grid of figures: two across on phones, three from `md` up. The grid counts as one figure ("Figure 4" under it);
-the captions on the pictures stay as they are.
+A grid of figures: two across on phones, three from `md` up. The grid counts as one figure, but "Figure N" only
+shows under it when the Gallery has its own `caption`; the captions on the pictures stay as they are.
 
 ```mdx
 <Gallery>
-    <Figure src="/IMG_1493.webp" alt="Horseback riding on the beach" caption="horseback riding on the beach" />
-    <Figure src="/IMG_1760.webp" alt="Coastal landscape at sunset" caption="views at sea ranch, ca" />
+    <Figure src="/IMG_1493.webp" alt="A meadow with two chairs above the sea at Sea Ranch" caption="views at sea ranch, ca" />
+    <Figure src="/IMG_1760.webp" alt="A beach seen from horseback" caption="horseback riding on the beach" />
 </Gallery>
 ```
 

@@ -22,6 +22,10 @@ export default {
                 muted: "var(--muted-color)",
                 // The koi's red-orange: link hovers, active marks, the one warm note on the page.
                 koi: "var(--koi-color)",
+                // The index's kind colours beside the koi (Research): an olive for projects, a slate blue for life.
+                // Each holds at least 4.5:1 on the light paper and 7:1 on the dark one, so the labels can be tinted.
+                "kind-project": "var(--project-color)",
+                "kind-life": "var(--life-color)",
                 // Running prose, a step quieter than the foreground so headings and emphasis stand out from it.
                 prose: ink(72),
                 // Underlines at rest, before hover firms them up.
@@ -40,7 +44,9 @@ export default {
                 ui: "15px", // names and titles in lists and cards
                 body: "16px", // prose and the page intro
                 lede: "17px", // the phone project list's text
-                heading: "21px", // the phone project list's titles
+                heading: "21px", // the phone project list's titles, the home page's list headings
+                subtitle: ["20px", { lineHeight: "1.375" }], // the italic serif line under a page title
+                "title-sm": ["28px", { lineHeight: "1.15" }], // page titles on phones, set in the serif
                 title: ["34px", { lineHeight: "1.15", letterSpacing: "-0.01em" }], // page titles, set in the serif
                 display: ["40px", { lineHeight: "1.1", letterSpacing: "-0.015em" }], // the name on the home page
             },
@@ -94,12 +100,16 @@ export default {
                     "--foreground-color": theme("colors.light-foreground"),
                     "--muted-color": ink(62),
                     "--koi-color": "#c4512a",
+                    "--project-color": "#6b7530",
+                    "--life-color": "#4a6a96",
                 },
                 ".dark": {
                     "--background-color": theme("colors.dark-background"),
                     "--foreground-color": theme("colors.dark-foreground"),
                     "--muted-color": ink(52),
                     "--koi-color": "#ec8457",
+                    "--project-color": "#a8b35e",
+                    "--life-color": "#8ea9d6",
                 },
             });
         }),

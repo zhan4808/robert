@@ -1,5 +1,6 @@
 ---
 title: "Tensor Parallelism Without NVLink: Where the All-Reduce Time Actually Goes"
+shortTitle: Where the all-reduce time goes
 subtitle: "at decode sizes you pay for latency, not bandwidth"
 date: November 15, 2026
 year: 2026
@@ -15,21 +16,21 @@ I spent the fall in Astera Labs' CTO office measuring what that actually costs. 
 
 <Diagram name="rig" caption="The rig. Inside a box, GPUs talk over PCIe; any tensor-parallel group bigger than eight has to cross the Ethernet switch." />
 
-This post is about one question that kept coming up: when a tensor-parallel all-reduce is slow, what is it actually spending its time on? I went in expecting the answer to be bandwidth, or GPUs waiting on each other. It was neither.
+This post is about one question that kept coming up: when a tensor-parallel all-reduce is slow, what is it actually spending its time on? I went in expecting the answer to be bandwidth, or GPUs waiting on each other. It was neither. Everything here is tensor parallelism; expert parallelism and its all-to-all traffic were out of scope.
 
 ## Why tensor parallelism needs an all-reduce
 
-Tensor parallelism splits every weight matrix across N GPUs. Each GPU multiplies its own slice and ends up with a partial result, and those partial results have to be summed before the next layer can start. That sum is an all-reduce, and a transformer layer does two of them: one after attention, one after the MLP.
+Tensor parallelism splits every weight matrix across N GPUs. Each GPU multiplies its own slice and ends up with a partial result, and those partial results have to be summed before the next layer can start. That sum is an all-reduce, and a standard transformer layer does two of them: one after attention, one after the MLP.
 
 <Diagram name="tp-block" caption="One block split across four GPUs. Each produces a partial result; the all-reduce sums them so every GPU has the full output before the next block." />
 
-Two things make it expensive. It sits on the critical path, since nothing downstream can run until it finishes. And it happens on every layer of every step. GLM-5.3-Flash makes 91 all-reduces per decode step and Qwen3.5-122B makes 96, and that count is fixed by the architecture, so a longer prompt doesn't change it.
+Two things make it expensive. It sits on the critical path, since nothing downstream can run until it finishes. And it happens on every layer of every step. GLM-5.3-Flash makes 91 all-reduces per decode step and Qwen3.5-122B makes 96, about two per layer, and that count is fixed by the architecture, so a longer prompt doesn't change it.
 
 On these boxes, every one of those calls goes through NCCL. vLLM ships its own custom all-reduce kernel, but it turns itself off for more than two GPUs that only have PCIe between them. So whatever NCCL decides to do is your latency.
 
 ## A simple model of the cost
 
-NCCL's default here is a ring. The GPUs form a loop and the message is cut into N chunks. For N−1 steps, each GPU passes a chunk to its neighbour and adds in the one it receives, until every chunk is fully summed somewhere on the ring. For another N−1 steps, the finished chunks travel around until every GPU has all of them.
+For all but the very smallest messages, NCCL's default here is a ring ([part 2](/blog/nccl-defaults-off-nvlink) covers the Tree exception across boxes). The GPUs form a loop and the message is cut into N chunks. For N−1 steps, each GPU passes a chunk to its neighbour and adds in the one it receives, until every chunk is fully summed somewhere on the ring. For another N−1 steps, the finished chunks travel around until every GPU has all of them.
 
 <Diagram name="ring-allreduce" caption="Ring all-reduce on four GPUs: three steps to build one fully summed chunk per GPU, three more to pass them around." />
 
@@ -55,7 +56,7 @@ In decode, each running request adds one token per step. With a hidden size of 4
 
 <Diagram name="message-sizes" caption="All-reduce sizes for hidden size 4096 in bf16. Decode lives between kilobytes and a few megabytes; one prefill chunk is far past that." />
 
-Plug a few kilobytes into the model and the transfer term all but disappears. That was my hypothesis going in, and the rest of this post checks it against real decode steps.
+NCCL also splits each all-reduce across several channels, each running its own ring on a slice of the message, so every ring step moves a fraction of an already small chunk. Plug a few kilobytes into the model and the transfer term all but disappears. That was my hypothesis going in, and the rest of this post checks it against real decode steps.
 
 ## Splitting real all-reduces into three parts
 
@@ -71,7 +72,7 @@ The right half of the chart has a twist: across two boxes, startup takes over ag
 
 ## Waiting on each other wasn't the problem
 
-Our profiles from the summer said most communication time was spin-wait: GPUs sitting idle until slower peers caught up. I fully expected this project to be about stragglers. It wasn't. Those profiles had been taken in eager mode, where the gaps between kernel launches get counted as communication. In CUDA-graph captures, which is how vLLM actually serves, residual wait inside one box is a thin sliver at every load.
+The team's earlier profiles said most communication time was spin-wait: GPUs sitting idle until slower peers caught up. I fully expected this project to be about stragglers. It wasn't. Those profiles had been taken in eager mode, where the gaps between kernel launches get counted as communication. In CUDA-graph captures, which is how vLLM actually serves, residual wait inside one box is a thin sliver at every load.
 
 Across Ethernet a real residual does show up at medium load, and it traced back to two specific things. The first all-reduce of every graph replay pays to wake up NCCL's network proxy thread, a fixed charge once per decode step that's small inside a box and much larger across Ethernet. And Ring/LL across the two boxes runs at one of two speeds, decided when the process launches and stuck for its lifetime. I never pinned down why, so if you benchmark across hosts, run more than one launch before believing a number.
 
@@ -101,7 +102,7 @@ So communication's share of the step climbs with every doubling, then jumps when
 
 ## What I'd do on a box without NVLink
 
-Keep tensor parallelism inside one PCIe box and scale out with independent replicas. On our 16 GPUs, two separate TP8 servers beat one TP16 server over Ethernet at every concurrency we tried, because nothing has to cross the network on every step.
+Keep tensor parallelism inside one PCIe box and scale out with independent replicas. When the model fits in one box at TP8, two separate TP8 servers on our 16 GPUs beat one TP16 server over Ethernet at every concurrency we tried, because nothing has to cross the network on every step. For long-context MLA models bound by KV-cache capacity, [part 3](/blog/pcie-vs-ethernet-scale-up) covers splitting the model into two pipeline stages with TP8 in each box.
 
 Profile in CUDA-graph mode, since eager mode inflates communication and invents spin-wait. When you benchmark with nccl-tests, force the same algorithm and protocol your server uses (`NCCL_ALGO`, `NCCL_PROTO`); compared like that, per-call time inside vLLM matched the isolated benchmark closely. Don't buy extra NIC rails hoping to speed up tensor-parallel all-reduce, because a two-host ring can't use them.
 

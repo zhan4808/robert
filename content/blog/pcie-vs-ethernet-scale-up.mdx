@@ -1,5 +1,6 @@
 ---
 title: "PCIe vs Ethernet Scale-Up for Inference: When Each One Wins"
+shortTitle: "PCIe vs Ethernet scale-up"
 subtitle: "same GPUs, two ways to join them, different best layouts"
 date: November 15, 2026
 year: 2026
@@ -19,11 +20,13 @@ We had both setups side by side. One was the pair of 8-GPU boxes from before, jo
 
 Per-call all-reduce latency on 8 local GPUs matched on both racks at every size. That's what you'd hope, since inside a box both are the same GPUs on the same kind of PCIe switch. Any difference between them comes from the hop between boxes.
 
-One caveat. End-to-end throughput did differ between the two racks' single boxes, and we traced it to the serving harness rather than the hardware: one ran vLLM's async scheduling and the other didn't. We never got to rerun them aligned, so I'd treat any cross-rack throughput comparison with care.
+<Note title="caveat">
+End-to-end throughput did differ between the two racks' single boxes, and we traced it to the serving harness rather than the hardware: one ran vLLM's async scheduling and the other didn't. We never got to rerun them aligned, so I'd treat any cross-rack throughput comparison with care.
+</Note>
 
 ## Across boxes, PCIe is much cheaper per call
 
-As NCCL sees it, a cross-box hop over the PCIe fabric costs a small fraction of an Ethernet crossing. At large message sizes the two converge, for the same reason as in part 1: each GPU's own PCIe link is the bottleneck either way. The whole difference lives in the decode range.
+As NCCL sees it, a hop between the boxes over the PCIe fabric costs a small fraction of an Ethernet crossing. At large message sizes the two converge, for the same reason as in part 1: each GPU's own PCIe link is the bottleneck either way. The whole difference lives in the decode range.
 
 It's part 1's startup term again, with a much smaller fixed cost for the steps that leave the box. And it compounds: a 16-GPU tensor-parallel decode step makes around a hundred all-reduces, and each one crosses between the boxes twice.
 
@@ -33,25 +36,25 @@ There are three sensible ways to use 16 GPUs in two boxes. You can run one tenso
 
 <Diagram name="layouts" caption="Three ways to use 16 GPUs in two boxes, and what each one sends between the boxes on every step." />
 
-Which one wins depends on the fabric and on how loaded the server is, so here is how throughput moves with concurrency for each layout. The axes are deliberately unlabeled. The curves show the ordering and the crossovers we measured, not the values.
+Which one wins depends on the fabric and on how loaded the server is, so here is how throughput moves with concurrency for each layout.
 
 <Diagram name="scale-up-trends" caption="Throughput as concurrency grows, for each layout on each fabric. Trends only: the shapes, orderings and crossovers are what we measured; the axes carry no values. TP16 against two replicas wasn't measured on the PCIe rack, so it isn't drawn there." />
 
-Over Ethernet, the story is simple. One box climbs quickly and then flattens once its KV cache fills up. Two replicas are each that same box at half the load, so they flatten twice as high and twice as late, and because they never touch the network, nothing about the fabric slows them down. TP16 starts behind a single box, because every decode step pays the Ethernet crossing a hundred times over, and only passes it once that box has run out of cache. Tuning NCCL's protocol choice ([part 2](/blog/nccl-defaults-off-nvlink)) lifts TP16 a long way at high load, but does nothing at low load, where it's fixed latency all the way down, and it never catches the replicas.
+Over Ethernet, one box climbs quickly and then flattens once its KV cache fills up. Two replicas are each that same box at half the load. Two independent cache pools flatten twice as high and twice as late. Because they never touch the network, nothing about the fabric slows them down. TP16 starts behind a single box because the per-call startup cost repeats on every cross-box all-reduce, around a hundred times per decode step, and it only passes that box once the box has run out of cache. Tuning NCCL's protocol choice ([part 2](/blog/nccl-defaults-off-nvlink)) lifts TP16 a long way at high load, but does nothing at low load, where it's fixed latency all the way down, and it never catches the replicas.
 
 Over the PCIe fabric, the crossing is cheap enough that splitting one tensor-parallel group across the boxes costs almost nothing. TP16 tracks a single box at low load and pulls ahead from medium concurrency on. We didn't run TP16 against two replicas head to head on that rack, so I've left that comparison out rather than guess at it. What we did see is that TP16 gave the best per-user generation rate of anything we ran there, which is the reason to want it: it buys per-request latency that replicas can't.
 
-Two more things are worth knowing. At medium load across Ethernet, communication takes about as much of a decode step as compute does, while over the PCIe fabric it's a modest slice. And for prefill-heavy traffic the fabric barely mattered, because large messages hit each GPU's own PCIe link either way.
+At medium load across Ethernet, communication takes about as much of a decode step as compute does, while over the PCIe fabric it's a modest slice. And for prefill-heavy traffic the fabric barely mattered, because large messages hit each GPU's own PCIe link either way.
 
 ## When the network stops mattering
 
 We also replayed an agentic coding trace: very long contexts, lots of prefix reuse. There the limit was KV-cache capacity, not communication, and the two fabrics landed at parity on the same layout.
 
-The layout turned out to be the interesting part. In MLA models (DeepSeek-style attention, here GLM-5.2), the compressed KV cache is replicated on every tensor-parallel rank, so doubling TP doesn't grow the cache pool. Pipeline parallelism does, because each stage only holds the cache for its own layers. For long-context MLA serving across 16 GPUs, PP2 × TP8 beat TP16, and by more than any difference between the fabrics.
+The layout turned out to be the interesting part. In MLA models (DeepSeek-style attention, here GLM-5.2), default tensor parallelism in vLLM and SGLang, without decode context parallelism, replicates the compressed KV cache on every rank, so doubling TP doesn't grow the cache pool. Pipeline parallelism does, because each stage only holds the cache for its own layers. For long-context MLA serving across 16 GPUs, PP2 × TP8 beat TP16, and by more than any difference between the fabrics.
 
 <Diagram name="mla-kv" caption="Why pipeline parallelism grows an MLA model's KV pool and tensor parallelism doesn't: the same memory per GPU holds twice the tokens." />
 
-Two more things we learned the hard way on that trace. Every layout fell apart once the working set of contexts outgrew the cache: the prefix-cache hit rate fell off a cliff, and time to first token went with it. And a CPU memory tier under two-node TP16 served almost none of the misses, so it didn't help.
+One more thing we learned the hard way on that trace: every layout fell apart once the working set of contexts outgrew the cache. The prefix-cache hit rate fell off a cliff, and time to first token went with it.
 
 ## Where Ethernet's cost actually lives
 
@@ -65,6 +68,6 @@ After that fix, TP16 over Ethernet got a lot better at high load. It still trail
 
 Over Ethernet, run independent replicas and keep every tensor-parallel group inside one box, with a tuned NCCL rule for anything that still has to cross. Over a PCIe fabric, one big TP16 group is worth it once load picks up, and it's the layout to reach for when per-request latency matters. For long-context MLA models, grow the KV pool with pipeline parallelism before you grow TP, and treat the fabric as secondary. And for prefill-heavy batch work, either fabric is fine; the money is better spent elsewhere.
 
-Every conclusion in this series came from hundreds of serving runs, and plenty of them were wrong the first time. [Part 4](/blog/reading-vllm-runs) is about reading a run without fooling yourself.
+Every conclusion in this series came from a lot of serving runs, and plenty of them were wrong the first time. [Part 4](/blog/reading-vllm-runs) is about reading a run without fooling yourself.
 
 *Thanks to Helia Naeimi, Chris Petersen and Haoyuan Xu at Astera Labs. Shared with permission, with absolute numbers left out.*

@@ -60,3 +60,8 @@ export function formatIsoDate(value: string): string {
     const name = MONTHS[month - 1];
     return `${name[0].toUpperCase()}${name.slice(1)} ${day}, ${year}`;
 }
+
+/** A written date with the month cut to three letters: "November 15, 2026" → "Nov 15, 2026"; "2026" stays. */
+export function abbreviateDate(value: string): string {
+    return value.trim().replace(/^([A-Za-z]{3})[A-Za-z]*/, "$1");
+}

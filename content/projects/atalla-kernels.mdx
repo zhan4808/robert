@@ -13,15 +13,17 @@ tags:
   - VLIW
   - Systolic Array
   - PyTorch
-featured: true
+featured: false
 thumb: /thumbs/atalla-kernels.svg
 githubUrl: https://github.com/Purdue-SoCET/atalla
 ---
 
 <Section id="overview" title="Overview">
-  Atalla is a student-led effort within Purdue's SoCET lab to design a research-grade AI accelerator stack from scratch: RTL, kernel software, FPGA emulation. The core is a parameterizable 32×32 BF16 systolic array with three dataflow implementations (naïve, MEISSA-inspired, TPU-inspired), a 1MB dual-partition scratchpad SRAM, and a VLIW scheduler.
+  I own the kernel and PyTorch integration layer for Atalla Ax01: the FlashAttention mapping, an implicit im2col convolution kernel with a Streamlit simulator to debug its addressing, tiled GEMM, and a torch.export backend that lowers FX graphs to Atalla instructions.
 
-  I work on the Systems Software team, owning the kernel and PyTorch integration layer. The design philosophy is closer to a TPU than a GPU: there's no hardware cache, no SIMT abstraction, and no hardware scoreboard. All data movement between DRAM and on-chip SRAM is explicit via SDMA instructions. All dependency tracking is the programmer's responsibility. This makes the programming model hard, but the optimization surface is wide open.
+  Atalla is a student-led effort in Purdue's SoCET lab to build a research-grade AI accelerator stack from scratch: RTL, kernel software, FPGA emulation. The core is a parameterizable 32×32 BF16 systolic array with three dataflow implementations (naïve, MEISSA-inspired, TPU-inspired), a 1MB dual-partition scratchpad SRAM, and a VLIW scheduler.
+
+  The design is closer to a TPU than a GPU. There's no data cache in front of DRAM, no SIMT abstraction, and no hardware scoreboard. Every move between DRAM and on-chip SRAM is an explicit SDMA instruction, and every dependency is the programmer's to track. That makes the programming model hard, but it leaves the optimization surface wide open.
 
   <Figure
     src="/atalla/toplevelatalla.webp"
@@ -29,17 +31,10 @@ githubUrl: https://github.com/Purdue-SoCET/atalla
     caption="Atalla Ax01 top-level architecture. Compute (systolic array), memory (scratchpad + DDR4), systems software (kernels + PyTorch), compiler (PPCI-based), and FPGA emulation are all student-built."
     invert
   />
-
-  <Figure
-    src="/atalla/atallaax02arch.webp"
-    alt="Atalla Ax02 full chip architecture"
-    caption="Ax02 next-generation architecture: dual-core design with 128×128 systolic arrays, 2MB L1 scratchpad per core, shared L2 scratchpad, and HBM via Ramulator."
-    invert
-  />
 </Section>
 
 <Section id="architecture" title="Architecture & Programming Model">
-  The Atalla programming model is tile-centric and single-threaded. Instead of writing scalar SIMT code that the runtime fans out, you write explicit tile descriptors and intrinsic calls that directly orchestrate the systolic array and SRAM. The key abstractions are GlobalTile (tensor in DRAM), ScpadTile (tensor in on-chip SRAM), and VectorReg (register in the VEGGIE file).
+  The programming model is tile-centric and single-threaded. Instead of writing SIMT code that the runtime fans out, you write explicit tile descriptors and intrinsic calls that drive the systolic array and SRAM directly. The key abstractions are GlobalTile (tensor in DRAM), ScpadTile (tensor in on-chip SRAM), and VectorReg (register in the VEGGIE file).
 
   ### Memory Hierarchy
 
@@ -48,63 +43,70 @@ githubUrl: https://github.com/Purdue-SoCET/atalla
   | DRAM (Global)             | 8GB+                   | SDMA only (scpad.ld / scpad.st)     | High     |
   | Scratchpad (SCPAD)        | 1MB SRAM, 2 partitions | SDMA only                           | Low      |
   | Vector Registers (VEGGIE) | On-chip                | VM instructions (vreg.ld / vreg.st) | Very low |
-  | Scalar Registers          | On-chip                | Hardware-managed L1 cache           | Very low |
-  | SA Accumulation Buffers   | Hardware-controlled    | Not programmable                    | —        |
+  | Scalar Registers          | On-chip                | Scalar instructions                 | Very low |
+  | SA Accumulation Buffers   | Hardware-controlled    | Not programmable                    | n/a      |
 
-  The dual scratchpad partition (SCPAD0, SCPAD1) is a key design choice. The compiler can issue loads to both partitions in the same VLIW bundle, enabling overlap between SCPAD0 loads and SCPAD1 compute. The GEMMV execution pattern exploits this: A tiles load into SCPAD0, B and C tiles into SCPAD1, allowing the systolic array to consume one pair while the next is loading.
+  The two scratchpad partitions (SCPAD0, SCPAD1) are a key design choice. The compiler can issue loads to both in the same VLIW bundle, so operands headed to different partitions arrive in parallel. GEMMV uses this by splitting operands: A tiles go to SCPAD0, B and C tiles to SCPAD1.
 
   ### ISA Highlights
 
-  The ISA has 7-bit opcodes across instruction types: scalar integer and BF16 arithmetic, vector-vector and vector-scalar masked operations, SDMA bulk DMA, VM vector-register loads and stores, and the GEMMV and CONV compute intrinsics. expi.vi (element-wise exp) costs 15 cycles, which matters a lot for softmax. The vector reduction tree (rmax.vi, rsum.vi) costs 13 cycles. These latencies make the case for polynomial exp emulation in attention kernels.
-</Section>
-
-<Section id="flashattention" title="FlashAttention Kernel">
-  I own the FlashAttention kernel workstream. The Q·Kᵀ and attn·V matmuls map cleanly onto GEMMV: tiles of Q, K, V load into SCPAD, the systolic array handles the matmul, and partial sums accumulate in the hardware accumulation buffers before transfer to VEGGIE. But softmax is inherently scalar and sequential. It runs on the scalar unit using rmax.vi (13 cycles), expi.vi (15 cycles), and rsum.vi (13 cycles) per tile.
-
-  The co-design question this raises: can the scalar unit begin softmax rescaling on the previous tile's output while the systolic array's PSUM writeback to VEGGIE is happening for the current tile? The two operations use distinct hardware units (scalar unit vs. accumulation buffer writeback path). If they can be pipelined across tiles using the dual-SCPAD architecture, that's free latency hiding. Still being validated in the emulator.
-
-  ### Key Optimizations
-
-  - Polynomial exp emulation: degree-3 Horner's method replaces the 15-cycle expi.vi with a \~4–5 cycle sequence of mul.vv + add.vv at acceptable accuracy for inference.
-  - Conditional softmax rescaling: skip the rescale step when the running tile max doesn't change, reducing scalar unit pressure on locally stable attention distributions.
-  - Tiling strategy: explicit SDMA prefetch of Q/K/V tiles into alternating SCPAD partitions, targeting overlap between SCPAD loads and systolic array compute.
-  - Online softmax (FlashAttention-style): maintain running (max, denominator, output) accumulators across tiles — never materialize the full N×N attention matrix in SRAM.
-</Section>
-
-<Section id="im2col" title="Implicit Im2col Convolution">
-  Standard convolution can be lowered to GEMM via im2col: rearrange the input tensor so each convolution window becomes a column, then run a single GEMM. The naive approach materializes the im2col buffer explicitly — for a 3×3 conv over a 224×224 feature map, that's a 9× expansion of the input, turning a 48MB tensor into 432MB. This is impractical for a 1MB scratchpad.
-
-  The implicit channel-first variant avoids materialization entirely. The im2col addressing is computed on-the-fly inside the SDMA load — the scratchpad sees a logically rearranged tensor computed from index arithmetic, not a pre-expanded buffer. This keeps the memory footprint bounded by the tile size. I built a Streamlit-based simulator and visualizer for this kernel to make the addressing logic debuggable and to help teammates understand the co-design constraints.
+  The ISA uses 7-bit opcodes across scalar integer and BF16 arithmetic, masked vector-vector and vector-scalar operations, SDMA bulk transfers, VM vector-register loads and stores, and the GEMMV and CONV compute intrinsics. Two latencies shape the attention kernel: expi.vi (element-wise exp) takes 15 cycles, and the vector reduction tree (rmax.vi, rsum.vi) takes 13.
 </Section>
 
 <Section id="tiled-gemm" title="Tiled GEMM">
-  The GEMMV intrinsic operates on tiles ≤ 32×32. A full M×N×K GEMM is decomposed into MT×NT×KT tile groups, each loaded into SCPAD before a GEMMV call. The C tile accumulates across all k-slices before being written back to DRAM. Tile sizing is a constraint satisfaction problem: TM × TK + TK × TN + TM × TN must fit within one SCPAD partition's budget with room for double-buffering the other partition.
+  GEMMV operates on tiles up to 32×32. A full M×N×K GEMM is decomposed into MT×NT×KT tile groups, each loaded into SCPAD before a GEMMV call, and the C tile accumulates across every k-slice before it's written back to DRAM.
 
   ```
   // Outer tile loop (output tiles)
     for each (i, j) in output tile grid:
       load C_tile → SCPAD1
-      
+
       // Inner K-reduction loop
       for each k-slice:
         load A_tile[i, k] → SCPAD0   // SDMA to partition 0
         load B_tile[k, j] → SCPAD1   // SDMA to partition 1
         GEMMV(sc_C, sc_A, sc_B)      // blocks until SCPAD_C updated
-      
+
       store C_tile → DRAM
   ```
+
+  Because the operands are split across partitions, tile sizing is a packing problem per partition: TM × TK has to fit in SCPAD0, and TK × TN + TM × TN has to fit in SCPAD1. As written, the loop doesn't double-buffer. Both partitions hold live operands and GEMMV blocks, so the next k-slice's loads wait for the current one to finish. Overlapping them means reserving space in each partition for the next slice, which roughly halves the tile budget.
+</Section>
+
+<Section id="flashattention" title="FlashAttention Kernel">
+  The Q·Kᵀ and attn·V matmuls map cleanly onto GEMMV. Tiles of Q, K and V load into SCPAD, the systolic array does the matmul, and partial sums accumulate in the hardware accumulation buffers before moving to VEGGIE. Softmax is the part the array can't do. It's element-wise math plus reductions, so it runs on the vector unit as rmax.vi (13 cycles), expi.vi (15 cycles) and rsum.vi (13 cycles) per tile.
+
+  The kernel follows the FlashAttention structure: keep running max, denominator and output accumulators across tiles so the full N×N attention matrix never sits in SRAM. On top of that I'm working on three things.
+
+  - Polynomial exp. A degree-3 Horner evaluation built from mul.vv and add.vv can stand in for expi.vi at inference accuracy, but a cubic is only accurate on a narrow interval. It needs range reduction first: split x into an integer power of two, applied through the exponent bits, and a small remainder for the polynomial. Any comparison against the 15-cycle expi.vi has to count that step.
+  - Conditional rescaling. Following FlashAttention-4, skip the rescale of the output accumulator when the running max doesn't change, which takes work off the vector unit when attention scores are locally stable.
+  - Tiling. Prefetch Q, K and V tiles with SDMA into alternating SCPAD partitions so loads can overlap systolic array compute.
+
+  The co-design question underneath: can the vector unit rescale the previous tile's output while the accumulation buffers write the current tile's partial sums back to VEGGIE? The two use different hardware paths, so if they pipeline across tiles, that latency is hidden for free. I'm still checking this in the emulator.
+</Section>
+
+<Section id="im2col" title="Implicit Im2col Convolution">
+  Convolution can be lowered to GEMM with im2col: rearrange the input so each convolution window becomes a column, then run one GEMM. Materializing that buffer duplicates each input element once per kernel position, roughly a 9× expansion for a 3×3 convolution, which a 1MB scratchpad can't absorb for any realistic layer.
+
+  The implicit channel-first variant never builds the buffer. The im2col addressing is computed inside the SDMA load, so the scratchpad receives the rearranged tile directly from index arithmetic, and the footprint stays bounded by the tile size. I built a Streamlit simulator and visualizer for this kernel to make the addressing debuggable and to help teammates see the co-design constraints.
 </Section>
 
 <Section id="pytorch" title="PyTorch Backend Integration">
-  To run real PyTorch models on Atalla, I built a custom backend using torch.export and FX graph capture. The flow: capture a model as an FX graph, walk the graph nodes, map recognized op patterns (linear, conv2d, relu, etc.) to Atalla kernel calls via an op registry, emit the SDMA + GEMMV instruction sequence for each mapped op, and hand off to the simulator for cycle-accurate execution. This gives the team a path from 'standard PyTorch model' to 'runs on Atalla' without hand-writing kernels for every model.
+  To run real PyTorch models on Atalla, I built a custom backend on torch.export and FX graph capture. It captures a model as an FX graph, walks the nodes, maps recognized ops (linear, conv2d, relu and so on) to Atalla kernels through an op registry, emits the SDMA and GEMMV instruction sequence for each, and hands the result to the simulator for cycle-accurate execution. That gives the team a path from a standard PyTorch model to Atalla without hand-writing kernels per model.
 </Section>
 
-<Section id="open-questions" title="Open Co-Design Questions">
-  Some open co-design directions the team is exploring:
+<Section id="next" title="What's Next">
+  The team's plan for the next generation, Ax02, scales the design out.
 
-  - PSUM overlap: can PSUM writeback to VEGGIE be pipelined with scalar unit softmax computation? This requires careful timing analysis in the emulator.
-  - Sparsity support: structured sparsity in specific model families could give 2× weight compression with hardware support. What ISA changes would enable this?
-  - Multi-datatype: extending beyond BF16 to INT8 or FP8 would open up quantized inference; the scalar core already has type conversion instructions (stbf.s, bfts.s).
-  - Transpose units: attention requires Kᵀ, currently handled in software via SDMA swizzle. Dedicated transpose hardware would eliminate that overhead.
-  - Compiler packetization: the VLIW scheduler leaves performance on the table; better packetization heuristics could meaningfully improve utilization.
+  <Figure
+    src="/atalla/atallaax02arch.webp"
+    alt="Planned Atalla Ax02 full chip architecture"
+    caption="The team's planned Ax02 architecture (not yet built): dual-core design with 128×128 systolic arrays, 2MB L1 scratchpad per core, shared L2 scratchpad, and HBM modeled via Ramulator."
+    invert
+  />
+
+  Two open questions from the kernel side that I'd like that design to answer:
+
+  - Transpose. Attention needs Kᵀ, which today is a software SDMA swizzle. Dedicated transpose hardware would remove that step.
+  - Datatypes beyond BF16. INT8 or FP8 would open up quantized inference, and the scalar core already has type conversion instructions (stbf.s, bfts.s) to build on.
 </Section>

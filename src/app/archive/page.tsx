@@ -19,8 +19,8 @@ export default function Archive() {
                 className="mx-auto flex w-full max-w-column flex-col gap-14 px-6 pb-24 pt-14 outline-none sm:pt-20"
             >
                 <header className="flex flex-col gap-4">
-                    <h1 className="font-serif text-[28px] font-normal leading-[1.15] sm:text-title">Archive</h1>
-                    <p className="-mt-2 font-serif text-[19px] italic text-muted">every version of this site.</p>
+                    <h1 className="font-serif text-title-sm font-normal sm:text-title">Archive</h1>
+                    <p className="-mt-2 font-serif text-subtitle italic text-muted">every version of this site.</p>
                     <p className={`max-w-[32rem] font-geistSans text-body leading-compact [text-wrap:pretty] ${MUTED}`}>
                         Six designs since 2023. Each one was checked out from its commit, run again, and photographed at
                         1440 and 375 wide.

@@ -48,7 +48,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         // next-themes sets the theme class on <html> before React hydrates, which React would otherwise flag.
-        <html lang="en" suppressHydrationWarning>
+        // overflow-x-clip on <html> too: a body-only clip propagates to the viewport, where iOS still lets a photo's
+        // ripple canvas (which bleeds past its frame) pan the page sideways on a phone.
+        <html lang="en" suppressHydrationWarning className="overflow-x-clip">
             <body
                 className={`${typefaceClassNames} scroll-smooth motion-reduce:scroll-auto overflow-x-clip bg-background text-foreground`}
             >

@@ -6,7 +6,7 @@ import KoiBanner from "./components/koi-banner";
 import SiteFooter from "./components/site-footer";
 import TopNav from "./components/top-nav";
 
-const RECENT = 7;
+const RECENT = 5;
 
 const MORE = "ink-link text-small text-muted";
 

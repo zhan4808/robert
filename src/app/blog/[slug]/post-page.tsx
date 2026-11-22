@@ -78,7 +78,7 @@ export function PostPager({ post, direction }: { post: PagerPost; direction: "ba
         >
             <span className={`text-small ${MUTED}`}>{back ? "previous" : "next"}</span>
             <span className="text-body decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
-                {back ? `← ${post.title}` : `${post.title} →`}
+                {back ? `←\u00a0${post.title}` : `${post.title}\u00a0→`}
             </span>
             <span ref={cardRef} aria-hidden className={HOVER_CARD}>
                 <PostCover post={post} meta={post.coverMeta} sizes="17rem" className="w-full" />

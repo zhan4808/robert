@@ -56,9 +56,9 @@ export default function BlogIndex({ years }: { years: [number, Entry[]][] }) {
                         >
                             <span
                                 aria-hidden
-                                className={`h-[6px] w-[6px] rounded-full transition-opacity ${
+                                className={`h-[6px] w-[6px] rounded-full ${
                                     f === "all" ? "bg-foreground" : KINDS[f].dot
-                                } ${on ? "opacity-100" : "opacity-40"}`}
+                                }`}
                             />
                             {LABEL[f]}
                         </button>
@@ -77,7 +77,7 @@ export default function BlogIndex({ years }: { years: [number, Entry[]][] }) {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <h2 className="mb-2 border-b border-hairline pb-2 font-serif text-[20px] tabular-nums">
+                            <h2 className="mb-2 border-b border-hairline pb-2 text-small font-medium tabular-nums text-muted">
                                 {year}
                             </h2>
                             <ul>

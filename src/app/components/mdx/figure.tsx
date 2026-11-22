@@ -8,7 +8,7 @@ export interface FigureProps {
     src: string;
     alt: string;
     caption?: string;
-    /** For diagrams drawn dark-on-white: inverts the image so it sits on the dark theme too. */
+    /** For diagrams drawn dark-on-white: in dark mode the image is inverted (hues kept) so it sits on the dark paper. */
     invert?: boolean;
     /** How wide the thumbnail renders, for the srcset; <Gallery> sets this on its figures. */
     sizes?: string;
@@ -29,15 +29,30 @@ function FigureLabel({ number, children }: { number: string; children?: ReactNod
     );
 }
 
+/**
+ * How a raster figure sits on the page. In light mode the image is multiplied onto a quiet tile, so a plot's white
+ * paper takes the tile's colour. In dark mode it is dimmed a step on the same tile, or, with `invert`, turned
+ * light-on-dark (hues restored) and screened on so its paper drops away. Photos never invert.
+ */
+const RASTER = "mix-blend-multiply dark:mix-blend-normal";
+const RASTER_DARK = "dark:opacity-90";
+const INVERT = "dark:invert dark:hue-rotate-180";
+const RASTER_INVERT = `${INVERT} dark:mix-blend-screen`;
+
 /** An image in the write-up, with an optional caption; clicking opens it in the lightbox. */
 export function Figure({ src, alt, caption, invert, sizes, number }: FigureProps) {
+    // Gallery photos (sizes set) and SVGs, which carry their own background or none, are left as they are.
+    const raster = !sizes && !src.endsWith(".svg");
+    const image = raster ? `${RASTER} ${invert ? RASTER_INVERT : RASTER_DARK}` : invert ? RASTER_INVERT : undefined;
     return (
         <div data-wide={sizes ? undefined : true} className={sizes ? undefined : "my-2"}>
             <ImageLightbox
                 src={src}
                 alt={alt}
                 caption={number ? <FigureLabel number={number}>{caption}</FigureLabel> : caption}
-                className={invert ? "invert" : undefined}
+                className={image}
+                fullClassName={invert ? INVERT : undefined}
+                frameClassName={raster ? "bg-tile" : undefined}
                 meta={imageMeta(src)}
                 sizes={sizes}
             />
@@ -48,8 +63,11 @@ export function Figure({ src, alt, caption, invert, sizes, number }: FigureProps
 // A third of the frame from md up (three columns), half the viewport below it.
 const GALLERY_SIZES = "(min-width: 1024px) 18rem, (min-width: 768px) 33vw, 50vw";
 
-/** A grid of <Figure>s: two across on phones, three from md up. The grid is numbered as one figure. */
-export function Gallery({ number, children }: { number?: string; children?: ReactNode }) {
+/**
+ * A grid of <Figure>s: two across on phones, three from md up. The grid is numbered as one figure, but the label only
+ * shows with a `caption`: each photo already carries its own, and a bare "Figure 1" under a photo set reads as noise.
+ */
+export function Gallery({ number, caption, children }: { number?: string; caption?: ReactNode; children?: ReactNode }) {
     const grid = (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {Children.map(children, (child) =>
@@ -59,12 +77,12 @@ export function Gallery({ number, children }: { number?: string; children?: Reac
             )}
         </div>
     );
-    if (!number) return grid;
+    if (!number || !caption) return grid;
     return (
         <figure className="flex flex-col gap-2">
             {grid}
             <figcaption className={`text-small ${MUTED}`}>
-                <FigureLabel number={number} />
+                <FigureLabel number={number}>{caption}</FigureLabel>
             </figcaption>
         </figure>
     );

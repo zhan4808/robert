@@ -63,6 +63,12 @@ export const getPosts = (): JournalPost[] => postDocuments().map((doc) => doc.me
 export const getPost = (slug: string): Document<JournalPost> | undefined =>
     postDocuments().find((doc) => doc.meta.slug === slug);
 
+/**
+ * Whether a post gets a page in this build. Hidden posts render under `next dev`, so drafts can be read locally,
+ * and get no page in production, like hidden projects.
+ */
+export const hasPostPage = (post: JournalPost): boolean => !post.hidden || process.env.NODE_ENV !== "production";
+
 const postTime = (post: JournalPost) => parseContentDate(post.date)?.getTime() ?? Date.UTC(post.year, 0, 1);
 
 /** The posts that show in the list, the feed, and the sitemap: newest first, `order` settling posts on one date. */
@@ -80,7 +86,10 @@ export function getVisiblePostsByYear(): Map<number, JournalPost[]> {
     return new Map([...byYear.entries()].sort((a, b) => b[0] - a[0]));
 }
 
-/** One line in the combined index: a post or a project, with where it lives. */
+/** A post inside a series row: its place, the name the list shows, and where it lives. */
+export type EntryPart = { part: number; title: string; href: string };
+
+/** One line in the combined index: a post, a project, or a whole series, with where it lives. */
 export type Entry = {
     slug: string;
     href: string;
@@ -89,43 +98,91 @@ export type Entry = {
     year: number;
     kind: "technical" | "journal" | "project";
     external?: boolean;
+    /** Set on a series row: every visible part, in order. */
+    parts?: EntryPart[];
 };
 
-/** Visible posts and projects together, newest first: the blog index and the home page's list read this. */
+type Sortable = Entry & { time: number; order: number; monthly: boolean };
+
+/** Whether a written date names a month ("November 2026", "Nov 15, 2026") rather than only a year ("2026"). */
+const hasMonth = (date: string) => /[A-Za-z]/.test(date);
+
+/**
+ * Visible posts and projects together, newest first: the blog index and the home page's list read this. A series is
+ * one row, titled with the series name, dated by its newest part, and linking to part 1. Within a year, entries with
+ * only a year for a date go after the ones with a month.
+ */
 export function getEntries(): Entry[] {
-    const posts: (Entry & { time: number; order: number })[] = getVisiblePosts().map((p) => ({
-        slug: p.slug,
-        href: `/blog/${p.slug}`,
-        title: p.title,
-        date: p.date,
-        year: p.year,
-        kind: p.kind,
-        time: postTime(p),
-        order: p.order,
-    }));
-    const projects = getProjects()
-        .filter((p) => !p.hidden)
-        .map((p) => ({
+    const posts = getVisiblePosts();
+    const series = new Map<string, JournalPost[]>();
+    for (const p of posts) if (p.series) series.set(p.series, [...(series.get(p.series) ?? []), p]);
+
+    const rows: Sortable[] = [];
+    for (const p of posts) {
+        if (!p.series) {
+            rows.push({
+                slug: p.slug,
+                href: `/blog/${p.slug}`,
+                title: p.title,
+                date: p.date,
+                year: p.year,
+                kind: p.kind,
+                time: postTime(p),
+                order: p.order,
+                monthly: hasMonth(p.date),
+            });
+            continue;
+        }
+        const members = series.get(p.series);
+        if (!members) continue; // already added
+        series.delete(p.series);
+        const ordered = [...members].sort((a, b) => (a.part ?? 0) - (b.part ?? 0));
+        const latest = [...members].sort((a, b) => postTime(b) - postTime(a))[0];
+        rows.push({
+            slug: ordered[0].slug,
+            href: `/blog/${ordered[0].slug}`,
+            title: p.series,
+            date: latest.date,
+            year: latest.year,
+            kind: "technical",
+            parts: ordered.map((m, i) => ({
+                part: m.part ?? i + 1,
+                title: m.shortTitle ?? m.title,
+                href: `/blog/${m.slug}`,
+            })),
+            time: postTime(latest),
+            order: Math.min(...members.map((m) => m.order)),
+            monthly: hasMonth(latest.date),
+        });
+    }
+    for (const p of getProjects()) {
+        if (p.hidden) continue;
+        rows.push({
             slug: p.slug,
             href: p.externalUrl ?? `/projects/${p.slug}`,
             title: p.shortTitle ?? p.title,
             date: p.date,
             year: p.year,
-            kind: "project" as const,
+            kind: "project",
             external: !!p.externalUrl,
             time: parseContentDate(p.date)?.getTime() ?? Date.UTC(p.year, 0, 1),
             order: p.order,
-        }));
-    return [...posts, ...projects]
-        .sort((a, b) => b.year - a.year || b.time - a.time || a.order - b.order)
-        .map((e) => ({
+            monthly: hasMonth(p.date),
+        });
+    }
+    return rows
+        .sort(
+            (a, b) => b.year - a.year || Number(b.monthly) - Number(a.monthly) || b.time - a.time || a.order - b.order
+        )
+        .map((e): Entry => ({
             slug: e.slug,
             href: e.href,
             title: e.title,
             date: e.date,
             year: e.year,
             kind: e.kind,
-            external: "external" in e ? e.external : undefined,
+            external: e.external,
+            parts: e.parts,
         }));
 }
 

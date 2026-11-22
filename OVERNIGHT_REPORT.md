@@ -126,3 +126,14 @@ git push origin main
 ```
 
 To take only part of it, cherry-pick commits from `git log main..overnight-review --oneline`. For example, the design commits are 12f59ab, 4c6cb12, c9c0566, 92cc087, 2f4974e and eb7811f. The content commit is d61b091, the drafts commit is 7311f1e, the UI fixes are 2435e72, and the review close-out is 9e55550. Run `git cherry-pick <sha>` for each one you want. 12f59ab (hidden posts get no page) should come along with any content commit that hides posts.
+
+## Fact-check fixes
+
+Commit 5bf516e applies a fact-check pass over every changed content file, checked against main and the evidence repos (cache-barrier, regime-router, MLSys, tiny-gemm).
+
+- **Tiny-GEMM is now hidden, and its results are invalid.** In `tiny-gemm/triton_gemm.py` the grid is `grid_m*grid_n // GROUP_SIZE_M`, and the pid mapping then skips most programs. At M=1 the kernel computes 1/16 of the output for Q/O and FFN down and 1/4 for FFN up. Every CSV shows `max_abs_diff` of about 4e7. The kernel is also W4A4, not weight-only. A comment at the top of the page records this. The home intro now links MLA profiling instead.
+- **L2 caveat.** MLA profiling and the quantizing draft now say their L2-resident results come from warm single-operator loops, and that a full decode step streams the weights from HBM.
+- **Number fixes.** Intensity reaches 93 at bs=1024, not 128. The FP16 slowdown when forced to HBM is explained by reloading the roughly 12 MB that L2 had been serving. The MLA cache entry is 576 values. The unsupported "1e-3" accuracy comparison is cut. The quantizing draft now uses MiB throughout.
+- **Series wording.** Part 3's per-call claim is back to main's wording ("as NCCL sees it", about the hop). The PP2×TP8 sentence is cut. Smaller wording fixes in parts 1 to 3.
+- **Charts.** The breakdown shares are coarsened to steps of 0.1, which also removes the thin residual sliver inside one box. The message-size charts now say small / decode range / large instead of showing byte ticks, and the byte tick positions are gone from `traced.json`.
+- **Still to do.** Re-run tiny-gemm with a fixed grid before un-hiding it. Check whether its `tl.dot` compiles to TF32.
